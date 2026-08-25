@@ -84,7 +84,7 @@ internal fun ReadingScreen(
                 ReadingMode.WORDS -> {
                     val word = twoLetterQuestions[index % twoLetterQuestions.size]
                     val ids: List<Int> = word.mapNotNull { ch ->
-                        readingArabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1)
+                        readingArabicLetters.indexOf(ch.toString()).takeIf { it >= 0 }?.plus(1)
                     }
                     if (ids.size == word.length) {
                         val clips: List<String> = ids.map { id: Int -> "ar_letter_%02d_sound".format(id) }
@@ -152,7 +152,6 @@ internal fun ReadingScreen(
                     Spacer(Modifier.height(6.dp))
                 }
 
-                // لوحة ثابتة داخل حدود الشاشة: لا تمرير عمودي أو أفقي.
                 Box(
                     Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(26.dp)).background(Color(0xFFF7FBFF), RoundedCornerShape(26.dp)).border(5.dp, Color(0xFF5AA7C7), RoundedCornerShape(26.dp))
                 ) {
@@ -206,11 +205,11 @@ internal fun ReadingScreen(
                                 ReadingMode.WORDS -> {
                                     val word = twoLetterQuestions[index % twoLetterQuestions.size]
                                     val ids: List<Int> = word.mapNotNull { ch ->
-                                        arabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1)
+                                        arabicLetters.indexOfFirst { it.letter == ch.toString() }.takeIf { it >= 0 }?.plus(1)
                                     }
                                     if (ids.size == word.length) {
                                         val clips: List<String> = ids.map { id: Int -> "ar_letter_%02d_sound".format(id) }
-                        audio.playSequence(clips)
+                                        audio.playSequence(clips)
                                     }
                                 }
                             }

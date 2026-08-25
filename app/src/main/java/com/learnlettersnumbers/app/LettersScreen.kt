@@ -32,7 +32,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 
 internal enum class LetterMode { FORMS, VOWELS }
-internal enum class LetterForm { INITIAL, MEDIAL, FINAL }
+internal enum class ArabicLetterForm { INITIAL, MEDIAL, FINAL }
 internal enum class Vowel { FATHA, DAMMA, KASRA }
 
 internal data class ArabicLetter(
@@ -85,7 +85,7 @@ internal fun LettersScreen(
 ) {
     var mode by remember { mutableStateOf(LetterMode.FORMS) }
     var index by remember { mutableIntStateOf(0) }
-    var form by remember { mutableStateOf(LetterForm.INITIAL) }
+    var form by remember { mutableStateOf(ArabicLetterForm.INITIAL) }
     var vowel by remember { mutableStateOf(Vowel.FATHA) }
     var showMessage by remember { mutableStateOf(true) }
     val current = arabicLetters[index]
@@ -112,7 +112,7 @@ internal fun LettersScreen(
                 modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .85f), RoundedCornerShape(20.dp)).padding(6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ModeButton("الحروف", mode == LetterMode.FORMS, Modifier.weight(1f)) { mode = LetterMode.FORMS; form = LetterForm.INITIAL; onTap() }
+                ModeButton("الحروف", mode == LetterMode.FORMS, Modifier.weight(1f)) { mode = LetterMode.FORMS; form = ArabicLetterForm.INITIAL; onTap() }
                 ModeButton("الحركات", mode == LetterMode.VOWELS, Modifier.weight(1f)) { mode = LetterMode.VOWELS; vowel = Vowel.FATHA; onTap() }
             }
 
@@ -141,9 +141,9 @@ internal fun LettersScreen(
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 if (mode == LetterMode.FORMS) {
-                    FormButton("أولي", form == LetterForm.INITIAL) { form = LetterForm.INITIAL; onTap() }
-                    FormButton("وسطي", form == LetterForm.MEDIAL) { form = LetterForm.MEDIAL; onTap() }
-                    FormButton("أخري", form == LetterForm.FINAL) { form = LetterForm.FINAL; onTap() }
+                    FormButton("أولي", form == ArabicLetterForm.INITIAL) { form = ArabicLetterForm.INITIAL; onTap() }
+                    FormButton("وسطي", form == ArabicLetterForm.MEDIAL) { form = ArabicLetterForm.MEDIAL; onTap() }
+                    FormButton("أخري", form == ArabicLetterForm.FINAL) { form = ArabicLetterForm.FINAL; onTap() }
                 } else {
                     FormButton("فتحة", vowel == Vowel.FATHA) { vowel = Vowel.FATHA; onTap() }
                     FormButton("ضمة", vowel == Vowel.DAMMA) { vowel = Vowel.DAMMA; onTap() }
@@ -162,9 +162,9 @@ internal fun LettersScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     val shown = if (mode == LetterMode.FORMS) when(form) {
-                        LetterForm.INITIAL -> current.initial
-                        LetterForm.MEDIAL -> current.medial
-                        LetterForm.FINAL -> current.final
+                        ArabicLetterForm.INITIAL -> current.initial
+                        ArabicLetterForm.MEDIAL -> current.medial
+                        ArabicLetterForm.FINAL -> current.final
                     } else addVowel(current.letter, vowel)
                     Text(shown, fontSize = 108.sp, fontWeight = FontWeight.ExtraBold, color = current.color)
                     Text(if (mode == LetterMode.FORMS) "صوت الحرف" else vowelName(vowel), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF155E8A))

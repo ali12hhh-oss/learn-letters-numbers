@@ -222,7 +222,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun EnglishNumbers(onBack: () -> Unit, speak: (String) -> Unit, repo: ProgressRepository) {
+    fun EnglishNumbers(onBack: () -> Unit, speak: (String) -> Unit, playNumber: (Int) -> Unit, repo: ProgressRepository) {
         var mode by remember { mutableStateOf("ones") }
         var selected by remember { mutableStateOf(1) }
         val nums = if (mode == "ones") (1..9).toList() else (10..100 step 10).toList()
@@ -233,26 +233,26 @@ class MainActivity : ComponentActivity() {
                 Column(horizontalAlignment = Alignment.End) { Text("Numbers", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF2357A6)); Text("الأرقام الإنجليزية", fontSize = 16.sp) }
             }
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ModeButton("1–9", "الآحاد", mode == "ones", Color(0xFF4C8BF5)) { mode = "ones"; selected = 1; speak("One to nine") }
-                ModeButton("10–100", "العشرات", mode == "tens", Color(0xFFFF8A4C)) { mode = "tens"; selected = 10; speak("Ten to one hundred") }
+                ModeButton("1–9", "الآحاد", mode == "ones", Color(0xFF4C8BF5), Modifier.weight(1f)) { mode = "ones"; selected = 1; speak("One to nine") }
+                ModeButton("10–100", "العشرات", mode == "tens", Color(0xFFFF8A4C), Modifier.weight(1f)) { mode = "tens"; selected = 10; speak("Ten to one hundred") }
             }
             Card(Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(9.dp)) {
                 Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(selected.toString(), fontSize = 68.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6))
-                    Button(onClick = { speak(numberName(selected)) }, shape = RoundedCornerShape(18.dp)) { Text("🔊 Listen", fontSize = 18.sp) }
+                    Button(onClick = { playNumber(selected) }, shape = RoundedCornerShape(18.dp)) { Text("🔊 Listen", fontSize = 18.sp) }
                     Text(if (mode == "ones") "Choose a number from 1 to 9" else "Choose a tens number from 10 to 100", fontSize = 16.sp, modifier = Modifier.padding(top = 7.dp), textAlign = TextAlign.Center)
                 }
             }
             LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(nums) { n -> NumberTile(n, n == selected) { selected = n; repo.recordNumberSeen(n); repo.recordLesson("English numbers", n.toString()); speak(numberName(n)) } }
+                items(nums) { n -> NumberTile(n, n == selected) { selected = n; repo.recordNumberSeen(n); repo.recordLesson("English numbers", n.toString()); playNumber(n) } }
             }
         }
     }
 
     @Composable
-    fun ModeButton(en: String, ar: String, selected: Boolean, color: Color, onClick: () -> Unit) {
+    fun ModeButton(en: String, ar: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
         val bg by animateColorAsState(if (selected) color else MaterialTheme.colorScheme.surface, label = "modeColor")
-        Button(onClick = onClick, modifier = Modifier.weight(1f).height(64.dp), shape = RoundedCornerShape(22.dp), colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = if (selected) Color.White else color), elevation = ButtonDefaults.buttonElevation(defaultElevation = 7.dp)) {
+        Button(onClick = onClick, modifier = modifier.height(64.dp), shape = RoundedCornerShape(22.dp), colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = if (selected) Color.White else color), elevation = ButtonDefaults.buttonElevation(defaultElevation = 7.dp)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(en, fontWeight = FontWeight.ExtraBold); Text(ar, fontSize = 13.sp) }
         }
     }

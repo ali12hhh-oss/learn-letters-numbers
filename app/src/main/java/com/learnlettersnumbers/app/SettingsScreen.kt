@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
 import androidx.compose.foundation.background
@@ -131,7 +132,7 @@ private fun SettingSwitchCard(title: String, subtitle: String, checked: Boolean,
 
 @Composable
 private fun InfoButton(title: String, subtitle: String, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(6.dp), onClick = onClick) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(6.dp), onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
             Text(title, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, fontSize = 13.sp)

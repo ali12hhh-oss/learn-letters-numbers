@@ -75,12 +75,12 @@ fun TestsScreen(
         }
 
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TestModeButton("العربي", language == TestMode.ARABIC, Color(0xFF4C8BF5)) { language = TestMode.ARABIC }
-            TestModeButton("English", language == TestMode.ENGLISH, Color(0xFF6BCB77)) { language = TestMode.ENGLISH }
+            TestModeButton("العربي", language == TestMode.ARABIC, Color(0xFF4C8BF5), Modifier.weight(1f)) { language = TestMode.ARABIC }
+            TestModeButton("English", language == TestMode.ENGLISH, Color(0xFF6BCB77), Modifier.weight(1f)) { language = TestMode.ENGLISH }
         }
         Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TestModeButton(if (language == TestMode.ARABIC) "الحروف" else "Letters", kind == TestKind.LETTERS, Color(0xFF9B72E8)) { kind = TestKind.LETTERS }
-            TestModeButton(if (language == TestMode.ARABIC) "الأرقام" else "Numbers", kind == TestKind.NUMBERS, Color(0xFFFF8A4C)) { kind = TestKind.NUMBERS }
+            TestModeButton(if (language == TestMode.ARABIC) "الحروف" else "Letters", kind == TestKind.LETTERS, Color(0xFF9B72E8), Modifier.weight(1f)) { kind = TestKind.LETTERS }
+            TestModeButton(if (language == TestMode.ARABIC) "الأرقام" else "Numbers", kind == TestKind.NUMBERS, Color(0xFFFF8A4C), Modifier.weight(1f)) { kind = TestKind.NUMBERS }
         }
 
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(9.dp)) {
@@ -146,10 +146,10 @@ fun TestsScreen(
 }
 
 @Composable
-private fun TestModeButton(text: String, selected: Boolean, color: Color, onClick: () -> Unit) {
+private fun TestModeButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.weight(1f).height(58.dp),
+        modifier = modifier.height(58.dp),
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else MaterialTheme.colorScheme.surface, contentColor = if (selected) Color.White else color),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 7.dp)

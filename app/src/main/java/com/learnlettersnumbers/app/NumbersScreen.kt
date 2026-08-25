@@ -184,7 +184,7 @@ private fun OperationCard(example: OperationExample, onTap: () -> Unit, speak: (
         PictureKind.BIKES -> Color(0xFF26A69A)
     }
     Column(
-        Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(30.dp)).border(4.dp, accent, RoundedCornerShape(30.dp)).clickable { speak(); onTap() }.padding(12.dp),
+        Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(30.dp)).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(30.dp)).border(4.dp, accent, RoundedCornerShape(30.dp)).clickable { speak(); onTap() }.padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {

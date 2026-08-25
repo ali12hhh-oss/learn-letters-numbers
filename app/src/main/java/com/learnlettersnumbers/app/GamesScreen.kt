@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
 import androidx.compose.foundation.background
@@ -192,7 +193,7 @@ private fun GamePlayScreen(
             Spacer(Modifier.height(14.dp))
             question.options.forEach { answer ->
                 Button(
-                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     enabled = !answered,
                     onClick = {
                         answered = true

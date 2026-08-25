@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -35,7 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.CompositionLocalProvider
 
 private enum class ReadingMode { LETTERS, NUMBERS, WORDS }
-private enum class LetterForm { INITIAL, MEDIAL, FINAL }
+private enum class ReadingLetterForm { INITIAL, MEDIAL, FINAL }
 private data class StrokeLine(val points: List<Offset>, val color: Color, val width: Float)
 
 private val readingArabicLetters = listOf(
@@ -58,7 +59,7 @@ internal fun ReadingScreen(
     soundsEnabled: () -> Boolean = { true }
 ) {
     var mode by remember { mutableStateOf(ReadingMode.LETTERS) }
-    var form by remember { mutableStateOf(LetterForm.INITIAL) }
+    var form by remember { mutableStateOf(ReadingLetterForm.INITIAL) }
     var index by remember { mutableIntStateOf(0) }
     var inkColor by remember { mutableStateOf(Color(0xFF3F51B5)) }
     var strokes by remember { mutableStateOf(emptyList<StrokeLine>()) }
@@ -82,8 +83,12 @@ internal fun ReadingScreen(
                 ReadingMode.NUMBERS -> audio.playRequired("ar_number_%03d".format(index + 1))
                 ReadingMode.WORDS -> {
                     val word = twoLetterQuestions[index % twoLetterQuestions.size]
-                    val names = word.map { ch -> readingArabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1) }
-                    if (names.all { it != null }) audio.playSequence(names.map { "ar_letter_%02d_sound".format(it!!) })
+                    val ids: List<Int> = word.mapNotNull { ch ->
+                        readingArabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1)
+                    }
+                    if (ids.size == word.length) {
+                        audio.playSequence(ids.map { id -> "ar_letter_%02d_sound".format(id) })
+                    }
                 }
             }
         }
@@ -139,9 +144,9 @@ internal fun ReadingScreen(
                 Spacer(Modifier.height(7.dp))
                 if (mode == ReadingMode.LETTERS) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        FormButton("أولي", form == LetterForm.INITIAL, Modifier.weight(1f)) { form = LetterForm.INITIAL; onTap() }
-                        FormButton("وسطي", form == LetterForm.MEDIAL, Modifier.weight(1f)) { form = LetterForm.MEDIAL; onTap() }
-                        FormButton("أخري", form == LetterForm.FINAL, Modifier.weight(1f)) { form = LetterForm.FINAL; onTap() }
+                        FormButton("أولي", form == ReadingLetterForm.INITIAL, Modifier.weight(1f)) { form = ReadingLetterForm.INITIAL; onTap() }
+                        FormButton("وسطي", form == ReadingLetterForm.MEDIAL, Modifier.weight(1f)) { form = ReadingLetterForm.MEDIAL; onTap() }
+                        FormButton("أخري", form == ReadingLetterForm.FINAL, Modifier.weight(1f)) { form = ReadingLetterForm.FINAL; onTap() }
                     }
                     Spacer(Modifier.height(6.dp))
                 }
@@ -169,7 +174,7 @@ internal fun ReadingScreen(
                             Modifier.fillMaxWidth().weight(.64f).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).border(2.dp, Color(0xFFE2EEF4), RoundedCornerShape(18.dp)).pointerInput(inkColor) {
                                 detectDragGestures(
                                     onDragStart = { point -> currentPoints = listOf(point) },
-                                    onDrag = { change, _ -> change.consume(); currentPoints = currentPoints + change.position },
+                                    onDrag = { change, _ -> change.consumePositionChange(); currentPoints = currentPoints + change.position },
                                     onDragEnd = { if (currentPoints.size > 1) strokes = strokes + StrokeLine(currentPoints, inkColor, 9f); currentPoints = emptyList() },
                                     onDragCancel = { currentPoints = emptyList() }
                                 )
@@ -199,8 +204,12 @@ internal fun ReadingScreen(
                                 ReadingMode.NUMBERS -> audio.playRequired("ar_number_%03d".format(index + 1))
                                 ReadingMode.WORDS -> {
                                     val word = twoLetterQuestions[index % twoLetterQuestions.size]
-                                    val ids = word.map { arabicLetters.indexOf(it) + 1 }.filter { it > 0 }
-                                    audio.playSequence(ids.map { "ar_letter_%02d_sound".format(it) })
+                                    val ids: List<Int> = word.mapNotNull { ch ->
+                                        arabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1)
+                                    }
+                                    if (ids.size == word.length) {
+                                        audio.playSequence(ids.map { id -> "ar_letter_%02d_sound".format(id) })
+                                    }
                                 }
                             }
                         }; onTap()
@@ -212,7 +221,7 @@ internal fun ReadingScreen(
 }
 
 private fun displayTarget(mode: ReadingMode, index: Int, form: LetterForm): String = when (mode) {
-    ReadingMode.LETTERS -> when (form) { LetterForm.INITIAL -> initialForms[index]; LetterForm.MEDIAL -> medialForms[index]; LetterForm.FINAL -> finalForms[index] }
+    ReadingMode.LETTERS -> when (form) { ReadingLetterForm.INITIAL -> initialForms[index]; ReadingLetterForm.MEDIAL -> medialForms[index]; ReadingLetterForm.FINAL -> finalForms[index] }
     ReadingMode.NUMBERS -> arabicDigits(index + 1)
     ReadingMode.WORDS -> twoLetterQuestions[index % twoLetterQuestions.size]
 }

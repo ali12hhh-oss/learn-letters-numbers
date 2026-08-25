@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
 import androidx.compose.animation.core.*
@@ -29,79 +30,79 @@ private data class Lesson(
     val strokes: List<Stroke>
 )
 
-private fun stroke(vararg p: Offset) = Stroke(p.toList())
+private fun stroke(p: List<Offset>) = Stroke(p)
 
 private val arLessons = listOf(
-    Lesson("ا", "الألف", "ar", listOf(stroke(Offset(.50f,.15f), Offset(.50f,.85f)))),
+    Lesson("ا", "الألف", "ar", listOf(stroke(listOf(Offset(.50f,.15f), Offset(.50f,.85f))))),
     Lesson("ب", "الباء", "ar", listOf(
-        stroke(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f)),
+        stroke(listOf(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f))),
         stroke(Offset(.50f,.73f))
     )),
     Lesson("ت", "التاء", "ar", listOf(
-        stroke(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f)),
+        stroke(listOf(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f))),
         stroke(Offset(.45f,.28f)), stroke(Offset(.55f,.28f))
     )),
     Lesson("ث", "الثاء", "ar", listOf(
-        stroke(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f)),
+        stroke(listOf(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f))),
         stroke(Offset(.42f,.28f)), stroke(Offset(.50f,.24f)), stroke(Offset(.58f,.28f))
     )),
     Lesson("ج", "الجيم", "ar", listOf(
-        stroke(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f)),
+        stroke(listOf(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f))),
         stroke(Offset(.50f,.82f))
     )),
     Lesson("ح", "الحاء", "ar", listOf(
-        stroke(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f))
+        stroke(listOf(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f)))
     )),
     Lesson("خ", "الخاء", "ar", listOf(
-        stroke(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f)),
+        stroke(listOf(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f))),
         stroke(Offset(.50f,.25f))
     ))
 )
 
 private val enLessons = listOf(
     Lesson("A a", "A / a", "en", listOf(
-        stroke(Offset(.50f,.12f), Offset(.30f,.86f)),
-        stroke(Offset(.50f,.12f), Offset(.70f,.86f)),
-        stroke(Offset(.38f,.58f), Offset(.62f,.58f))
+        stroke(listOf(Offset(.50f,.12f), Offset(.30f,.86f))),
+        stroke(listOf(Offset(.50f,.12f), Offset(.70f,.86f))),
+        stroke(listOf(Offset(.38f,.58f), Offset(.62f,.58f)))
     )),
     Lesson("B b", "B / b", "en", listOf(
-        stroke(Offset(.35f,.12f), Offset(.35f,.88f)),
-        stroke(Offset(.35f,.15f), Offset(.62f,.25f), Offset(.38f,.50f)),
-        stroke(Offset(.38f,.50f), Offset(.64f,.62f), Offset(.35f,.86f))
+        stroke(listOf(Offset(.35f,.12f), Offset(.35f,.88f))),
+        stroke(listOf(Offset(.35f,.15f), Offset(.62f,.25f), Offset(.38f,.50f))),
+        stroke(listOf(Offset(.38f,.50f), Offset(.64f,.62f), Offset(.35f,.86f)))
     )),
     Lesson("C c", "C / c", "en", listOf(
-        stroke(Offset(.68f,.24f), Offset(.55f,.14f), Offset(.35f,.20f), Offset(.25f,.50f), Offset(.35f,.80f), Offset(.55f,.86f), Offset(.68f,.76f))
+        stroke(listOf(Offset(.68f,.24f), Offset(.55f,.14f), Offset(.35f,.20f), Offset(.25f,.50f), Offset(.35f,.80f), Offset(.55f,.86f), Offset(.68f,.76f)))
     )),
     Lesson("D d", "D / d", "en", listOf(
-        stroke(Offset(.35f,.12f), Offset(.35f,.88f)),
-        stroke(Offset(.35f,.14f), Offset(.62f,.22f), Offset(.70f,.50f), Offset(.62f,.78f), Offset(.35f,.86f))
+        stroke(listOf(Offset(.35f,.12f), Offset(.35f,.88f))),
+        stroke(listOf(Offset(.35f,.14f), Offset(.62f,.22f), Offset(.70f,.50f), Offset(.62f,.78f), Offset(.35f,.86f)))
     )),
     Lesson("E e", "E / e", "en", listOf(
-        stroke(Offset(.68f,.14f), Offset(.34f,.14f), Offset(.34f,.86f), Offset(.68f,.86f)),
-        stroke(Offset(.34f,.50f), Offset(.60f,.50f))
+        stroke(listOf(Offset(.68f,.14f), Offset(.34f,.14f), Offset(.34f,.86f), Offset(.68f,.86f))),
+        stroke(listOf(Offset(.34f,.50f), Offset(.60f,.50f)))
     )),
     Lesson("F f", "F / f", "en", listOf(
-        stroke(Offset(.68f,.14f), Offset(.34f,.14f), Offset(.34f,.86f)),
-        stroke(Offset(.34f,.50f), Offset(.60f,.50f))
+        stroke(listOf(Offset(.68f,.14f), Offset(.34f,.14f), Offset(.34f,.86f))),
+        stroke(listOf(Offset(.34f,.50f), Offset(.60f,.50f)))
     )),
     Lesson("G g", "G / g", "en", listOf(
-        stroke(Offset(.68f,.24f), Offset(.55f,.14f), Offset(.35f,.20f), Offset(.25f,.50f), Offset(.35f,.80f), Offset(.58f,.84f), Offset(.70f,.70f)),
-        stroke(Offset(.70f,.70f), Offset(.50f,.70f))
+        stroke(listOf(Offset(.68f,.24f), Offset(.55f,.14f), Offset(.35f,.20f), Offset(.25f,.50f), Offset(.35f,.80f), Offset(.58f,.84f), Offset(.70f,.70f))),
+        stroke(listOf(Offset(.70f,.70f), Offset(.50f,.70f)))
     ))
 )
 
 private val digits = (0..9).map { n ->
     val shapes = when(n) {
-        0 -> listOf(stroke(Offset(.50f,.15f),Offset(.32f,.28f),Offset(.30f,.65f),Offset(.50f,.85f),Offset(.68f,.65f),Offset(.68f,.28f),Offset(.50f,.15f)))
-        1 -> listOf(stroke(Offset(.42f,.30f),Offset(.50f,.18f),Offset(.50f,.84f)))
-        2 -> listOf(stroke(Offset(.32f,.30f),Offset(.45f,.17f),Offset(.67f,.28f),Offset(.32f,.84f),Offset(.68f,.84f)))
-        3 -> listOf(stroke(Offset(.32f,.22f),Offset(.62f,.18f),Offset(.68f,.45f),Offset(.48f,.50f),Offset(.68f,.55f),Offset(.62f,.84f),Offset(.32f,.80f)))
-        4 -> listOf(stroke(Offset(.60f,.15f),Offset(.30f,.60f),Offset(.72f,.60f)),stroke(Offset(.60f,.15f),Offset(.60f,.86f)))
-        5 -> listOf(stroke(Offset(.68f,.16f),Offset(.34f,.16f),Offset(.32f,.50f),Offset(.62f,.50f),Offset(.70f,.62f),Offset(.62f,.84f),Offset(.32f,.82f)))
-        6 -> listOf(stroke(Offset(.65f,.18f),Offset(.40f,.16f),Offset(.30f,.50f),Offset(.38f,.82f),Offset(.62f,.84f),Offset(.70f,.65f),Offset(.62f,.50f),Offset(.32f,.52f)))
-        7 -> listOf(stroke(Offset(.30f,.16f),Offset(.70f,.16f),Offset(.42f,.86f)))
-        8 -> listOf(stroke(Offset(.50f,.50f),Offset(.32f,.34f),Offset(.38f,.16f),Offset(.62f,.16f),Offset(.68f,.34f),Offset(.50f,.50f),Offset(.32f,.66f),Offset(.38f,.84f),Offset(.62f,.84f),Offset(.68f,.66f),Offset(.50f,.50f)))
-        else -> listOf(stroke(Offset(.68f,.50f),Offset(.58f,.18f),Offset(.35f,.18f),Offset(.30f,.50f),Offset(.38f,.65f),Offset(.62f,.65f),Offset(.68f,.82f),Offset(.30f,.82f)))
+        0 -> listOf(stroke(listOf(Offset(.50f,.15f),Offset(.32f,.28f),Offset(.30f,.65f),Offset(.50f,.85f),Offset(.68f,.65f),Offset(.68f,.28f),Offset(.50f,.15f))))
+        1 -> listOf(stroke(listOf(Offset(.42f,.30f),Offset(.50f,.18f),Offset(.50f,.84f))))
+        2 -> listOf(stroke(listOf(Offset(.32f,.30f),Offset(.45f,.17f),Offset(.67f,.28f),Offset(.32f,.84f),Offset(.68f,.84f))))
+        3 -> listOf(stroke(listOf(Offset(.32f,.22f),Offset(.62f,.18f),Offset(.68f,.45f),Offset(.48f,.50f),Offset(.68f,.55f),Offset(.62f,.84f),Offset(.32f,.80f))))
+        4 -> listOf(stroke(listOf(Offset(.60f,.15f),Offset(.30f,.60f),Offset(.72f,.60f))),stroke(listOf(Offset(.60f,.15f),Offset(.60f,.86f))))
+        5 -> listOf(stroke(listOf(Offset(.68f,.16f),Offset(.34f,.16f),Offset(.32f,.50f),Offset(.62f,.50f),Offset(.70f,.62f),Offset(.62f,.84f),Offset(.32f,.82f))))
+        6 -> listOf(stroke(listOf(Offset(.65f,.18f),Offset(.40f,.16f),Offset(.30f,.50f),Offset(.38f,.82f),Offset(.62f,.84f),Offset(.70f,.65f),Offset(.62f,.50f),Offset(.32f,.52f))))
+        7 -> listOf(stroke(listOf(Offset(.30f,.16f),Offset(.70f,.16f),Offset(.42f,.86f))))
+        8 -> listOf(stroke(listOf(Offset(.50f,.50f),Offset(.32f,.34f),Offset(.38f,.16f),Offset(.62f,.16f),Offset(.68f,.34f),Offset(.50f,.50f),Offset(.32f,.66f),Offset(.38f,.84f),Offset(.62f,.84f),Offset(.68f,.66f),Offset(.50f,.50f))))
+        else -> listOf(stroke(listOf(Offset(.68f,.50f),Offset(.58f,.18f),Offset(.35f,.18f),Offset(.30f,.50f),Offset(.38f,.65f),Offset(.62f,.65f),Offset(.68f,.82f),Offset(.30f,.82f))))
     }
     Lesson(n.toString(), n.toString(), "en", shapes)
 }
@@ -192,7 +193,7 @@ private fun StrokeCanvas(lesson: Lesson, replay: Int) {
     }
 
     Canvas(
-        Modifier.fillMaxWidth().weight(1f).background(Color(0xFFF3F7FF))
+        Modifier.fillMaxWidth().height(220.dp).background(Color(0xFFF3F7FF))
     ) {
         val w = size.width
         val h = size.height

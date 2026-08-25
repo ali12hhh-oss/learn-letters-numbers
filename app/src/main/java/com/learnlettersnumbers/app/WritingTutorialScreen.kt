@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
 import androidx.compose.animation.core.*
@@ -156,11 +157,11 @@ fun WritingTutorialScreen(
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
-                    Modifier.weight(1f),
+                    modifier = Modifier.weight(1f),
                     onClick = { mode = "letters"; replayKey++ }
                 ) { Text(if (language == "ar") "الحروف" else "Letters") }
                 Button(
-                    Modifier.weight(1f),
+                    modifier = Modifier.weight(1f),
                     onClick = { mode = "numbers"; replayKey++ }
                 ) { Text(if (language == "ar") "الأرقام" else "Numbers") }
             }
@@ -200,19 +201,19 @@ fun WritingTutorialScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    Modifier.weight(1f),
+                    modifier = Modifier.weight(1f),
                     enabled = index > 0,
                     onClick = { index-- }
                 ) { Text("السابق") }
                 Button(
-                    Modifier.weight(1f),
+                    modifier = Modifier.weight(1f),
                     onClick = {
                         replayKey++
                         speak(item.instruction, item.language)
                     }
                 ) { Text("🔊 أعد الشرح") }
                 Button(
-                    Modifier.weight(1f),
+                    modifier = Modifier.weight(1f),
                     enabled = index < steps.lastIndex,
                     onClick = { index++ }
                 ) { Text("التالي") }

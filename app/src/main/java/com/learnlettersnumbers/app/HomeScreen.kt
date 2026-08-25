@@ -131,7 +131,7 @@ fun HomeSection(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { avatar = "boy"; ChildProfileRepository.saveAvatar(avatar) }, modifier = Modifier.weight(1f)) { Text("👦 طالب") }
                         OutlinedButton(onClick = { avatar = "girl"; ChildProfileRepository.saveAvatar(avatar) }, modifier = Modifier.weight(1f)) { Text("👧 طالبة") }
-                        OutlinedButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.weight(1f)) { Text("📷 من الجهاز") }
+                        OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) { Text("📷 من الجهاز") }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = { ChildProfileRepository.markPromptSeen(); showProfile = false }) { Text("تخطي") }

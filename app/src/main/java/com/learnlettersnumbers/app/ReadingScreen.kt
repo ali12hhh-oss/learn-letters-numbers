@@ -59,7 +59,7 @@ internal fun ReadingScreen(
     soundsEnabled: () -> Boolean = { true }
 ) {
     var mode by remember { mutableStateOf(ReadingMode.LETTERS) }
-    var form by remember { mutableStateOf(ReadingReadingLetterForm.INITIAL) }
+    var form by remember { mutableStateOf(ReadingLetterForm.INITIAL) }
     var index by remember { mutableIntStateOf(0) }
     var inkColor by remember { mutableStateOf(Color(0xFF3F51B5)) }
     var strokes by remember { mutableStateOf(emptyList<StrokeLine>()) }
@@ -145,9 +145,9 @@ internal fun ReadingScreen(
                 Spacer(Modifier.height(7.dp))
                 if (mode == ReadingMode.LETTERS) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        FormButton("أولي", form == ReadingReadingLetterForm.INITIAL, Modifier.weight(1f)) { form = ReadingReadingLetterForm.INITIAL; onTap() }
-                        FormButton("وسطي", form == ReadingReadingLetterForm.MEDIAL, Modifier.weight(1f)) { form = ReadingReadingLetterForm.MEDIAL; onTap() }
-                        FormButton("أخري", form == ReadingReadingLetterForm.FINAL, Modifier.weight(1f)) { form = ReadingReadingLetterForm.FINAL; onTap() }
+                        FormButton("أولي", form == ReadingLetterForm.INITIAL, Modifier.weight(1f)) { form = ReadingLetterForm.INITIAL; onTap() }
+                        FormButton("وسطي", form == ReadingLetterForm.MEDIAL, Modifier.weight(1f)) { form = ReadingLetterForm.MEDIAL; onTap() }
+                        FormButton("أخري", form == ReadingLetterForm.FINAL, Modifier.weight(1f)) { form = ReadingLetterForm.FINAL; onTap() }
                     }
                     Spacer(Modifier.height(6.dp))
                 }
@@ -223,7 +223,7 @@ internal fun ReadingScreen(
 }
 
 private fun displayTarget(mode: ReadingMode, index: Int, form: ReadingLetterForm): String = when (mode) {
-    ReadingMode.LETTERS -> when (form) { ReadingReadingLetterForm.INITIAL -> initialForms[index]; ReadingReadingLetterForm.MEDIAL -> medialForms[index]; ReadingReadingLetterForm.FINAL -> finalForms[index] }
+    ReadingMode.LETTERS -> when (form) { ReadingLetterForm.INITIAL -> initialForms[index]; ReadingLetterForm.MEDIAL -> medialForms[index]; ReadingLetterForm.FINAL -> finalForms[index] }
     ReadingMode.NUMBERS -> arabicDigits(index + 1)
     ReadingMode.WORDS -> twoLetterQuestions[index % twoLetterQuestions.size]
 }

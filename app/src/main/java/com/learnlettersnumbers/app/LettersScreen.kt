@@ -85,7 +85,7 @@ internal fun LettersScreen(
 ) {
     var mode by remember { mutableStateOf(LetterMode.FORMS) }
     var index by remember { mutableIntStateOf(0) }
-    var form by remember { mutableStateOf(ArabicArabicLetterForm.INITIAL) }
+    var form by remember { mutableStateOf(ArabicLetterForm.INITIAL) }
     var vowel by remember { mutableStateOf(Vowel.FATHA) }
     var showMessage by remember { mutableStateOf(true) }
     val current = arabicLetters[index]
@@ -112,7 +112,7 @@ internal fun LettersScreen(
                 modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .85f), RoundedCornerShape(20.dp)).padding(6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ModeButton("الحروف", mode == LetterMode.FORMS, Modifier.weight(1f)) { mode = LetterMode.FORMS; form = ArabicArabicLetterForm.INITIAL; onTap() }
+                ModeButton("الحروف", mode == LetterMode.FORMS, Modifier.weight(1f)) { mode = LetterMode.FORMS; form = ArabicLetterForm.INITIAL; onTap() }
                 ModeButton("الحركات", mode == LetterMode.VOWELS, Modifier.weight(1f)) { mode = LetterMode.VOWELS; vowel = Vowel.FATHA; onTap() }
             }
 
@@ -141,9 +141,9 @@ internal fun LettersScreen(
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 if (mode == LetterMode.FORMS) {
-                    FormButton("أولي", form == ArabicArabicLetterForm.INITIAL) { form = ArabicArabicLetterForm.INITIAL; onTap() }
-                    FormButton("وسطي", form == ArabicArabicLetterForm.MEDIAL) { form = ArabicArabicLetterForm.MEDIAL; onTap() }
-                    FormButton("أخري", form == ArabicArabicLetterForm.FINAL) { form = ArabicArabicLetterForm.FINAL; onTap() }
+                    FormButton("أولي", form == ArabicLetterForm.INITIAL) { form = ArabicLetterForm.INITIAL; onTap() }
+                    FormButton("وسطي", form == ArabicLetterForm.MEDIAL) { form = ArabicLetterForm.MEDIAL; onTap() }
+                    FormButton("أخري", form == ArabicLetterForm.FINAL) { form = ArabicLetterForm.FINAL; onTap() }
                 } else {
                     FormButton("فتحة", vowel == Vowel.FATHA) { vowel = Vowel.FATHA; onTap() }
                     FormButton("ضمة", vowel == Vowel.DAMMA) { vowel = Vowel.DAMMA; onTap() }

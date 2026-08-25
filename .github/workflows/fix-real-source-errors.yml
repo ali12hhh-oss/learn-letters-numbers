@@ -1,0 +1,49 @@
+name: Fix Real Source Errors
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fix source code directly
+        shell: bash
+        run: |
+          set -euo pipefail
+          letters="app/src/main/java/com/learnlettersnumbers/app/LettersScreen.kt"
+          reading="app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt"
+
+          # Fix the actual enum references in the source file.
+          sed -i 's/ArabicArabicLetterForm/ArabicLetterForm/g' "$letters"
+
+          # The two-letter reading strings are iterated as Char values, while
+          # the letter catalog stores String values. Convert the Char explicitly.
+          sed -i 's/readingArabicLetters\.indexOf(ch)/readingArabicLetters.indexOf(ch.toString())/g' "$reading"
+
+          # The main Arabic letter catalog contains ArabicLetter objects, so
+          # resolve by the object's letter field rather than List.indexOf(Char).
+          sed -i 's/arabicLetters\.indexOf(ch)/arabicLetters.indexOfFirst { it.letter == ch.toString() }/g' "$reading"
+
+          # Leave the project fail-fast: verify there are no malformed names left.
+          if grep -R "ArabicArabicLetterForm" -n app/src/main/java; then
+            echo "Malformed ArabicLetterForm reference remains"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$letters" "$reading"
+          git commit -m "Fix real Kotlin source errors in letters and reading"
+
+          # Remove this one-time workflow from the repository in the same commit.
+          rm .github/workflows/fix-real-source-errors.yml
+          git add .github/workflows/fix-real-source-errors.yml
+          git commit --amend --no-edit
+          git push

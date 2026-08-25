@@ -1,6 +1,8 @@
 name: Generate Gradle Wrapper
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -32,5 +34,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
-          git diff --cached --quiet || git commit -m "Add Gradle 8.13 wrapper"
-          git push
+          if git diff --cached --quiet; then
+            echo "Gradle wrapper is already up to date."
+          else
+            git commit -m "Add Gradle 8.13 wrapper"
+            git push
+          fi

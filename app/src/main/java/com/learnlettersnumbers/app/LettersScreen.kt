@@ -1,6 +1,5 @@
 package com.learnlettersnumbers.app
 
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -99,7 +98,7 @@ internal fun LettersScreen(
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
-        BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = { onBack(); onTap() }, shape = RoundedCornerShape(18.dp)) { Text("رجوع") }
@@ -269,4 +268,3 @@ private fun playArabicVowelSound(audio: LocalAudioManager, index: Int, vowel: Vo
     val suffix = when (vowel) { Vowel.FATHA -> 1; Vowel.DAMMA -> 2; Vowel.KASRA -> 3 }
     audio.playRequired("ar_letter_%02d_vowel_%d".format(index, suffix))
 }
-

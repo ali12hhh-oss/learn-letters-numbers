@@ -1,0 +1,65 @@
+name: One-time Source Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply exact source fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          base = Path('app/src/main/java/com/learnlettersnumbers/app')
+
+          letters = base / 'LettersScreen.kt'
+          s = letters.read_text(encoding='utf-8')
+          s = s.replace('ArabicArabicLetterForm', 'ArabicLetterForm')
+          if s.count('ArabicArabicLetterForm') != 0:
+              raise SystemExit('Malformed ArabicLetterForm references remain')
+          letters.write_text(s, encoding='utf-8')
+
+          reading = base / 'ReadingScreen.kt'
+          s = reading.read_text(encoding='utf-8')
+          s = s.replace('ReadingReadingLetterForm', 'ReadingLetterForm')
+
+          old = '''val ids: List<Int> = word.mapNotNull { ch ->\n                        readingArabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1)\n                    }'''
+          new = '''val ids: List<Int> = word.map { ch ->\n                        readingArabicLetters.indexOf(ch) + 1\n                    }'''
+          s = s.replace(old, new)
+
+          old = '''val ids: List<Int> = word.mapNotNull { ch ->\n                                        arabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1)\n                                    }'''
+          new = '''val ids: List<Int> = word.map { ch ->\n                                        arabicLetters.indexOf(ch) + 1\n                                    }'''
+          s = s.replace(old, new)
+
+          # Make the repeated audio block deterministic and type-safe without changing its behavior.
+          s = s.replace(
+              'val clips: List<String> = ids.map { id: Int -> "ar_letter_%02d_sound".format(id) }',
+              'val clips: List<String> = ids.map { id -> "ar_letter_%02d_sound".format(id) }'
+          )
+          s = s.replace('ReadingReadingLetterForm', 'ReadingLetterForm')
+          reading.write_text(s, encoding='utf-8')
+
+          # Remove this one-time workflow after applying the source fixes.
+          Path('.github/workflows/one-time-source-fix.yml').unlink()
+
+      - name: Verify exact fixes
+        shell: bash
+        run: |
+          ! grep -R "ArabicArabicLetterForm\|ReadingReadingLetterForm" app/src/main/java/com/learnlettersnumbers/app
+          grep -R "val ids: List<Int> = word.map" -n app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt
+
+      - name: Commit direct source fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/learnlettersnumbers/app/LettersScreen.kt app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt .github/workflows/one-time-source-fix.yml
+          git commit -m "Fix remaining Kotlin source errors"
+          git push origin main

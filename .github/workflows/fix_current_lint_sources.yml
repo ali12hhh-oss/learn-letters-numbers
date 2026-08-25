@@ -1,0 +1,100 @@
+name: Fix current lint sources
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply verified source fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          fixes = {
+              'app/src/main/java/com/learnlettersnumbers/app/LettersScreen.kt': [
+                  ('BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {',
+                   'Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {'),
+              ],
+              'app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt': [
+                  ('import androidx.compose.ui.input.pointer.consumePositionChange',
+                   'import androidx.compose.ui.input.pointer.consume'),
+                  ('change.consumePositionChange()', 'change.consume()'),
+              ],
+              'app/src/main/java/com/learnlettersnumbers/app/StagesScreen.kt': [
+                  ('import androidx.compose.material.icons.filled.ArrowBack',
+                   'import androidx.compose.material.icons.automirrored.filled.ArrowBack'),
+                  ('Icons.Default.ArrowBack', 'Icons.AutoMirrored.Filled.ArrowBack'),
+              ],
+              'app/src/main/java/com/learnlettersnumbers/app/WritingStrokeLessonScreen.kt': [
+                  ('import androidx.compose.material.icons.filled.ArrowBack',
+                   'import androidx.compose.material.icons.automirrored.filled.ArrowBack'),
+                  ('Icons.Default.ArrowBack', 'Icons.AutoMirrored.Filled.ArrowBack'),
+              ],
+              'app/src/main/java/com/learnlettersnumbers/app/WritingTutorialScreen.kt': [
+                  ('import androidx.compose.material.icons.filled.ArrowBack',
+                   'import androidx.compose.material.icons.automirrored.filled.ArrowBack'),
+                  ('Icons.Default.ArrowBack', 'Icons.AutoMirrored.Filled.ArrowBack'),
+              ],
+          }
+
+          for name, replacements in fixes.items():
+              p = Path(name)
+              text = p.read_text(encoding='utf-8')
+              original = text
+              for old, new in replacements:
+                  if old not in text:
+                      raise SystemExit(f'Expected source pattern not found: {name}: {old}')
+                  text = text.replace(old, new)
+              if text == original:
+                  raise SystemExit(f'No source change produced for {name}')
+              p.write_text(text, encoding='utf-8')
+
+          # Verify the exact intended changes before saving the commit.
+          checks = {
+              'app/src/main/java/com/learnlettersnumbers/app/LettersScreen.kt': 'BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {',
+              'app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt': 'consumePositionChange',
+              'app/src/main/java/com/learnlettersnumbers/app/StagesScreen.kt': 'Icons.Default.ArrowBack',
+              'app/src/main/java/com/learnlettersnumbers/app/WritingStrokeLessonScreen.kt': 'Icons.Default.ArrowBack',
+              'app/src/main/java/com/learnlettersnumbers/app/WritingTutorialScreen.kt': 'Icons.Default.ArrowBack',
+          }
+          for name, forbidden in checks.items():
+              if forbidden in Path(name).read_text(encoding='utf-8'):
+                  raise SystemExit(f'Forbidden old source pattern remains: {name}: {forbidden}')
+
+      - name: Validate source diff
+        shell: bash
+        run: |
+          git diff --check
+          git diff -- app/src/main/java/com/learnlettersnumbers/app/LettersScreen.kt \
+            app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt \
+            app/src/main/java/com/learnlettersnumbers/app/StagesScreen.kt \
+            app/src/main/java/com/learnlettersnumbers/app/WritingStrokeLessonScreen.kt \
+            app/src/main/java/com/learnlettersnumbers/app/WritingTutorialScreen.kt
+
+      - name: Commit source fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/learnlettersnumbers/app/LettersScreen.kt \
+            app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt \
+            app/src/main/java/com/learnlettersnumbers/app/StagesScreen.kt \
+            app/src/main/java/com/learnlettersnumbers/app/WritingStrokeLessonScreen.kt \
+            app/src/main/java/com/learnlettersnumbers/app/WritingTutorialScreen.kt
+          git commit -m "Fix verified lint warnings in source"
+          git push
+
+      - name: Remove one-time fixer
+        if: success()
+        shell: bash
+        run: |
+          git rm .github/workflows/fix_current_lint_sources.yml
+          git commit -m "Remove one-time lint fixer"
+          git push

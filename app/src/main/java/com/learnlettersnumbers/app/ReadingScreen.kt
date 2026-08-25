@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -59,7 +60,7 @@ internal fun ReadingScreen(
     soundsEnabled: () -> Boolean = { true }
 ) {
     var mode by remember { mutableStateOf(ReadingMode.LETTERS) }
-    var form by remember { mutableStateOf(ReadingLetterForm.INITIAL) }
+    var form by remember { mutableStateOf(ReadingReadingLetterForm.INITIAL) }
     var index by remember { mutableIntStateOf(0) }
     var inkColor by remember { mutableStateOf(Color(0xFF3F51B5)) }
     var strokes by remember { mutableStateOf(emptyList<StrokeLine>()) }
@@ -87,7 +88,8 @@ internal fun ReadingScreen(
                         readingArabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1)
                     }
                     if (ids.size == word.length) {
-                        audio.playSequence(ids.map { id -> "ar_letter_%02d_sound".format(id) })
+                        val clips: List<String> = ids.map { id: Int -> "ar_letter_%02d_sound".format(id) }
+                        audio.playSequence(clips)
                     }
                 }
             }
@@ -144,9 +146,9 @@ internal fun ReadingScreen(
                 Spacer(Modifier.height(7.dp))
                 if (mode == ReadingMode.LETTERS) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        FormButton("أولي", form == ReadingLetterForm.INITIAL, Modifier.weight(1f)) { form = ReadingLetterForm.INITIAL; onTap() }
-                        FormButton("وسطي", form == ReadingLetterForm.MEDIAL, Modifier.weight(1f)) { form = ReadingLetterForm.MEDIAL; onTap() }
-                        FormButton("أخري", form == ReadingLetterForm.FINAL, Modifier.weight(1f)) { form = ReadingLetterForm.FINAL; onTap() }
+                        FormButton("أولي", form == ReadingReadingLetterForm.INITIAL, Modifier.weight(1f)) { form = ReadingReadingLetterForm.INITIAL; onTap() }
+                        FormButton("وسطي", form == ReadingReadingLetterForm.MEDIAL, Modifier.weight(1f)) { form = ReadingReadingLetterForm.MEDIAL; onTap() }
+                        FormButton("أخري", form == ReadingReadingLetterForm.FINAL, Modifier.weight(1f)) { form = ReadingReadingLetterForm.FINAL; onTap() }
                     }
                     Spacer(Modifier.height(6.dp))
                 }
@@ -208,7 +210,8 @@ internal fun ReadingScreen(
                                         arabicLetters.indexOf(ch).takeIf { it >= 0 }?.plus(1)
                                     }
                                     if (ids.size == word.length) {
-                                        audio.playSequence(ids.map { id -> "ar_letter_%02d_sound".format(id) })
+                                        val clips: List<String> = ids.map { id: Int -> "ar_letter_%02d_sound".format(id) }
+                        audio.playSequence(clips)
                                     }
                                 }
                             }
@@ -220,8 +223,8 @@ internal fun ReadingScreen(
     }
 }
 
-private fun displayTarget(mode: ReadingMode, index: Int, form: LetterForm): String = when (mode) {
-    ReadingMode.LETTERS -> when (form) { ReadingLetterForm.INITIAL -> initialForms[index]; ReadingLetterForm.MEDIAL -> medialForms[index]; ReadingLetterForm.FINAL -> finalForms[index] }
+private fun displayTarget(mode: ReadingMode, index: Int, form: ReadingLetterForm): String = when (mode) {
+    ReadingMode.LETTERS -> when (form) { ReadingReadingLetterForm.INITIAL -> initialForms[index]; ReadingReadingLetterForm.MEDIAL -> medialForms[index]; ReadingReadingLetterForm.FINAL -> finalForms[index] }
     ReadingMode.NUMBERS -> arabicDigits(index + 1)
     ReadingMode.WORDS -> twoLetterQuestions[index % twoLetterQuestions.size]
 }

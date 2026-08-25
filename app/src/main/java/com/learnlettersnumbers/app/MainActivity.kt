@@ -315,8 +315,8 @@ class MainActivity : ComponentActivity() {
             }
 
             Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ModeButton("Letters", "الحروف", mode == "letters", Color(0xFF4C8BF5)) { mode = "letters"; index = 0; selectedCase = "upper" }
-                ModeButton("Numbers", "الأرقام", mode == "numbers", Color(0xFFFF8A4C)) { mode = "numbers"; index = 0 }
+                ModeButton("Letters", "الحروف", mode == "letters", Color(0xFF4C8BF5), Modifier.weight(1f)) { mode = "letters"; index = 0; selectedCase = "upper" }
+                ModeButton("Numbers", "الأرقام", mode == "numbers", Color(0xFFFF8A4C), Modifier.weight(1f)) { mode = "numbers"; index = 0 }
             }
 
             if (mode == "letters") {

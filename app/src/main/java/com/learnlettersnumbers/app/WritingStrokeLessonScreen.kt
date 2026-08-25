@@ -36,26 +36,26 @@ private val arLessons = listOf(
     Lesson("ا", "الألف", "ar", listOf(stroke(listOf(Offset(.50f,.15f), Offset(.50f,.85f))))),
     Lesson("ب", "الباء", "ar", listOf(
         stroke(listOf(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f))),
-        stroke(Offset(.50f,.73f))
+        stroke(listOf(Offset(.50f,.73f)))
     )),
     Lesson("ت", "التاء", "ar", listOf(
         stroke(listOf(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f))),
-        stroke(Offset(.45f,.28f)), stroke(Offset(.55f,.28f))
+        stroke(listOf(Offset(.45f,.28f))), stroke(listOf(Offset(.55f,.28f)))
     )),
     Lesson("ث", "الثاء", "ar", listOf(
         stroke(listOf(Offset(.72f,.45f), Offset(.60f,.58f), Offset(.42f,.62f), Offset(.28f,.48f))),
-        stroke(Offset(.42f,.28f)), stroke(Offset(.50f,.24f)), stroke(Offset(.58f,.28f))
+        stroke(listOf(Offset(.42f,.28f))), stroke(listOf(Offset(.50f,.24f))), stroke(listOf(Offset(.58f,.28f)))
     )),
     Lesson("ج", "الجيم", "ar", listOf(
         stroke(listOf(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f))),
-        stroke(Offset(.50f,.82f))
+        stroke(listOf(Offset(.50f,.82f)))
     )),
     Lesson("ح", "الحاء", "ar", listOf(
         stroke(listOf(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f)))
     )),
     Lesson("خ", "الخاء", "ar", listOf(
         stroke(listOf(Offset(.70f,.38f), Offset(.52f,.55f), Offset(.32f,.58f), Offset(.40f,.72f), Offset(.58f,.70f))),
-        stroke(Offset(.50f,.25f))
+        stroke(listOf(Offset(.50f,.25f)))
     ))
 )
 
@@ -174,9 +174,9 @@ fun WritingStrokeLessonScreen(
 
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(Modifier.weight(1f), enabled = index > 0, onClick = { index-- }) { Text("السابق") }
-                Button(Modifier.weight(1f), onClick = { replay++ }) { Text("🔊 أعد") }
-                Button(Modifier.weight(1f), enabled = index < lessons.lastIndex, onClick = { index++ }) { Text("التالي") }
+                OutlinedButton(modifier = Modifier.weight(1f), enabled = index > 0, onClick = { index-- }) { Text("السابق") }
+                Button(modifier = Modifier.weight(1f), onClick = { replay++ }) { Text("🔊 أعد") }
+                Button(modifier = Modifier.weight(1f), enabled = index < lessons.lastIndex, onClick = { index++ }) { Text("التالي") }
             }
         }
     }

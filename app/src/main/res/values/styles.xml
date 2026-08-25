@@ -1,0 +1,1 @@
+<resources><style name="Theme.LearnLettersNumbers" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:statusBarColor">#0875D8</item><item name="android:navigationBarColor">#62B95C</item></style></resources>

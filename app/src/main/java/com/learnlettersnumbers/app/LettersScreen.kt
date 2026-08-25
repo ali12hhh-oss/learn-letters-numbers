@@ -162,9 +162,9 @@ internal fun LettersScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     val shown = if (mode == LetterMode.FORMS) when(form) {
-                        ArabicArabicLetterForm.INITIAL -> current.initial
-                        ArabicArabicLetterForm.MEDIAL -> current.medial
-                        ArabicArabicLetterForm.FINAL -> current.final
+                        ArabicLetterForm.INITIAL -> current.initial
+                        ArabicLetterForm.MEDIAL -> current.medial
+                        ArabicLetterForm.FINAL -> current.final
                     } else addVowel(current.letter, vowel)
                     Text(shown, fontSize = 108.sp, fontWeight = FontWeight.ExtraBold, color = current.color)
                     Text(if (mode == LetterMode.FORMS) "صوت الحرف" else vowelName(vowel), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF155E8A))

@@ -59,7 +59,7 @@ internal fun ReadingScreen(
     soundsEnabled: () -> Boolean = { true }
 ) {
     var mode by remember { mutableStateOf(ReadingMode.LETTERS) }
-    var form by remember { mutableStateOf(ReadingLetterForm.INITIAL) }
+    var form by remember { mutableStateOf<ReadingLetterForm>(ReadingLetterForm.INITIAL) }
     var index by remember { mutableIntStateOf(0) }
     var inkColor by remember { mutableStateOf(Color(0xFF3F51B5)) }
     var strokes by remember { mutableStateOf(emptyList<StrokeLine>()) }

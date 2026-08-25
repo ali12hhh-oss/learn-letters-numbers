@@ -85,7 +85,7 @@ internal fun LettersScreen(
 ) {
     var mode by remember { mutableStateOf(LetterMode.FORMS) }
     var index by remember { mutableIntStateOf(0) }
-    var form by remember { mutableStateOf(ArabicLetterForm.INITIAL) }
+    var form by remember { mutableStateOf<ArabicLetterForm>(ArabicLetterForm.INITIAL) }
     var vowel by remember { mutableStateOf(Vowel.FATHA) }
     var showMessage by remember { mutableStateOf(true) }
     val current = arabicLetters[index]

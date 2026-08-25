@@ -22,11 +22,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
       - name: Set up Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -44,20 +39,6 @@ jobs:
               git commit -m "Add Gradle 8.13 wrapper"
               git push
             fi
-          fi
-
-      - name: Repair Kotlin compile errors
-        run: python3 tools/repair_compile_errors.py
-
-      - name: Persist source repairs
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java tools/repair_compile_errors.py
-          if ! git diff --cached --quiet; then
-            git commit -m "Fix Kotlin compile errors"
-            git push
           fi
 
       - name: Verify wrapper

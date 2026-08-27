@@ -1,26 +1,19 @@
 package com.learnlettersnumbers.app
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.BoxWithConstraints
 
 @Composable
 fun HomeSection(
@@ -35,88 +28,74 @@ fun HomeSection(
     onSettings: () -> Unit,
     speak: (String) -> Unit
 ) {
-    val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
-    val progressRepo = remember { ProgressRepository(context) }
     var childName by remember { mutableStateOf(ChildProfileRepository.loadName()) }
     var avatar by remember { mutableStateOf(ChildProfileRepository.loadAvatar()) }
     var showProfile by remember { mutableStateOf(!ChildProfileRepository.promptSeen()) }
+    var showLearnMenu by remember { mutableStateOf(false) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
             try {
-                context.contentResolver.takePersistableUriPermission(
-                    it,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
+                context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             } catch (_: SecurityException) { }
             avatar = it.toString()
             ChildProfileRepository.saveAvatar(avatar)
         }
     }
+
     LaunchedEffect(Unit) { speak("أهلاً بك في تطبيق تعلم الحروف والأرقام!") }
 
-    Column(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(colors.background, colors.surfaceVariant))).padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("تعلم الحروف والأرقام", fontSize = 27.sp, fontWeight = FontWeight.Black, color = colors.primary)
-                Text("تعلم • العب • اكتب • أنجز ⭐", fontSize = 15.sp, color = colors.onBackground)
-            }
-            TextButton(onClick = onSettings) { Text("⚙ الإعدادات") }
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val w = maxWidth
+            val h = maxHeight
+
+            Image(
+                painter = painterResource(R.drawable.home_screen),
+                contentDescription = "الصفحة الرئيسية",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds
+            )
+
+            HomeHotspot(Modifier.offset(x = w * 0.025f, y = h * 0.018f).size(w * 0.085f, h * 0.065f), onSettings)
+            HomeHotspot(Modifier.offset(x = w * 0.115f, y = h * 0.018f).size(w * 0.085f, h * 0.065f), onSettings)
+            HomeHotspot(Modifier.offset(x = w * 0.665f, y = h * 0.025f).size(w * 0.305f, h * 0.115f)) { showProfile = true }
+
+            // الصف الأول في الصورة: الألعاب، تدرب، تعلم، إنجازاتي.
+            HomeHotspot(Modifier.offset(x = w * 0.035f, y = h * 0.395f).size(w * 0.215f, h * 0.205f), onGames)
+            HomeHotspot(Modifier.offset(x = w * 0.295f, y = h * 0.395f).size(w * 0.215f, h * 0.205f), onTests)
+            HomeHotspot(Modifier.offset(x = w * 0.555f, y = h * 0.395f).size(w * 0.215f, h * 0.205f)) { showLearnMenu = true }
+            HomeHotspot(Modifier.offset(x = w * 0.805f, y = h * 0.395f).size(w * 0.17f, h * 0.205f), onProgress)
+
+            // الصف الثاني: القصص، الاختبارات، المتجر.
+            HomeHotspot(Modifier.offset(x = w * 0.035f, y = h * 0.635f).size(w * 0.325f, h * 0.205f), onStories)
+            HomeHotspot(Modifier.offset(x = w * 0.39f, y = h * 0.635f).size(w * 0.255f, h * 0.205f), onTests)
+            HomeHotspot(Modifier.offset(x = w * 0.675f, y = h * 0.635f).size(w * 0.30f, h * 0.205f), onRewards)
+
+            HomeHotspot(Modifier.offset(x = w * 0.735f, y = h * 0.835f).size(w * 0.215f, h * 0.075f), onProgress)
+
+            // شريط RTL كما في الصورة: المزيد، تقدمي، التعلم، الرئيسية؛ الرئيسية في أقصى اليمين.
+            HomeHotspot(Modifier.offset(x = w * 0.02f, y = h * 0.925f).size(w * 0.20f, h * 0.065f), onStages)
+            HomeHotspot(Modifier.offset(x = w * 0.255f, y = h * 0.925f).size(w * 0.20f, h * 0.065f), onProgress)
+            HomeHotspot(Modifier.offset(x = w * 0.49f, y = h * 0.925f).size(w * 0.20f, h * 0.065f)) { showLearnMenu = true }
+            HomeHotspot(Modifier.offset(x = w * 0.745f, y = h * 0.925f).size(w * 0.235f, h * 0.065f)) { }
         }
-        Spacer(Modifier.height(8.dp))
-        Card(
-            Modifier.fillMaxWidth().clickable { showProfile = true },
-            shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = colors.surface),
-            elevation = CardDefaults.cardElevation(7.dp)
-        ) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (avatar.startsWith("content://")) {
-                    AndroidView(
-                        factory = { context ->
-                            android.widget.ImageView(context).apply {
-                                scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
-                                setImageURI(android.net.Uri.parse(avatar))
-                            }
-                        },
-                        update = { it.setImageURI(android.net.Uri.parse(avatar)) },
-                        modifier = Modifier.size(62.dp)
-                    )
-                } else {
-                    val res = when (avatar) {
-                        "boy" -> R.drawable.student_boy_avatar
-                        "girl" -> R.drawable.student_girl_avatar
-                        else -> R.drawable.child_avatar
-                    }
-                    Image(painterResource(res), contentDescription = "صورة الطفل", modifier = Modifier.size(62.dp))
+    }
+
+    if (showLearnMenu) {
+        AlertDialog(
+            onDismissRequest = { showLearnMenu = false },
+            title = { Text("التعلّم") },
+            text = { Text("اختر اللغة التي تريد التعلّم بها") },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { showLearnMenu = false; onArabic() }) { Text("العربية") }
+                    Button(onClick = { showLearnMenu = false; onEnglish() }) { Text("English") }
                 }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(if (childName.isBlank()) "سجّل اسم الطفل" else "مرحباً $childName ${progressRepo.load().earnedTitles.firstOrNull()?.let { "• $it" } ?: "👋"}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("اضغط لتسجيل أو تغيير الاسم", fontSize = 13.sp)
-                }
             }
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            HomeCard("🇮🇶", "العربية", colors.primary, Modifier.weight(1f), onArabic)
-            HomeCard("🇬🇧", "English", colors.secondary, Modifier.weight(1f), onEnglish)
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HomeSmall("تقدمي", "📊", colors.tertiary, Modifier.weight(1f), onProgress)
-            HomeSmall("مكافأة", "🎁", colors.primary, Modifier.weight(1f), onRewards)
-            HomeSmall("اختبارات", "🎯", colors.secondary, Modifier.weight(1f), onTests)
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HomeSmall("قصص", "📚", Color(0xFF3BA99C), Modifier.weight(1f), onStories)
-            HomeSmall("ألعاب", "🎮", Color(0xFFE78AC3), Modifier.weight(1f), onGames)
-            HomeSmall("مراحل", "🏆", Color(0xFFE6A23C), Modifier.weight(1f), onStages)
-        }
+        )
     }
 
     if (showProfile) {
@@ -125,7 +104,7 @@ fun HomeSection(
             title = { Text("مرحباً بك 🌟") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("اكتب اسم الطفل، اختر صورة طالب أو طالبة، أو اختر صورة من الجهاز. يمكنك التغيير لاحقاً بالضغط على البطاقة.")
+                    Text("اكتب اسم الطفل، اختر صورة طالب أو طالبة، أو اختر صورة من الجهاز. يمكنك التغيير لاحقاً بالضغط على بطاقة الطفل.")
                     var draft by remember(childName) { mutableStateOf(childName) }
                     OutlinedTextField(value = draft, onValueChange = { draft = it }, label = { Text("اسم الطفل") }, singleLine = true)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -135,7 +114,13 @@ fun HomeSection(
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = { ChildProfileRepository.markPromptSeen(); showProfile = false }) { Text("تخطي") }
-                        Button(onClick = { ChildProfileRepository.saveName(draft.trim()); progressRepo.setChildName(draft.trim()); childName = draft.trim(); showProfile = false }) { Text("حفظ") }
+                        Button(onClick = {
+                            val savedName = draft.trim()
+                            ChildProfileRepository.saveName(savedName)
+                            ProgressRepository(context).setChildName(savedName)
+                            childName = savedName
+                            showProfile = false
+                        }) { Text("حفظ") }
                     }
                 }
             },
@@ -145,21 +130,6 @@ fun HomeSection(
 }
 
 @Composable
-private fun HomeCard(icon: String, title: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Card(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = color), elevation = CardDefaults.cardElevation(9.dp)) {
-        Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, fontSize = 42.sp)
-            Text(title, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black)
-        }
-    }
-}
-
-@Composable
-private fun HomeSmall(title: String, icon: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Card(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = color), elevation = CardDefaults.cardElevation(6.dp)) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, fontSize = 26.sp)
-            Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        }
-    }
+private fun HomeHotspot(modifier: Modifier, onClick: () -> Unit = {}) {
+    Box(modifier = modifier.clickable(onClick = onClick))
 }

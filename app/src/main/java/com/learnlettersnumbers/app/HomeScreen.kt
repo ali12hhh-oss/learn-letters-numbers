@@ -31,26 +31,21 @@ fun HomeSection(onArabic: () -> Unit,onEnglish: () -> Unit,onProgress: () -> Uni
     var childName by remember { mutableStateOf(ChildProfileRepository.loadName()) }
     var avatar by remember { mutableStateOf(ChildProfileRepository.loadAvatar()) }
     var showProfile by remember { mutableStateOf(!ChildProfileRepository.promptSeen()) }
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { try { context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: SecurityException) {}; avatar = it.toString(); ChildProfileRepository.saveAvatar(avatar) }
-    }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { avatar = it.toString(); ChildProfileRepository.saveAvatar(avatar) } }
     LaunchedEffect(Unit) { speak("أهلاً بك في تطبيق تعلم الحروف والأرقام!") }
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
         Box(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0879D1), Color(0xFF48C9F5), Color(0xFF8BD86B)))))
-            Image(painter = painterResource(R.drawable.home_background), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(painterResource(R.drawable.home_background), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { HomeRoundButton("⚙", "الإعدادات", Color(0xFF6D35C9), onSettings); HomeProfileCard(childName, avatar) { showProfile = true } }
                 Spacer(Modifier.height(8.dp))
-                Card(modifier = Modifier.fillMaxWidth(0.86f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .88f)), elevation = CardDefaults.cardElevation(8.dp)) { Column(Modifier.padding(horizontal = 18.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text("تعلم الحروف والأرقام", fontSize = 30.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF8A00), textAlign = TextAlign.Center); Text("تعلم • العب • اكتب • أنجز ⭐", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34526F), textAlign = TextAlign.Center) } }
+                Card(Modifier.fillMaxWidth(0.86f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .88f)), elevation = CardDefaults.cardElevation(8.dp)) { Column(Modifier.padding(horizontal = 18.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text("تعلم الحروف والأرقام", fontSize = 30.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF8A00), textAlign = TextAlign.Center); Text("تعلم • العب • اكتب • أنجز ⭐", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34526F), textAlign = TextAlign.Center) } }
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) { HomeLanguageCard(Modifier.weight(1f), R.drawable.arabic_card, "العربية", "حروف • أرقام • نطق\nألعاب • قصص • اختبارات", onArabic); HomeLanguageCard(Modifier.weight(1f), R.drawable.english_card, "English", "Letters • Numbers • Pronunciation\nGames • Stories • Tests", onEnglish) }
-                Spacer(Modifier.height(10.dp))
-                Text("اختر ما تريد أن تتعلمه", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, modifier = Modifier.background(Color(0xFF185B8E).copy(alpha = .72f), RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 5.dp))
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp)); Text("اختر ما تريد أن تتعلمه", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, modifier = Modifier.background(Color(0xFF185B8E).copy(alpha = .72f), RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 5.dp)); Spacer(Modifier.height(6.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) { HomeFeatureButton("📊", "تقدمي", Color(0xFF00AFAF), Modifier.weight(1f), onProgress); HomeFeatureButton("🎁", "مكافآت", Color(0xFF1777D3), Modifier.weight(1f), onRewards); HomeFeatureButton("📝", "اختبارات", Color(0xFFE88A19), Modifier.weight(1f), onTests); HomeFeatureButton("📖", "قصص", Color(0xFFD83B72), Modifier.weight(1f), onStories); HomeFeatureButton("🎮", "ألعاب", Color(0xFF4FAE32), Modifier.weight(1f), onGames); HomeFeatureButton("🏆", "المراحل", Color(0xFF6A35C5), Modifier.weight(1f), onStages) }
-                Spacer(Modifier.weight(1f))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) { Text("أحسنت! ⭐ استمر هكذا لتصبح الأفضل", modifier = Modifier.weight(1f).padding(horizontal = 8.dp).background(Color(0xFFFFE08A), RoundedCornerShape(20.dp)).padding(horizontal = 10.dp, vertical = 9.dp), color = Color(0xFFB83B28), fontSize = 16.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center); Spacer(Modifier.width(8.dp)); HomeRoundButton("🔊", "الصوت", Color(0xFF6531C5), onSettings) }
+                Spacer(Modifier.weight(1f)); Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) { Text("أحسنت! ⭐ استمر هكذا لتصبح الأفضل", modifier = Modifier.weight(1f).padding(horizontal = 8.dp).background(Color(0xFFFFE08A), RoundedCornerShape(20.dp)).padding(horizontal = 10.dp, vertical = 9.dp), color = Color(0xFFB83B28), fontSize = 16.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center); Spacer(Modifier.width(8.dp)); HomeRoundButton("🔊", "الصوت", Color(0xFF6531C5), onSettings) }
             }
         }
     }

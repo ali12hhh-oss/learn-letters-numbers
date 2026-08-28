@@ -1,0 +1,1 @@
+The GamesScreen compile failure is caused by unsupported Material icon references EmojiEvents and VolumeUp. Replace those references with text/emoji or supported icons, then remove this file.

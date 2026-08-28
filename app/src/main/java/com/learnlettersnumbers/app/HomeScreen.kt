@@ -1,6 +1,12 @@
 package com.learnlettersnumbers.app
 
+import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,16 +16,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun HomeSection(onArabic:()->Unit,onEnglish:()->Unit,onProgress:()->Unit,onRewards:()->Unit,onTests:()->Unit,onStories:()->Unit,onGames:()->Unit,onStages:()->Unit,onSettings:()->Unit,speak:(String)->Unit){
@@ -27,6 +39,12 @@ fun HomeSection(onArabic:()->Unit,onEnglish:()->Unit,onProgress:()->Unit,onRewar
     var childName by remember{mutableStateOf(ChildProfileRepository.loadName())}
     var avatar by remember{mutableStateOf(ChildProfileRepository.loadAvatar())}
     var showProfile by remember{mutableStateOf(!ChildProfileRepository.promptSeen())}
+    val galleryLauncher=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri: Uri? ->
+        if(uri!=null){
+            try{context.contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:SecurityException){}
+            avatar=uri.toString();ChildProfileRepository.saveAvatar(avatar)
+        }
+    }
     LaunchedEffect(Unit){speak("أهلاً بك في تطبيق تعلم الحروف والأرقام!")}
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides LayoutDirection.Rtl){
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF7ED6F7),Color(0xFFB9E8C7),Color(0xFFFFE6A8))))){
@@ -53,8 +71,52 @@ fun HomeSection(onArabic:()->Unit,onEnglish:()->Unit,onProgress:()->Unit,onRewar
         }
     }
     var draft by remember(childName){mutableStateOf(childName)}
-    if(showProfile)AlertDialog(onDismissRequest={if(childName.isNotBlank())showProfile=false},title={Text("مرحباً بك 🌟")},text={OutlinedTextField(value=draft,onValueChange={draft=it},label={Text("اسم الطفل")},singleLine=true,modifier=Modifier.fillMaxWidth())},confirmButton={Button(onClick={val n=draft.trim();ChildProfileRepository.saveName(n);ProgressRepository(context).setChildName(n);childName=n;ChildProfileRepository.markPromptSeen();showProfile=false}){Text("حفظ")}},dismissButton={TextButton(onClick={ChildProfileRepository.markPromptSeen();showProfile=false}){Text("تخطي")}},properties=DialogProperties(dismissOnBackPress=true,dismissOnClickOutside=childName.isNotBlank()))
+    if(showProfile){
+        ProfileEditorDialog(
+            name=draft,
+            avatar=avatar,
+            onNameChange={draft=it},
+            onBoy={avatar="boy";ChildProfileRepository.saveAvatar("boy")},
+            onGirl={avatar="girl";ChildProfileRepository.saveAvatar("girl")},
+            onGallery={galleryLauncher.launch(arrayOf("image/*"))},
+            onSave={val n=draft.trim();ChildProfileRepository.saveName(n);ProgressRepository(context).setChildName(n);childName=n;ChildProfileRepository.markPromptSeen();showProfile=false},
+            onSkip={ChildProfileRepository.markPromptSeen();showProfile=false},
+            canDismiss=childName.isNotBlank()
+        )
+    }
 }
+
+@Composable private fun ProfileEditorDialog(name:String,avatar:String,onNameChange:(String)->Unit,onBoy:()->Unit,onGirl:()->Unit,onGallery:()->Unit,onSave:()->Unit,onSkip:()->Unit,canDismiss:Boolean){
+    AlertDialog(onDismissRequest={if(canDismiss)onSkip()},title={Text("ملف الطفل",fontWeight=FontWeight.Black)},text={
+        Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.fillMaxWidth()){
+            Text("اختر صورة جميلة لطفلك",color=Color(0xFF35566F),fontSize=13.sp,fontWeight=FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
+            ProfileAvatarPreview(avatar)
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                AvatarChoice("ولد","boy",avatar,Color(0xFF2B82D7),onBoy,Modifier.weight(1f))
+                AvatarChoice("بنت","girl",avatar,Color(0xFFE65A9A),onGirl,Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick=onGallery,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp)){Text("اختيار صورة من الاستوديو 📷",fontWeight=FontWeight.Bold)}
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(value=name,onValueChange=onNameChange,label={Text("اسم الطفل")},singleLine=true,modifier=Modifier.fillMaxWidth())
+        }
+    },confirmButton={Button(onClick=onSave,shape=RoundedCornerShape(14.dp)){Text("حفظ الملف")}},dismissButton={TextButton(onClick=onSkip){Text("تخطي")}},properties=DialogProperties(dismissOnBackPress=canDismiss,dismissOnClickOutside=canDismiss))
+}
+
+@Composable private fun AvatarChoice(title:String,kind:String,current:String,color:Color,onClick:()->Unit,modifier:Modifier){
+    val selected=current==kind
+    Surface(modifier=modifier.clickable(onClick=onClick),shape=RoundedCornerShape(18.dp),color=if(selected)color.copy(alpha=.18f) else Color.Transparent,border=if(selected)androidx.compose.foundation.BorderStroke(2.dp,color) else null){
+        Column(Modifier.padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally){ProfileAvatarImage(kind,Modifier.size(54.dp));Text(title,fontSize=11.sp,fontWeight=FontWeight.Black,color=color)}
+    }
+}
+
+@Composable private fun ProfileAvatarPreview(avatar:String){Surface(Modifier.size(100.dp),CircleShape,color=Color.White,shadowElevation=10.dp){Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){if(avatar.startsWith("content://")){LocalAvatarImage(avatar,Modifier.fillMaxSize().clip(CircleShape))}else ProfileAvatarImage(if(avatar=="girl")"girl" else "boy",Modifier.size(88.dp))}}}
+
+@Composable private fun ProfileAvatarImage(kind:String,modifier:Modifier){Image(painter=painterResource(if(kind=="girl")R.drawable.avatar_girl else R.drawable.avatar_boy),contentDescription=if(kind=="girl")"صورة بنت" else "صورة ولد",modifier=modifier.clip(CircleShape))}
+
+@Composable private fun LocalAvatarImage(uriString:String,modifier:Modifier){val context=LocalContext.current;var bitmap by remember(uriString){mutableStateOf<ImageBitmap?>(null)};LaunchedEffect(uriString){bitmap=withContext(Dispatchers.IO){try{context.contentResolver.openInputStream(Uri.parse(uriString))?.use{BitmapFactory.decodeStream(it)?.asImageBitmap()}}catch(_:Exception){null}}};if(bitmap!=null)Image(bitmap=bitmap!!,contentDescription="صورة الطفل",modifier=modifier)else ProfileAvatarImage("boy",Modifier.size(88.dp))}
 
 @Composable private fun TitleBanner(){Surface(Modifier.fillMaxWidth(.86f),RoundedCornerShape(28.dp),color=Color.White.copy(alpha=.94f),shadowElevation=10.dp){Column(Modifier.padding(horizontal=12.dp,vertical=9.dp),horizontalAlignment=Alignment.CenterHorizontally){Text("تعلم الحروف والأرقام",fontSize=25.sp,fontWeight=FontWeight.Black,color=Color(0xFFEE8B00),textAlign=TextAlign.Center);Text("تعلّم • العب • اكتب • أنجز ⭐",fontSize=13.sp,fontWeight=FontWeight.Bold,color=Color(0xFF315271))}}}
 
@@ -64,4 +126,4 @@ fun HomeSection(onArabic:()->Unit,onEnglish:()->Unit,onProgress:()->Unit,onRewar
 
 @Composable private fun Icon3D(icon:String,title:String,color:Color,onClick:()->Unit){var pressed by remember{mutableStateOf(false)};val scale by animateFloatAsState(if(pressed).9f else 1f,label="icon");Column(horizontalAlignment=Alignment.CenterHorizontally){Surface(Modifier.size(56.dp).scale(scale).clickable{pressed=true;onClick();pressed=false},CircleShape,color=color,shadowElevation=10.dp){Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text(icon,fontSize=29.sp)}};Text(title,color=Color(0xFF234B63),fontSize=9.sp,fontWeight=FontWeight.Black)}}
 
-@Composable private fun ProfileCard(childName:String,avatar:String,onClick:()->Unit){Surface(Modifier.widthIn(max=215.dp).clickable(onClick=onClick),RoundedCornerShape(23.dp),color=Color(0xFFFFF0D2).copy(alpha=.97f),shadowElevation=9.dp){Row(Modifier.padding(7.dp),verticalAlignment=Alignment.CenterVertically){val res=when(avatar){"boy"->R.drawable.student_boy_avatar;"girl"->R.drawable.student_girl_avatar;else->R.drawable.child_avatar};androidx.compose.foundation.Image(painter=androidx.compose.ui.res.painterResource(res),contentDescription="صورة الطفل",modifier=Modifier.size(44.dp));Spacer(Modifier.width(6.dp));Column(horizontalAlignment=Alignment.End){Text(if(childName.isBlank())"مرحباً بك 🌟" else "مرحباً $childName",fontSize=15.sp,fontWeight=FontWeight.Black,color=Color(0xFF59331E));Text("اضغط لتعديل الملف ✎",fontSize=8.sp,color=Color(0xFF7D5737))}}}}
+@Composable private fun ProfileCard(childName:String,avatar:String,onClick:()->Unit){Surface(Modifier.widthIn(max=215.dp).clickable(onClick=onClick),RoundedCornerShape(23.dp),color=Color(0xFFFFF0D2).copy(alpha=.97f),shadowElevation=9.dp){Row(Modifier.padding(7.dp),verticalAlignment=Alignment.CenterVertically){if(avatar.startsWith("content://")){LocalAvatarImage(avatar,Modifier.size(50.dp).clip(CircleShape))}else ProfileAvatarImage(if(avatar=="girl")"girl" else "boy",Modifier.size(50.dp));Spacer(Modifier.width(8.dp));Column(horizontalAlignment=Alignment.End){Text(if(childName.isBlank())"مرحباً بك 🌟" else "مرحباً $childName",fontSize=15.sp,fontWeight=FontWeight.Black,color=Color(0xFF59331E));Text("اضغط لتعديل الملف ✎",fontSize=8.sp,color=Color(0xFF7D5737))}}}}

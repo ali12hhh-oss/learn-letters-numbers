@@ -86,7 +86,7 @@ internal fun ReadingScreen(
                     val ids: List<Int> = word.mapNotNull { ch ->
                         readingArabicLetters.indexOf(ch.toString()).takeIf { it >= 0 }?.plus(1)
                     }
-                    if (ids.size == word.length) {
+                    if (ids.all { it in 1..28 }) {
                         val clips: List<String> = ids.map { id: Int -> "ar_letter_%02d_sound".format(id) }
                         audio.playSequence(clips)
                     }
@@ -207,7 +207,7 @@ internal fun ReadingScreen(
                                     val ids: List<Int> = word.mapNotNull { ch ->
                                         arabicLetters.indexOfFirst { it.letter == ch.toString() }.takeIf { it >= 0 }?.plus(1)
                                     }
-                                    if (ids.size == word.length) {
+                                    if (ids.all { it in 1..28 }) {
                                         val clips: List<String> = ids.map { id: Int -> "ar_letter_%02d_sound".format(id) }
                                         audio.playSequence(clips)
                                     }

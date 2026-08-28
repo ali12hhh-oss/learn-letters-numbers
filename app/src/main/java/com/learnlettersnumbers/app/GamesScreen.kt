@@ -17,10 +17,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,7 +55,7 @@ private fun GameHubScreen(games: List<LearningGame>, onBack: () -> Unit, onGameS
     Scaffold(topBar = {
         TopAppBar(title = { Text("🎮 عالم الألعاب", fontWeight = FontWeight.ExtraBold) }, navigationIcon = {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") }
-        }, actions = { Icon(Icons.Default.EmojiEvents, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(12.dp)) })
+        }, actions = { Text("🏆", fontSize = 24.sp); Spacer(Modifier.width(12.dp)) })
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 14.dp)) {
             Spacer(Modifier.height(8.dp))
@@ -135,7 +132,7 @@ private fun GameQuestionPanel(game: LearningGame, question: RoundQuestion, onSpe
     Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = game.color.copy(alpha = .75f))) {
         Column(Modifier.fillMaxSize().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(game.icon, fontSize = 45.sp); Text(question.prompt, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-            if (game.id == "listen") { Spacer(Modifier.height(5.dp)); FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Icon(Icons.Default.VolumeUp, null); Spacer(Modifier.width(5.dp)); Text("استمع للسؤال") } }
+            if (game.id == "listen") { Spacer(Modifier.height(5.dp)); FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Text("🔊", fontSize = 20.sp); Spacer(Modifier.width(5.dp)); Text("استمع للسؤال") } }
         }
     }
 }

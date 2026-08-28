@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -27,9 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private data class LearningGame(val id: String, val title: String, val subtitle: String, val icon: String, val color: Color, val category: String)
-private val games = listOf(
-    LearningGame("match", "صائد الحروف", "اضغط على الحرف المطلوب", "🔤", Color(0xFFFFD166), "حروف"), LearningGame("number", "صيد الأرقام", "اعثر على الرقم الصحيح", "🎯", Color(0xFF8ED1FC), "أرقام"), LearningGame("memory", "ذاكرة الأبطال", "طابق الأزواج", "🧠", Color(0xFFCDB4DB), "حروف"), LearningGame("sort", "سباق الترتيب", "اختر الرقم الأصغر", "🏁", Color(0xFFA8E6CF), "أرقام"), LearningGame("word", "الكلمة السحرية", "أكمل الكلمة", "🪄", Color(0xFFFFAAA5), "قراءة"), LearningGame("listen", "اسمع واربح", "استمع واختر", "🔊", Color(0xFFFFD6A5), "حروف"), LearningGame("count", "مزرعة الأعداد", "عد النجوم", "🌟", Color(0xFFCAFFBF), "أرقام"), LearningGame("build", "صانع الكلمات", "كوّن الكلمة", "🧩", Color(0xFFFFC8DD), "قراءة"), LearningGame("quick", "التحدي الذهبي", "أسئلة متنوعة", "🏆", Color(0xFFFFE5B4), "متنوع"), LearningGame("shapes", "شكل الحرف", "تعرف على الحرف", "✏️", Color(0xFFBDE0FE), "حروف")
-)
+private val games = listOf(LearningGame("match", "صائد الحروف", "اضغط على الحرف المطلوب", "🔤", Color(0xFFFFD166), "حروف"), LearningGame("number", "صيد الأرقام", "اعثر على الرقم الصحيح", "🎯", Color(0xFF8ED1FC), "أرقام"), LearningGame("memory", "ذاكرة الأبطال", "طابق الأزواج", "🧠", Color(0xFFCDB4DB), "حروف"), LearningGame("sort", "سباق الترتيب", "اختر الرقم الأصغر", "🏁", Color(0xFFA8E6CF), "أرقام"), LearningGame("word", "الكلمة السحرية", "أكمل الكلمة", "🪄", Color(0xFFFFAAA5), "قراءة"), LearningGame("listen", "اسمع واربح", "استمع واختر", "🔊", Color(0xFFFFD6A5), "حروف"), LearningGame("count", "مزرعة الأعداد", "عد النجوم", "🌟", Color(0xFFCAFFBF), "أرقام"), LearningGame("build", "صانع الكلمات", "كوّن الكلمة", "🧩", Color(0xFFFFC8DD), "قراءة"), LearningGame("quick", "التحدي الذهبي", "أسئلة متنوعة", "🏆", Color(0xFFFFE5B4), "متنوع"), LearningGame("shapes", "شكل الحرف", "تعرف على الحرف", "✏️", Color(0xFFBDE0FE), "حروف"))
 
 @Composable
 fun GamesScreen(onBack: () -> Unit, repo: ProgressRepository, onSpeak: ((String, String) -> Unit)? = null) {

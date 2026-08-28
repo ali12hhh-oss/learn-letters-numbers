@@ -2,6 +2,9 @@ name: Direct Source Fix
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/direct-source-fix.yml'
 
 permissions:
   contents: write
@@ -37,12 +40,21 @@ jobs:
           s = s.replace("if (ids.size == word.length) {", "if (ids.all { it in 1..28 }) {")
           reading.write_text(s, encoding="utf-8")
 
+          games = Path("app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt")
+          s = games.read_text(encoding="utf-8")
+          s = s.replace('import androidx.compose.material.icons.filled.EmojiEvents\n', '')
+          s = s.replace('import androidx.compose.material.icons.filled.VolumeUp\n', '')
+          s = s.replace('import androidx.compose.material.icons.filled.CheckCircle\n', '')
+          s = s.replace('Icon(Icons.Default.EmojiEvents, null, tint = MaterialTheme.colorScheme.primary)', 'Text("🏆", fontSize = 24.sp)')
+          s = s.replace('Icon(Icons.Default.VolumeUp, null)', 'Text("🔊", fontSize = 20.sp)')
+          games.write_text(s, encoding="utf-8")
+
       - name: Commit source fixes
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/learnlettersnumbers/app/LettersScreen.kt app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt
+          git add app/src/main/java/com/learnlettersnumbers/app/LettersScreen.kt app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
           if git diff --cached --quiet; then
             echo "No source changes were needed"
             exit 0

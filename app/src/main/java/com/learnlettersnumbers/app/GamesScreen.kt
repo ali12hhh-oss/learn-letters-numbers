@@ -45,8 +45,7 @@ private val games = listOf(
 @Composable
 fun GamesScreen(onBack: () -> Unit, repo: ProgressRepository, onSpeak: ((String, String) -> Unit)? = null) {
     var selected by remember { mutableStateOf<LearningGame?>(null) }
-    if (selected == null) GameHubScreen(onBack) { selected = it }
-    else ProfessionalGameScreen(selected!!, { selected = null }, repo, onSpeak)
+    if (selected == null) GameHubScreen(onBack) { selected = it } else ProfessionalGameScreen(selected!!, { selected = null }, repo, onSpeak)
 }
 
 @Composable private fun GameHubScreen(onBack: () -> Unit, onGameSelected: (LearningGame) -> Unit) {
@@ -67,79 +66,39 @@ fun GamesScreen(onBack: () -> Unit, repo: ProgressRepository, onSpeak: ((String,
 
 private data class RoundQuestion(val prompt: String, val options: List<String>, val answer: String, val spoken: String = prompt)
 private fun questionFor(game: LearningGame, index: Int): RoundQuestion {
-    val letters = listOf("أ", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ر", "س")
+    val letters = listOf("أ", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ر", "س", "ش", "ص", "ض", "ط", "ظ", "ع", "غ", "ف", "ق", "ك", "ل", "م", "ن", "ه", "و", "ي")
+    val level = index / 3
     return when (game.id) {
-        "match" -> { val a = letters[index % 10]; RoundQuestion("اضغط على الحرف: $a", listOf(a, letters[(index + 2) % 10], letters[(index + 5) % 10], letters[(index + 7) % 10]).shuffled(), a) }
-        "number" -> { val a = ((index * 3) % 9 + 1).toString(); RoundQuestion("اعثر على الرقم $a", listOf(a, "${(index + 2) % 9 + 1}", "${(index + 4) % 9 + 1}", "${(index + 6) % 9 + 1}").distinct().shuffled(), a) }
-        "sort" -> { val base = index % 5 + 1; RoundQuestion("ما الرقم الأصغر؟", listOf(base + 3, base + 1, base + 4, base).map(Int::toString).shuffled(), base.toString()) }
-        "word" -> { val d = listOf("ب_ب" to "ا", "ك_ب" to "ت", "ق_م" to "ل", "م_رس" to "د", "س_مك" to "م"); val (p, a) = d[index % d.size]; RoundQuestion("أكمل الكلمة: $p", listOf(a, "ب", "ن", "س").shuffled(), a) }
-        "listen" -> { val d = listOf("أ" to "ألف", "ب" to "باء", "ت" to "تاء", "ج" to "جيم", "م" to "ميم"); val (a, n) = d[index % d.size]; RoundQuestion("استمع ثم اختر الحرف", listOf(a, "د", "س", "ك").shuffled(), a, n) }
-        "count" -> { val a = index % 7 + 2; RoundQuestion("كم نجمة؟", listOf(a, a + 1, a - 1, 9).map(Int::toString).distinct().shuffled(), a.toString()) }
-        "build" -> { val d = listOf("ب + ا" to "با", "م + ا" to "ما", "د + ا" to "دا", "ل + ا" to "لا", "س + ا" to "سا"); val (p, a) = d[index % d.size]; RoundQuestion("كوّن: $p", listOf(a, "بو", "مي", "دو").shuffled(), a) }
-        "shapes" -> { val a = letters[(index + 1) % 10]; RoundQuestion("أي حرف تراه هنا؟", listOf(a, letters[(index + 3) % 10], letters[(index + 6) % 10], letters[(index + 8) % 10]).shuffled(), a) }
-        else -> { val a = index % 8 + 1; RoundQuestion("$a + 1 = ؟", listOf(a + 1, a, a + 2, 9).map(Int::toString).distinct().shuffled(), (a + 1).toString()) }
+        "match" -> { val a = letters[index % letters.size]; RoundQuestion("اضغط على الحرف: $a", listOf(a, letters[(index + 2 + level) % letters.size], letters[(index + 5 + level) % letters.size], letters[(index + 7 + level) % letters.size]).shuffled(), a) }
+        "number" -> { val max = 9 + level * 5; val a = ((index * 3) % max + 1).toString(); RoundQuestion("اعثر على الرقم $a", listOf(a, (a.toInt() + 2).toString(), (a.toInt() + 4).toString(), (a.toInt() + 6).coerceAtMost(99).toString()).distinct().shuffled(), a) }
+        "sort" -> { val base = index % (5 + level) + 1; RoundQuestion("ما الرقم الأصغر؟", listOf(base + 3 + level, base + 1, base + 4 + level, base).map(Int::toString).shuffled(), base.toString()) }
+        "word" -> { val d = listOf("ب_ب" to "ا", "ك_ب" to "ت", "ق_م" to "ل", "م_رس" to "د", "س_مك" to "م", "ك_تاب" to "ت"); val (p, a) = d[index % d.size]; RoundQuestion("أكمل الكلمة: $p", listOf(a, "ب", "ن", "س").shuffled(), a) }
+        "listen" -> { val d = listOf("أ" to "ألف", "ب" to "باء", "ت" to "تاء", "ج" to "جيم", "م" to "ميم", "س" to "سين"); val (a, n) = d[index % d.size]; RoundQuestion("استمع ثم اختر الحرف", listOf(a, "د", "س", "ك").shuffled(), a, n) }
+        "count" -> { val a = index % (7 + level * 2) + 2; RoundQuestion("كم نجمة؟", listOf(a, a + 1, a - 1, a + 2).map(Int::toString).distinct().shuffled(), a.toString()) }
+        "build" -> { val d = listOf("ب + ا" to "با", "م + ا" to "ما", "د + ا" to "دا", "ل + ا" to "لا", "س + ا" to "سا", "ك + ا" to "كا"); val (p, a) = d[index % d.size]; RoundQuestion("كوّن: $p", listOf(a, "بو", "مي", "دو").shuffled(), a) }
+        "shapes" -> { val a = letters[(index + 1 + level) % letters.size]; RoundQuestion("أي حرف تراه هنا؟", listOf(a, letters[(index + 3 + level) % letters.size], letters[(index + 6 + level) % letters.size], letters[(index + 8 + level) % letters.size]).shuffled(), a) }
+        "memory" -> { val a = letters[(index * 2 + level) % letters.size]; RoundQuestion("تذكّر الحرف ثم اختره: $a", listOf(a, letters[(index + 4) % letters.size], letters[(index + 9) % letters.size], letters[(index + 13) % letters.size]).shuffled(), a) }
+        else -> { val a = index % (8 + level * 2) + 1; RoundQuestion("$a + ${level + 1} = ؟", listOf(a + level + 1, a, a + level + 2, 9 + level).map(Int::toString).distinct().shuffled(), (a + level + 1).toString()) }
     }
 }
 
 @Composable private fun ProfessionalGameScreen(game: LearningGame, onBack: () -> Unit, repo: ProgressRepository, onSpeak: ((String, String) -> Unit)?) {
-    var round by remember { mutableStateOf(0) }
-    var score by remember { mutableStateOf(0) }
-    var streak by remember { mutableStateOf(0) }
-    var bestStreak by remember { mutableStateOf(0) }
-    var lives by remember { mutableStateOf(3) }
-    var timeLeft by remember { mutableStateOf(15) }
-    var answered by remember { mutableStateOf(false) }
-    var selected by remember { mutableStateOf<String?>(null) }
-    var finished by remember { mutableStateOf(false) }
-    var timedOut by remember { mutableStateOf(false) }
-    val total = 10
-    val question = questionFor(game, round)
-    val progress = ((round + if (answered) 1 else 0).toFloat() / total).coerceIn(0f, 1f)
-
-    LaunchedEffect(round, answered, finished) {
-        if (!answered && !finished) {
-            timeLeft = 15
-            while (timeLeft > 0 && !answered && !finished) { delay(1000); timeLeft-- }
-            if (timeLeft == 0 && !answered && !finished) {
-                timedOut = true; answered = true; selected = null; lives--; streak = 0; repo.recordAnswer(false); onSpeak?.invoke("انتهى الوقت، حاول مرة أخرى", "ar")
-            }
-        }
-    }
-
+    var round by remember { mutableStateOf(0) }; var score by remember { mutableStateOf(0) }; var streak by remember { mutableStateOf(0) }; var bestStreak by remember { mutableStateOf(0) }; var lives by remember { mutableStateOf(3) }; var timeLeft by remember { mutableStateOf(15) }; var answered by remember { mutableStateOf(false) }; var selected by remember { mutableStateOf<String?>(null) }; var finished by remember { mutableStateOf(false) }; var timedOut by remember { mutableStateOf(false) }
+    val total = 10; val question = questionFor(game, round); val progress = ((round + if (answered) 1 else 0).toFloat() / total).coerceIn(0f, 1f)
+    LaunchedEffect(round, answered, finished) { if (!answered && !finished) { timeLeft = (15 - (round / 3)).coerceAtLeast(8); while (timeLeft > 0 && !answered && !finished) { delay(1000); timeLeft-- }; if (timeLeft == 0 && !answered && !finished) { timedOut = true; answered = true; selected = null; lives--; streak = 0; repo.recordAnswer(false); onSpeak?.invoke("انتهى الوقت، حاول مرة أخرى", "ar") } } }
     if (finished) { GameResultScreen(game, score, bestStreak, onBack) { round = 0; score = 0; streak = 0; bestStreak = 0; lives = 3; timeLeft = 15; answered = false; selected = null; timedOut = false; finished = false }; return }
     Scaffold(topBar = { TopAppBar(title = { Text(game.title, fontWeight = FontWeight.Bold) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") } }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("${round + 1}/$total", fontWeight = FontWeight.Bold); Spacer(Modifier.width(8.dp)); LinearProgressIndicator(progress = { progress }, Modifier.weight(1f).height(9.dp)); Spacer(Modifier.width(8.dp)); Text("⭐ $score", fontWeight = FontWeight.Bold) }
-            Spacer(Modifier.height(7.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(if (streak >= 2) "🔥 سلسلة ×$streak" else "ابدأ سلسلة!", fontWeight = FontWeight.Bold)
-                Text("⏱ $timeLeft", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                Row { repeat(3) { i -> Icon(Icons.Default.Favorite, null, tint = if (i < lives) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.size(22.dp)) } }
-            }
+            Spacer(Modifier.height(7.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(if (streak >= 2) "🔥 سلسلة ×$streak" else "ابدأ سلسلة!", fontWeight = FontWeight.Bold); Text("⏱ $timeLeft", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold); Row { repeat(3) { i -> Icon(Icons.Default.Favorite, null, tint = if (i < lives) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.size(22.dp)) } } }
             Spacer(Modifier.height(8.dp)); if (game.id == "count") CountChallenge(round) else GameQuestionPanel(game, question, onSpeak); Spacer(Modifier.height(14.dp))
-            question.options.forEach { option ->
-                AnswerButton(option, !answered, selected == option, answered && option == question.answer, answered && selected == option && option != question.answer) {
-                    selected = option; answered = true; val correct = option == question.answer; repo.recordAnswer(correct)
-                    if (correct) { val gained = 1 + streak.coerceAtMost(4); score += gained; streak++; bestStreak = maxOf(bestStreak, streak); repo.addStars(gained); onSpeak?.invoke("أحسنت! إجابة صحيحة", "ar") }
-                    else { lives--; streak = 0; onSpeak?.invoke("حاول مرة أخرى، أنت تستطيع", "ar") }
-                }; Spacer(Modifier.height(7.dp))
-            }
-            AnimatedVisibility(answered, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (timedOut) "⏰ انتهى الوقت! الإجابة: ${question.answer}" else if (selected == question.answer) "رائع! +${1 + (streak - 1).coerceAtLeast(0).coerceAtMost(4)} ⭐" else "الإجابة الصحيحة: ${question.answer}", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.height(7.dp)); Button(onClick = { timedOut = false; if (round + 1 >= total || lives <= 0) finished = true else { round++; answered = false; selected = null } }) { Text(if (round + 1 >= total || lives <= 0) "عرض النتيجة 🏆" else "السؤال التالي ➜") }
-                }
-            }
+            question.options.forEach { option -> AnswerButton(option, !answered, selected == option, answered && option == question.answer, answered && selected == option && option != question.answer) { selected = option; answered = true; val correct = option == question.answer; repo.recordAnswer(correct); if (correct) { val gained = 1 + streak.coerceAtMost(4); score += gained; streak++; bestStreak = maxOf(bestStreak, streak); repo.addStars(gained); onSpeak?.invoke("أحسنت! إجابة صحيحة", "ar") } else { lives--; streak = 0; onSpeak?.invoke("حاول مرة أخرى، أنت تستطيع", "ar") } }; Spacer(Modifier.height(7.dp)) }
+            AnimatedVisibility(answered, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(if (timedOut) "⏰ انتهى الوقت! الإجابة: ${question.answer}" else if (selected == question.answer) "رائع! +${1 + (streak - 1).coerceAtLeast(0).coerceAtMost(4)} ⭐" else "الإجابة الصحيحة: ${question.answer}", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold); Spacer(Modifier.height(7.dp)); Button(onClick = { timedOut = false; if (round + 1 >= total || lives <= 0) finished = true else { round++; answered = false; selected = null } }) { Text(if (round + 1 >= total || lives <= 0) "عرض النتيجة 🏆" else "السؤال التالي ➜") } } }
         }
     }
 }
 
-@Composable private fun GameQuestionPanel(game: LearningGame, question: RoundQuestion, onSpeak: ((String, String) -> Unit)?) {
-    Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = game.color.copy(alpha = .75f))) { Column(Modifier.fillMaxSize().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text(game.icon, fontSize = 45.sp); Text(question.prompt, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold); if (game.id == "listen") { Spacer(Modifier.height(5.dp)); FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Text("🔊 استمع للسؤال") } } } }
-}
-
+@Composable private fun GameQuestionPanel(game: LearningGame, question: RoundQuestion, onSpeak: ((String, String) -> Unit)?) { Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = game.color.copy(alpha = .75f))) { Column(Modifier.fillMaxSize().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text(game.icon, fontSize = 45.sp); Text(question.prompt, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold); if (game.id == "listen") { Spacer(Modifier.height(5.dp)); FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Text("🔊 استمع للسؤال") } } } } }
 @Composable private fun CountChallenge(round: Int) { val count = round % 7 + 2; Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFCAFFBF).copy(alpha = .8f))) { Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text("عد النجوم", fontSize = 22.sp, fontWeight = FontWeight.Bold); Row { repeat(count) { Text("⭐", fontSize = 28.sp) } }; Text("كم عددها؟", fontSize = 18.sp, fontWeight = FontWeight.Bold) } } }
-
 @Composable private fun AnswerButton(text: String, enabled: Boolean, selected: Boolean, correct: Boolean, wrong: Boolean, onClick: () -> Unit) { val scale by animateFloatAsState(if (selected) .97f else 1f, tween(120), label = "answerScale"); val bg = when { correct -> Color(0xFF8BE28B); wrong -> Color(0xFFFF9A9A); else -> MaterialTheme.colorScheme.surface }; Surface(Modifier.fillMaxWidth().height(52.dp).scale(scale).clickable(enabled = enabled, onClick = onClick), shape = RoundedCornerShape(18.dp), color = bg, tonalElevation = 3.dp) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text, fontSize = 20.sp, fontWeight = FontWeight.Bold) } } }
-
 @Composable private fun GameResultScreen(game: LearningGame, score: Int, bestStreak: Int, onBack: () -> Unit, onReplay: () -> Unit) { Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text("🏆", fontSize = 80.sp); Text("انتهت اللعبة!", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold); Text(game.title, fontSize = 21.sp); Spacer(Modifier.height(8.dp)); Text("النتيجة: ⭐ $score", fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("أفضل سلسلة: 🔥 $bestStreak", fontSize = 18.sp); Spacer(Modifier.height(20.dp)); Button(onClick = onReplay, modifier = Modifier.fillMaxWidth()) { Text("العب مرة أخرى") }; OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("العودة للألعاب") } } }

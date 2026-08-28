@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
 import androidx.compose.animation.AnimatedContent
@@ -19,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -256,7 +257,7 @@ private fun GamePlayScreen(game: LearningGame, onBack: () -> Unit, repo: Progres
                 Column(Modifier.fillMaxWidth().padding(20.dp),horizontalAlignment=Alignment.CenterHorizontally){
                     Canvas(Modifier.size(110.dp)){drawGameIllustration(game.kind,game.accent)}
                     Spacer(Modifier.height(8.dp));Text(question.prompt,fontSize=25.sp,fontWeight=FontWeight.ExtraBold,textAlign=TextAlign.Center)
-                    Spacer(Modifier.height(10.dp));FilledTonalButton(onClick={onSpeak?.invoke(question.speech,"ar")}){Icon(Icons.Default.VolumeUp,null);Spacer(Modifier.width(7.dp));Text("اسمع السؤال")}
+                    Spacer(Modifier.height(10.dp));FilledTonalButton(onClick={onSpeak?.invoke(question.speech,"ar")}){Icon(Icons.Default.PlayArrow,null);Spacer(Modifier.width(7.dp));Text("اسمع السؤال")}
                     Spacer(Modifier.height(14.dp))
                     question.options.forEach{option->AnswerButton(option,option==question.answer,selectedAnswer,answered,game.accent){if(!answered){selectedAnswer=option;answered=true;val correct=option==question.answer;repo.recordAnswer(correct);if(correct){score++;repo.addStars(1);success=true;onSpeak?.invoke("أحسنت! إجابة رائعة","ar")}else{success=false;onSpeak?.invoke("حاول مرة أخرى، أنت تستطيع","ar")}}}}
                 }

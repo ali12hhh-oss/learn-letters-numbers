@@ -26,19 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun InteractiveMemoryBoard(
-    values: List<String>,
-    opened: Set<Int>,
-    matched: Set<Int>,
-    enabled: Boolean = true,
-    onCardClick: (Int) -> Unit
-) {
+fun InteractiveMemoryBoard(values: List<String>, opened: Set<Int>, matched: Set<Int>, enabled: Boolean = true, onCardClick: (Int) -> Unit) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(if (values.size <= 6) 3 else 4),
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         itemsIndexed(values) { index, value ->
             val faceUp = index in opened || index in matched
@@ -50,8 +42,8 @@ fun InteractiveMemoryBoard(
                 elevation = CardDefaults.cardElevation(if (faceUp) 8.dp else 3.dp)
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    AnimatedContent(faceUp, label = "memory_face") {
-                        Text(if (it) value else "؟", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                    AnimatedContent(targetState = faceUp, label = "memory_face") { visible ->
+                        Text(if (visible) value else "؟", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
@@ -63,17 +55,16 @@ fun InteractiveMemoryBoard(
 fun DraggableNumberCard(number: Int, onDropped: () -> Unit, modifier: Modifier = Modifier) {
     var dragging by remember { mutableStateOf(false) }
     Card(
-        modifier = modifier
-            .size(68.dp)
-            .pointerInput(number) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { dragging = true },
-                    onDragEnd = { dragging = false; onDropped() },
-                    onDragCancel = { dragging = false }
-                ) { change, dragAmount -> change.consume() },
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = if (dragging) Color(0xFFFFD166) else Color.White),
-                elevation = CardDefaults.cardElevation(if (dragging) 10.dp else 4.dp)
+        modifier = modifier.size(68.dp).pointerInput(number) {
+            detectDragGesturesAfterLongPress(
+                onDragStart = { dragging = true },
+                onDragEnd = { dragging = false; onDropped() },
+                onDragCancel = { dragging = false }
+            ) { change, _ -> change.consume() }
+        },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = if (dragging) Color(0xFFFFD166) else Color.White),
+        elevation = CardDefaults.cardElevation(if (dragging) 10.dp else 4.dp)
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(number.toString(), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
@@ -83,12 +74,7 @@ fun DraggableNumberCard(number: Int, onDropped: () -> Unit, modifier: Modifier =
 
 @Composable
 fun GameRoundBanner(title: String, subtitle: String) {
-    Box(
-        Modifier.fillMaxWidth().background(
-            Brush.horizontalGradient(listOf(Color(0xFF5B8DEF), Color(0xFF8B6CF6))),
-            RoundedCornerShape(24.dp)
-        ).padding(18.dp)
-    ) {
+    Box(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF5B8DEF), Color(0xFF8B6CF6))), RoundedCornerShape(24.dp)).padding(18.dp)) {
         Column {
             Text(title, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
             Spacer(Modifier.height(4.dp))

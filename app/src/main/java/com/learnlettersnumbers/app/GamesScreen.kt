@@ -52,24 +52,17 @@ fun GamesScreen(onBack: () -> Unit, repo: ProgressRepository, onSpeak: ((String,
 
 @Composable
 private fun GameHubScreen(games: List<LearningGame>, onBack: () -> Unit, onGameSelected: (LearningGame) -> Unit) {
-    Scaffold(topBar = {
-        TopAppBar(title = { Text("🎮 عالم الألعاب", fontWeight = FontWeight.ExtraBold) }, navigationIcon = {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") }
-        }, actions = { Text("🏆", fontSize = 24.sp); Spacer(Modifier.width(12.dp)) })
-    }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("🎮 عالم الألعاب", fontWeight = FontWeight.ExtraBold) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") } }, actions = { Text("🏆", fontSize = 24.sp); Spacer(Modifier.width(12.dp)) }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 14.dp)) {
             Spacer(Modifier.height(8.dp))
             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(Modifier.padding(20.dp)) {
                     Text("مستعد للتحدي؟ 🚀", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.height(5.dp))
-                    Text("اختر لعبة، اجمع النجوم، وافتح طريقك نحو لقب البطل!", fontSize = 15.sp)
+                    Spacer(Modifier.height(5.dp)); Text("اختر لعبة، اجمع النجوم، وافتح طريقك نحو لقب البطل!", fontSize = 15.sp)
                 }
             }
             Spacer(Modifier.height(14.dp)); Text("الألعاب", fontSize = 22.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
-            LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(games, key = { it.id }) { game -> GameCard(game) { onGameSelected(game) } }
-            }
+            LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { items(games, key = { it.id }) { game -> GameCard(game) { onGameSelected(game) } } }
         }
     }
 }
@@ -80,8 +73,7 @@ private fun GameCard(game: LearningGame, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (pressed) .96f else 1f, tween(100), label = "gameCardScale")
     Card(Modifier.fillMaxWidth().height(174.dp).scale(scale).clickable { pressed = true; onClick(); pressed = false }, shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = game.color), elevation = CardDefaults.cardElevation(7.dp)) {
         Column(Modifier.fillMaxSize().padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(game.icon, fontSize = 45.sp); Spacer(Modifier.height(4.dp)); Text(game.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold); Text(game.subtitle, fontSize = 12.sp); Spacer(Modifier.height(6.dp))
-            Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = .45f)) { Text(game.category, Modifier.padding(horizontal = 10.dp, vertical = 3.dp), fontSize = 11.sp) }
+            Text(game.icon, fontSize = 45.sp); Spacer(Modifier.height(4.dp)); Text(game.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold); Text(game.subtitle, fontSize = 12.sp); Spacer(Modifier.height(6.dp)); Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = .45f)) { Text(game.category, Modifier.padding(horizontal = 10.dp, vertical = 3.dp), fontSize = 11.sp) }
         }
     }
 }
@@ -120,45 +112,32 @@ private fun ProfessionalGameScreen(game: LearningGame, onBack: () -> Unit, repo:
                     else { lives--; streak = 0; onSpeak?.invoke("حاول مرة أخرى، أنت تستطيع 💪", "ar") }
                 }; Spacer(Modifier.height(7.dp))
             }
-            AnimatedVisibility(answered, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) { Spacer(Modifier.height(5.dp)); Text(if (selected == question.answer) "رائع! إجابة صحيحة ⭐" else "الإجابة الصحيحة: ${question.answer}", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold); Spacer(Modifier.height(7.dp)); Button(onClick = { if (round + 1 >= total || lives <= 0) finished = true else { round++; answered = false; selected = null } }) { Text(if (round + 1 >= total || lives <= 0) "عرض النتيجة 🏆" else "السؤال التالي ➜") } }
-            }
+            AnimatedVisibility(answered, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Spacer(Modifier.height(5.dp)); Text(if (selected == question.answer) "رائع! إجابة صحيحة ⭐" else "الإجابة الصحيحة: ${question.answer}", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold); Spacer(Modifier.height(7.dp)); Button(onClick = { if (round + 1 >= total || lives <= 0) finished = true else { round++; answered = false; selected = null } }) { Text(if (round + 1 >= total || lives <= 0) "عرض النتيجة 🏆" else "السؤال التالي ➜") } } }
         }
     }
 }
 
 @Composable
 private fun GameQuestionPanel(game: LearningGame, question: RoundQuestion, onSpeak: ((String, String) -> Unit)?) {
-    Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = game.color.copy(alpha = .75f))) {
-        Column(Modifier.fillMaxSize().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(game.icon, fontSize = 45.sp); Text(question.prompt, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-            if (game.id == "listen") { Spacer(Modifier.height(5.dp)); FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Text("🔊", fontSize = 20.sp); Spacer(Modifier.width(5.dp)); Text("استمع للسؤال") } }
-        }
-    }
+    Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = game.color.copy(alpha = .75f))) { Column(Modifier.fillMaxSize().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text(game.icon, fontSize = 45.sp); Text(question.prompt, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold); if (game.id == "listen") { Spacer(Modifier.height(5.dp)); FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Text("🔊", fontSize = 20.sp); Spacer(Modifier.width(5.dp)); Text("استمع للسؤال") } } } }
 }
 
 @Composable
 private fun CountChallenge(round: Int) {
     val count = (round % 7) + 2
-    Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFCAFFBF).copy(alpha = .8f))) {
-        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text("عد النجوم", fontSize = 22.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(12.dp)); Row(horizontalArrangement = Arrangement.Center) { repeat(count) { Text("⭐", fontSize = 28.sp) } }; Spacer(Modifier.height(8.dp)); Text("كم عددها؟", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-    }
+    Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFCAFFBF).copy(alpha = .8f))) { Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text("عد النجوم", fontSize = 22.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(12.dp)); Row(horizontalArrangement = Arrangement.Center) { repeat(count) { Text("⭐", fontSize = 28.sp) } }; Spacer(Modifier.height(8.dp)); Text("كم عددها؟", fontSize = 18.sp, fontWeight = FontWeight.Bold) } }
 }
 
 @Composable
 private fun AnswerButton(text: String, enabled: Boolean, selected: Boolean, correct: Boolean, wrong: Boolean, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (selected) .97f else 1f, tween(120), label = "answerScale")
     val bg = when { correct -> Color(0xFF8BE28B); wrong -> Color(0xFFFF9A9A); else -> MaterialTheme.colorScheme.surface }
-    Surface(Modifier.fillMaxWidth().height(52.dp).scale(scale).clickable(enabled = enabled, onClick = onClick), shape = RoundedCornerShape(18.dp), color = bg, tonalElevation = 3.dp, shadowElevation = 2.dp) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) { Text(text, Modifier.weight(1f), fontSize = 20.sp, fontWeight = FontWeight.Bold); if (correct) Icon(Icons.Default.CheckCircle, null) }
-    }
+    Surface(Modifier.fillMaxWidth().height(52.dp).scale(scale).clickable(enabled = enabled, onClick = onClick), shape = RoundedCornerShape(18.dp), color = bg, tonalElevation = 3.dp, shadowElevation = 2.dp) { Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) { Text(text, Modifier.weight(1f), fontSize = 20.sp, fontWeight = FontWeight.Bold); if (correct) Icon(Icons.Default.CheckCircle, null) } }
 }
 
 @Composable
 private fun GameResultScreen(game: LearningGame, score: Int, streak: Int, onBack: () -> Unit, onReplay: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("🏆", fontSize = 90.sp); Text("انتهى التحدي!", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold); Spacer(Modifier.height(8.dp)); Text(game.title, fontSize = 20.sp); Spacer(Modifier.height(20.dp))
-        Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(25.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text("النتيجة", fontSize = 18.sp); Text("⭐ $score", fontSize = 44.sp, fontWeight = FontWeight.ExtraBold); Text("🔥 أفضل سلسلة: $streak", fontSize = 17.sp) } }
-        Spacer(Modifier.height(20.dp)); Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick = onBack) { Text("خروج") }; Button(onClick = onReplay) { Text("العب مرة أخرى 🔄") } }
-    }
+    Column(Modifier.fillMaxSize().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text("🏆", fontSize = 90.sp); Text("انتهى التحدي!", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold); Spacer(Modifier.height(8.dp)); Text(game.title, fontSize = 20.sp); Spacer(Modifier.height(20.dp)); Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(25.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text("النتيجة", fontSize = 18.sp); Text("⭐ $score", fontSize = 44.sp, fontWeight = FontWeight.ExtraBold); Text("🔥 أفضل سلسلة: $streak", fontSize = 17.sp) } }; Spacer(Modifier.height(20.dp)); Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick = onBack) { Text("خروج") }; Button(onClick = onReplay) { Text("العب مرة أخرى 🔄") } } }
 }
+
+// Material icon compatibility: use emoji for trophy/speaker UI; keep only icons available in the project's dependency set.

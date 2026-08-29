@@ -123,20 +123,6 @@ internal fun LettersScreen(
                 )
             }
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                modifier = Modifier.fillMaxWidth().height(112.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                items(arabicLetters) { l ->
-                    val i = arabicLetters.indexOf(l)
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        LetterDot(l.letter, i == index, l.color) { index = i; onTap() }
-                    }
-                }
-            }
-
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 if (mode == LetterMode.FORMS) {
@@ -173,6 +159,26 @@ internal fun LettersScreen(
                         shape = RoundedCornerShape(14.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
                     ) { Text("اسم الحرف", fontWeight = FontWeight.Bold) }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Button(
+                    onClick = { if (index > 0) { index--; onTap() } },
+                    enabled = index > 0,
+                    modifier = Modifier.weight(1f).height(58.dp),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Text("السابق", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Button(
+                    onClick = { if (index < arabicLetters.lastIndex) { index++; onTap() } },
+                    enabled = index < arabicLetters.lastIndex,
+                    modifier = Modifier.weight(1f).height(58.dp),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Text("التالي", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
 

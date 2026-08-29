@@ -501,7 +501,11 @@ private fun ProfessionalGameScreen(
         (
             round + if (answered) 1 else 0
         ).toFloat() / total
-            .coerceIn(0f, 1f)
+            val progress =
+    (
+        (round + if (answered) 1 else 0).toFloat() /
+            total.toFloat()
+    ).coerceIn(0f, 1f)
 
     LaunchedEffect(round, answered, finished, game.id) {
 

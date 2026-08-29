@@ -221,27 +221,65 @@ internal fun LettersScreen(
     }
 }
 
+private fun illustrationEmoji(item: String): String = when (item) {
+    "أسد" -> "🦁"
+    "بطة" -> "🦆"
+    "تفاحة" -> "🍎"
+    "ثعلب" -> "🦊"
+    "جمل" -> "🐪"
+    "حصان" -> "🐴"
+    "خوخ" -> "🍑"
+    "دب" -> "🐻"
+    "ذئب" -> "🐺"
+    "رمان" -> "🍎"
+    "زرافة" -> "🦒"
+    "سمكة" -> "🐟"
+    "شمام" -> "🍈"
+    "صقر" -> "🦅"
+    "ضفدع" -> "🐸"
+    "طاووس" -> "🦚"
+    "ظبي" -> "🦌"
+    "عنب" -> "🍇"
+    "غزال" -> "🦌"
+    "فراولة" -> "🍓"
+    "قرد" -> "🐒"
+    "كمثرى" -> "🍐"
+    "ليمون" -> "🍋"
+    "موز" -> "🍌"
+    "نحلة" -> "🐝"
+    "هدهد" -> "🦉"
+    "وردة" -> "🌹"
+    "يد" -> "✋"
+    else -> "⭐"
+}
+
 @Composable private fun IllustrationCard(letter: ArabicLetter, modifier: Modifier, onClick: () -> Unit) {
-    Box(modifier.shadow(7.dp, RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(22.dp)).border(2.dp, letter.color, RoundedCornerShape(22.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize().padding(8.dp)) {
-            val w = size.width; val h = size.height
-            when (letter.itemType) {
-                "فاكهة" -> {
-                    drawCircle(letter.color, radius = minOf(w,h)*.28f, center = Offset(w*.5f,h*.54f))
-                    drawCircle(Color(0xFF4CAF50), radius = minOf(w,h)*.09f, center = Offset(w*.62f,h*.24f))
-                    drawLine(Color(0xFF5D4037), Offset(w*.5f,h*.27f), Offset(w*.55f,h*.18f), strokeWidth = 8f)
-                }
-                "حيوان" -> {
-                    drawCircle(Color(0xFFFFCC80), radius = minOf(w,h)*.28f, center = Offset(w*.5f,h*.52f))
-                    drawCircle(Color(0xFFFFCC80), radius = minOf(w,h)*.12f, center = Offset(w*.30f,h*.30f))
-                    drawCircle(Color(0xFFFFCC80), radius = minOf(w,h)*.12f, center = Offset(w*.70f,h*.30f))
-                    drawCircle(Color.Black, radius = 5f, center = Offset(w*.43f,h*.48f)); drawCircle(Color.Black, radius = 5f, center = Offset(w*.57f,h*.48f))
-                }
-                else -> {
-                    drawRoundRect(Color(0xFFFFCC80), topLeft = Offset(w*.28f,h*.25f), size = Size(w*.44f,h*.5f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(18f,18f))
-                    drawCircle(Color(0xFF42A5F5), radius = 9f, center = Offset(w*.43f,h*.48f)); drawCircle(Color(0xFF42A5F5), radius = 9f, center = Offset(w*.57f,h*.48f))
-                }
-            }
+    Box(
+        modifier
+            .shadow(9.dp, RoundedCornerShape(24.dp))
+            .background(
+                Brush.verticalGradient(listOf(Color.White, letter.color.copy(alpha = .10f))),
+                RoundedCornerShape(24.dp)
+            )
+            .border(3.dp, letter.color.copy(alpha = .75f), RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick)
+            .padding(6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(
+                text = illustrationEmoji(letter.item),
+                fontSize = 58.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = letter.item,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFF6D3500),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

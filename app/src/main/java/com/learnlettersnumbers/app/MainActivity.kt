@@ -236,13 +236,21 @@ class MainActivity : ComponentActivity() {
                 ModeButton("1–9", "الآحاد", mode == "ones", Color(0xFF4C8BF5), Modifier.weight(1f)) { mode = "ones"; selected = 1; speak("One to nine") }
                 ModeButton("10–100", "العشرات", mode == "tens", Color(0xFFFF8A4C), Modifier.weight(1f)) { mode = "tens"; selected = 10; speak("Ten to one hundred") }
             }
-            Card(Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(9.dp)) {
-                Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(selected.toString(), fontSize = 68.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6))
-                    Button(onClick = { playNumber(selected) }, shape = RoundedCornerShape(18.dp)) { Text("🔊 Listen", fontSize = 18.sp) }
-                    Text(if (mode == "ones") "Choose a number from 1 to 9" else "Choose a tens number from 10 to 100", fontSize = 16.sp, modifier = Modifier.padding(top = 7.dp), textAlign = TextAlign.Center)
+            Card(Modifier.fillMaxWidth().height(178.dp).padding(bottom = 12.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(9.dp)) {
+                Column(Modifier.fillMaxSize().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text(selected.toString(), fontSize = 78.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6), textAlign = TextAlign.Center)
+                    Button(onClick = { playNumber(selected) }, shape = RoundedCornerShape(18.dp)) { Text("🔊 Listen | استمع", fontSize = 18.sp) }
+                    Text(if (mode == "ones") "Choose a number from 1 to 9 | اختر رقمًا من الآحاد ١ إلى ٩" else "Choose a tens number from 10 to 100 | اختر رقمًا من العشرات ١٠ إلى ١٠٠", fontSize = 15.sp, modifier = Modifier.padding(top = 7.dp), textAlign = TextAlign.Center)
                 }
             }
+            Text(
+                if (mode == "ones") "الآحاد — أرقام من 1 إلى 9" else "العشرات — أرقام من 10 إلى 100",
+                modifier = Modifier.fillMaxWidth().padding(bottom = 7.dp),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (mode == "ones") Color(0xFF245B8A) else Color(0xFF9A4F16),
+                textAlign = TextAlign.Center
+            )
             LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(nums) { n -> NumberTile(n, n == selected) { selected = n; repo.recordNumberSeen(n); repo.recordLesson("English numbers", n.toString()); playNumber(n) } }
             }
@@ -262,7 +270,9 @@ class MainActivity : ComponentActivity() {
         val colors = listOf(Color(0xFF4C8BF5), Color(0xFFFF8A4C), Color(0xFF6BCB77), Color(0xFF9B72E8), Color(0xFFE85D9E))
         val c = colors[(n - 1) % colors.size]
         Card(Modifier.fillMaxWidth().height(82.dp).clickable { onClick() }, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = if (selected) Color(0xFFFFC857) else c), elevation = CardDefaults.cardElevation(if (selected) 12.dp else 7.dp)) {
-            Box(contentAlignment = Alignment.Center) { Text(n.toString(), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(n.toString(), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, textAlign = TextAlign.Center)
+            }
         }
     }
 

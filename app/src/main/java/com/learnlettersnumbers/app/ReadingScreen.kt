@@ -156,22 +156,22 @@ internal fun ReadingScreen(
                     Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(26.dp)).background(Color(0xFFF7FBFF), RoundedCornerShape(26.dp)).border(5.dp, Color(0xFF5AA7C7), RoundedCornerShape(26.dp))
                 ) {
                     Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.fillMaxWidth().weight(.36f).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp)).border(2.dp, Color(0xFFD7E8EF), RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.fillMaxWidth().weight(.22f).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp)).border(2.dp, Color(0xFFD7E8EF), RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
                             Text(
                                 displayTarget(mode, index, form),
-                                fontSize = when (mode) { ReadingMode.WORDS -> 55.sp; else -> 72.sp },
+                                fontSize = when (mode) { ReadingMode.WORDS -> 48.sp; else -> 62.sp },
                                 fontWeight = FontWeight.Black, color = Color(0xFF294C78), textAlign = TextAlign.Center
                             )
                         }
                         Spacer(Modifier.height(7.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().height(38.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             ColorButton("أزرق", Color(0xFF3F51B5), inkColor == Color(0xFF3F51B5), Modifier.weight(1f)) { inkColor = Color(0xFF3F51B5); onTap() }
                             ColorButton("أخضر", Color(0xFF2E9B62), inkColor == Color(0xFF2E9B62), Modifier.weight(1f)) { inkColor = Color(0xFF2E9B62); onTap() }
                             ColorButton("وردي", Color(0xFFE64A78), inkColor == Color(0xFFE64A78), Modifier.weight(1f)) { inkColor = Color(0xFFE64A78); onTap() }
                         }
                         Spacer(Modifier.height(6.dp))
                         Canvas(
-                            Modifier.fillMaxWidth().weight(.64f).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).border(2.dp, Color(0xFFE2EEF4), RoundedCornerShape(18.dp)).pointerInput(inkColor) {
+                            Modifier.fillMaxWidth().weight(.78f).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).border(2.dp, Color(0xFFE2EEF4), RoundedCornerShape(18.dp)).pointerInput(inkColor) {
                                 detectDragGestures(
                                     onDragStart = { point -> currentPoints = listOf(point) },
                                     onDrag = { change, _ -> change.consumePositionChange(); currentPoints = currentPoints + change.position },
@@ -186,14 +186,14 @@ internal fun ReadingScreen(
                     }
                 }
 
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     encouragement(mode),
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = .9f), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFBFE1ED), RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 6.dp),
-                    fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF246078), textAlign = TextAlign.Center
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = .9f), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFBFE1ED), RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 4.dp),
+                    fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF246078), textAlign = TextAlign.Center
                 )
-                Spacer(Modifier.height(6.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Reading3DButton("السابق", Color(0xFF5C6BC0), Modifier.weight(1f)) { previous() }
                     Reading3DButton("مسح", Color(0xFFE85D5D), Modifier.weight(1f)) { clearBoard(); onTap() }
                     Reading3DButton("التالي", Color(0xFF2EAD69), Modifier.weight(1f)) { next() }

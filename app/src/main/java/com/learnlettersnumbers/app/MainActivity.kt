@@ -333,8 +333,8 @@ class MainActivity : ComponentActivity() {
                     elevation = CardDefaults.cardElevation(7.dp)
                 ) {
                     Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Choose how you want to write this letter", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF245B8A), textAlign = TextAlign.Center)
-                        Text("اختر شكل الحرف الذي تريد كتابته", fontSize = 14.sp, color = Color(0xFF666666))
+                        Text("Choose how you want to write this letter", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF245B8A), textAlign = TextAlign.Center)
+                        Text("اختر شكل الحرف الذي تريد كتابته", fontSize = 12.sp, color = Color(0xFF666666))
                         Spacer(Modifier.height(7.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             LetterCaseChoice(letter = baseLetter.toString(), title = "UPPERCASE", arabic = "حرف كبير", selected = selectedCase == "upper", color = Color(0xFF4C8BF5), modifier = Modifier.weight(1f)) { selectedCase = "upper"; speak("Capital letter ${baseLetter}") }
@@ -348,7 +348,7 @@ class MainActivity : ComponentActivity() {
                 Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (mode == "letters") "Write this letter: " else "Write this number: ", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text(target, fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6))
+                        Text(target, fontSize = 36.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6))
                         Spacer(Modifier.width(8.dp))
                         IconButton(onClick = { speakTarget() }) { Text("🔊", fontSize = 24.sp) }
                     }
@@ -356,7 +356,7 @@ class MainActivity : ComponentActivity() {
                         Text(if (selectedCase == "upper") "UPPERCASE: use the big form." else "lowercase: use the small form.", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32), textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 4.dp))
                     }
                     Text(if (mode == "letters") "اكتب الشكل المختار داخل السبورة" else "اكتب الرقم داخل السبورة", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF555555), modifier = Modifier.padding(bottom = 4.dp))
-                    val boardModifier = Modifier.fillMaxWidth().weight(1f).padding(4.dp).pointerInput(inkColor) {
+                    val boardModifier = Modifier.fillMaxWidth().weight(1.35f).padding(4.dp).pointerInput(inkColor) {
                         detectDragGestures(onDragStart = { currentStroke = listOf(it) }, onDrag = { change, _ -> change.consume(); currentStroke = currentStroke + change.position }, onDragEnd = { if (currentStroke.isNotEmpty()) strokes.add(currentStroke); currentStroke = emptyList(); encourage() }, onDragCancel = { currentStroke = emptyList() })
                     }
                     Canvas(boardModifier.background(Color(0xFFFDFEFF), RoundedCornerShape(20.dp))) {
@@ -367,7 +367,7 @@ class MainActivity : ComponentActivity() {
                         val colors = listOf(Color(0xFF2563EB), Color(0xFF16A34A), Color(0xFFE11D48), Color(0xFF9333EA), Color(0xFFF59E0B))
                         colors.forEach { c -> val selected = inkColor == c; val scale by animateFloatAsState(if (selected) 1.15f else 1f, label = "inkColor"); Box(Modifier.padding(5.dp).size(38.dp).scale(scale).background(c, CircleShape).clickable { inkColor = c; speak("Color selected") }) }
                     }
-                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth().height(54.dp).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { if (index > 0) index-- else speak("This is the first one!") }, modifier = Modifier.weight(1f)) { Text("Previous") }
                         Button(onClick = { clearBoard(); repo.recordWritingPractice(); speak("Board cleared! Try again!") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE85D9E))) { Text("Clear") }
                         Button(onClick = { repo.recordWritingPractice(); if (index < total - 1) index++ else { repo.recordLesson("English writing", target, true); repo.addStars(1); speak("Great job! You finished!") } }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C8BF5))) { Text("Next") }

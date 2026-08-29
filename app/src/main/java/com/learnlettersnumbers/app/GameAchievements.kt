@@ -61,14 +61,29 @@ internal object GameAchievements {
         return if (unlockedNow) listOf(achievement) else emptyList()
     }
 
+    /**
+     * يسجل عدد الإجابات الصحيحة عبر جميع الألعاب.
+     * هذا هو العداد التراكمي الحقيقي لإنجاز "بطل الإجابات".
+     */
+    fun recordCorrectAnswers(context: Context, correctCount: Int): List<GameAchievement> {
+        if (correctCount <= 0) return emptyList()
+        return addProgress(context, "ten_correct", correctCount)
+    }
+
+    /**
+     * يسجل نتيجة جولة مكتملة ويحدث جميع الإنجازات المرتبطة بها.
+     * correctCount تراكمي: لا يعتمد على نتيجة جولة واحدة فقط.
+     */
     fun recordGameFinished(
         context: Context,
         accuracy: Int,
         bestStreak: Int,
         level: Int,
-        lostLives: Int
+        lostLives: Int,
+        correctCount: Int = 0
     ): List<GameAchievement> {
         val newlyUnlocked = mutableListOf<GameAchievement>()
+
         fun add(id: String, amount: Int = 1) {
             newlyUnlocked += addProgress(context, id, amount)
         }
@@ -76,10 +91,14 @@ internal object GameAchievements {
         add("first_win")
         add("three_wins")
         add("ten_wins")
+        if (correctCount > 0) {
+            newlyUnlocked += recordCorrectAnswers(context, correctCount)
+        }
         if (bestStreak >= 5) add("five_streak", 5)
         if (accuracy >= 100) add("perfect_game")
         if (lostLives == 0) add("no_mistakes")
         if (level >= 3) add("hard_win")
+
         return newlyUnlocked.distinctBy { it.id }
     }
 }

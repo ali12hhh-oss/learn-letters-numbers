@@ -22,20 +22,10 @@ import kotlin.random.Random
 private enum class TestMode { ARABIC, ENGLISH }
 private enum class TestKind { LETTERS, NUMBERS }
 
-private data class TestQuestion(
-    val prompt: String,
-    val spokenPrompt: String,
-    val answer: String,
-    val options: List<String>,
-    val kind: TestKind
-)
+private data class TestQuestion(val prompt: String, val spokenPrompt: String, val answer: String, val options: List<String>, val kind: TestKind)
 
 @Composable
-fun TestsScreen(
-    repo: ProgressRepository,
-    audio: LocalAudioManager,
-    onBack: () -> Unit
-) {
+fun TestsScreen(repo: ProgressRepository, audio: LocalAudioManager, onBack: () -> Unit) {
     var language by remember { mutableStateOf(TestMode.ARABIC) }
     var kind by remember { mutableStateOf(TestKind.LETTERS) }
     var questionIndex by remember { mutableStateOf(0) }
@@ -45,27 +35,18 @@ fun TestsScreen(
     var question by remember { mutableStateOf(makeQuestion(language, kind, questionIndex)) }
 
     fun nextQuestion() {
-        questionIndex += 1
-        selected = null
-        answered = false
+        questionIndex += 1; selected = null; answered = false
         question = makeQuestion(language, kind, questionIndex)
         playTestAudio(audio, language, kind, question.answer)
     }
 
     LaunchedEffect(language, kind) {
-        questionIndex = 0
-        score = 0
-        selected = null
-        answered = false
+        questionIndex = 0; score = 0; selected = null; answered = false
         question = makeQuestion(language, kind, 0)
         playTestAudio(audio, language, kind, question.answer)
     }
 
-    Column(
-        Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFFE8F9FF), Color(0xFFFFF1D7))))
-            .padding(14.dp)
-    ) {
+    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFE8F9FF), Color(0xFFFFF1D7)))).padding(14.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Button(onClick = onBack, shape = RoundedCornerShape(18.dp)) { Text("رجوع") }
             Column(horizontalAlignment = Alignment.End) {
@@ -73,7 +54,6 @@ fun TestsScreen(
                 Text("اختبر مهاراتك وتعلم من أخطائك", fontSize = 15.sp)
             }
         }
-
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             TestModeButton("العربي", language == TestMode.ARABIC, Color(0xFF4C8BF5), Modifier.weight(1f)) { language = TestMode.ARABIC }
             TestModeButton("English", language == TestMode.ENGLISH, Color(0xFF6BCB77), Modifier.weight(1f)) { language = TestMode.ENGLISH }
@@ -82,7 +62,6 @@ fun TestsScreen(
             TestModeButton(if (language == TestMode.ARABIC) "الحروف" else "Letters", kind == TestKind.LETTERS, Color(0xFF9B72E8), Modifier.weight(1f)) { kind = TestKind.LETTERS }
             TestModeButton(if (language == TestMode.ARABIC) "الأرقام" else "Numbers", kind == TestKind.NUMBERS, Color(0xFFFF8A4C), Modifier.weight(1f)) { kind = TestKind.NUMBERS }
         }
-
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(9.dp)) {
             Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("السؤال ${questionIndex + 1}", color = Color(0xFF6B7280), fontWeight = FontWeight.Bold)
@@ -90,19 +69,11 @@ fun TestsScreen(
                 Text(question.prompt, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF2357A6), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = { playTestAudio(audio, language, kind, question.answer) }, shape = RoundedCornerShape(18.dp)) { Text("🔊 اسمع السؤال") }
-                Spacer(Modifier.height(8.dp))
-                Text("⭐ نتيجتك: $score", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp)); Text("⭐ نتيجتك: $score", fontSize = 17.sp, fontWeight = FontWeight.Bold)
             }
         }
-
         Spacer(Modifier.height(12.dp))
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(question.options) { option ->
                 val color = when {
                     selected == option && option == question.answer -> Color(0xFF55C878)
@@ -110,50 +81,28 @@ fun TestsScreen(
                     answered && option == question.answer -> Color(0xFF55C878)
                     else -> listOf(Color(0xFF4C8BF5), Color(0xFFFF8A4C), Color(0xFF9B72E8), Color(0xFF00A9A5))[question.options.indexOf(option) % 4]
                 }
-                Card(
-                    Modifier.fillMaxWidth().height(100.dp).clickable(enabled = !answered) {
-                        selected = option
-                        answered = true
-                        val correct = option == question.answer
-                        repo.recordAnswer(correct)
-                        if (correct) {
-                            score += 1
-                            repo.addStars(1)
-                            audio.playRequired(if (language == TestMode.ARABIC) "correct_ar" else "correct_en")
-                        } else {
-                            audio.playRequired(if (language == TestMode.ARABIC) "wrong_ar" else "wrong_en")
-                        }
-                    },
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = color),
-                    elevation = CardDefaults.cardElevation(8.dp)
-                ) { Box(contentAlignment = Alignment.Center) { Text(option, color = Color.White, fontSize = if (kind == TestKind.LETTERS) 38.sp else 30.sp, fontWeight = FontWeight.ExtraBold) } }
+                Card(Modifier.fillMaxWidth().height(100.dp).clickable(enabled = !answered) {
+                    selected = option; answered = true
+                    val correct = option == question.answer
+                    repo.recordAnswer(correct)
+                    if (correct) { score += 1; repo.addStars(1); audio.playRequired(if (language == TestMode.ARABIC) "correct_ar" else "correct_en") }
+                    else audio.playRequired(if (language == TestMode.ARABIC) "wrong_ar" else "wrong_en")
+                }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = color), elevation = CardDefaults.cardElevation(8.dp)) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(option, Modifier.fillMaxWidth(), color = Color.White, fontSize = if (kind == TestKind.LETTERS) 38.sp else 30.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                    }
+                }
             }
         }
-
         if (answered) {
-            Text(
-                if (selected == question.answer) "🎉 رائع! أحسنت الاختيار" else "💪 لا بأس، تعلم من المحاولة التالية",
-                Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                textAlign = TextAlign.Center, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                color = if (selected == question.answer) Color(0xFF238636) else Color(0xFFB45309)
-            )
-            Button(onClick = { nextQuestion() }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(20.dp)) {
-                Text("السؤال التالي ➜", fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            }
+            Text(if (selected == question.answer) "🎉 رائع! أحسنت الاختيار" else "💪 لا بأس، تعلم من المحاولة التالية", Modifier.fillMaxWidth().padding(vertical = 8.dp), textAlign = TextAlign.Center, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (selected == question.answer) Color(0xFF238636) else Color(0xFFB45309))
+            Button(onClick = { nextQuestion() }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(20.dp)) { Text("السؤال التالي ➜", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
 
-@Composable
-private fun TestModeButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(58.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else MaterialTheme.colorScheme.surface, contentColor = if (selected) Color.White else color),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 7.dp)
-    ) { Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) }
+@Composable private fun TestModeButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    Button(onClick = onClick, modifier = modifier.height(58.dp), shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else MaterialTheme.colorScheme.surface, contentColor = if (selected) Color.White else color), elevation = ButtonDefaults.buttonElevation(defaultElevation = 7.dp)) { Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) }
 }
 
 private fun makeQuestion(language: TestMode, kind: TestKind, seed: Int): TestQuestion {
@@ -161,24 +110,17 @@ private fun makeQuestion(language: TestMode, kind: TestKind, seed: Int): TestQue
     if (kind == TestKind.LETTERS) {
         return if (language == TestMode.ARABIC) {
             val letters = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","و","ي")
-            val answer = letters[r.nextInt(letters.size)]
-            val options = (listOf(answer) + letters.shuffled(r).take(3)).distinct().shuffled(r)
+            val answer = letters[r.nextInt(letters.size)]; val options = (listOf(answer) + letters.shuffled(r).take(3)).distinct().shuffled(r)
             TestQuestion("اختر الحرف: $answer", "أين الحرف $answer؟ اختره من بين الحروف", answer, options, kind)
         } else {
-            val letters = ('A'..'Z').map { it.toString() }
-            val answer = letters[r.nextInt(letters.size)]
-            val options = (listOf(answer) + letters.shuffled(r).take(3)).distinct().shuffled(r)
-            TestQuestion("Choose the letter: $answer", "Find the letter ${answer}", answer, options, kind)
+            val letters = ('A'..'Z').map { it.toString() }; val answer = letters[r.nextInt(letters.size)]; val options = (listOf(answer) + letters.shuffled(r).take(3)).distinct().shuffled(r)
+            TestQuestion("Choose the letter: $answer", "Find the letter $answer", answer, options, kind)
         }
     }
-    val answer = if (language == TestMode.ARABIC) (1..100).random(r).toString() else (1..100).random(r).toString()
-    val pool = (1..100).map { it.toString() }.shuffled(r)
-    val options = (listOf(answer) + pool.filter { it != answer }.take(3)).shuffled(r)
+    val answer = (1..100).random(r).toString(); val pool = (1..100).map { it.toString() }.shuffled(r); val options = (listOf(answer) + pool.filter { it != answer }.take(3)).shuffled(r)
     return if (language == TestMode.ARABIC) {
-        TestQuestion("اختر الرقم: ${answer.toArabicDigits()}", "ما الرقم الذي تسمعه؟ الرقم هو $answer", answer, options.map { it.toArabicDigits() }, kind).let { q -> q.copy(answer = answer.toArabicDigits(), options = options.map { it.toArabicDigits() }) }
-    } else {
-        TestQuestion("Choose the number: $answer", "Find the number $answer", answer, options, kind)
-    }
+        val ar = answer.toArabicDigits(); TestQuestion("اختر الرقم: $ar", "ما الرقم الذي تسمعه؟ الرقم هو $answer", ar, options.map { it.toArabicDigits() }, kind)
+    } else TestQuestion("Choose the number: $answer", "Find the number $answer", answer, options, kind)
 }
 
 private fun String.toArabicDigits(): String = map { c -> if (c in '0'..'9') ('٠'.code + (c.code - '0'.code)).toChar() else c }.joinToString("")
@@ -186,13 +128,8 @@ private fun String.toArabicDigits(): String = map { c -> if (c in '0'..'9') ('٠
 private fun playTestAudio(audio: LocalAudioManager, language: TestMode, kind: TestKind, answer: String) {
     if (kind == TestKind.LETTERS) {
         if (language == TestMode.ARABIC) {
-            val letters = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","و","ي")
-            val i = letters.indexOf(answer)
-            if (i >= 0) audio.playRequired("ar_letter_%02d_sound".format(i + 1))
-        } else {
-            val i = ('A'..'Z').indexOf(answer.firstOrNull() ?: '?')
-            if (i >= 0) audio.playRequired("en_letter_%02d_sound".format(i + 1))
-        }
+            val letters = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","و","ي"); val i = letters.indexOf(answer); if (i >= 0) audio.playRequired("ar_letter_%02d_sound".format(i + 1))
+        } else { val i = ('A'..'Z').indexOf(answer.firstOrNull() ?: '?'); if (i >= 0) audio.playRequired("en_letter_%02d_sound".format(i + 1)) }
     } else {
         val n = answer.map { c -> when(c) { '٠'->'0';'١'->'1';'٢'->'2';'٣'->'3';'٤'->'4';'٥'->'5';'٦'->'6';'٧'->'7';'٨'->'8';'٩'->'9'; else->c } }.joinToString("").toIntOrNull()
         if (n != null && n in 1..100) audio.playRequired(if (language == TestMode.ARABIC) "ar_number_%03d".format(n) else "en_number_%03d".format(n))

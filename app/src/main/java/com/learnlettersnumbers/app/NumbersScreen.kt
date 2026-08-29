@@ -7,9 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,12 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -31,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
-import kotlin.math.max
 import kotlin.random.Random
 
 private enum class NumberMode { NUMBERS, OPERATIONS }
@@ -86,28 +80,69 @@ internal fun NumbersScreen(
                 }
 
                 Text(
-                    if (mode == NumberMode.NUMBERS) "رائع! اضغط أي رقم واسمع اسمه 🎈" else "هيا نتعلم الجمع والطرح بالصور! 🌟",
+                    if (mode == NumberMode.NUMBERS) "رائع! استخدم السابق والتالي لتعلّم الأرقام 🎈" else "هيا نتعلم الجمع والطرح بالصور! 🌟",
                     modifier = Modifier.padding(vertical = 8.dp).background(Color(0xFFFFE89A), RoundedCornerShape(18.dp)).padding(horizontal = 18.dp, vertical = 8.dp),
                     color = Color(0xFF713D00), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold
                 )
 
                 if (mode == NumberMode.NUMBERS) {
                     Box(
-                        Modifier.fillMaxWidth().height(116.dp).shadow(10.dp, RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(28.dp)).border(4.dp, numberColor(selected), RoundedCornerShape(28.dp)).clickable { if (soundsEnabled()) audio.playRequired("ar_number_%03d".format(selected)); onTap() },
+                        Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp))
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(30.dp))
+                            .border(5.dp, numberColor(selected), RoundedCornerShape(30.dp))
+                            .clickable {
+                                if (soundsEnabled()) audio.playRequired("ar_number_%03d".format(selected))
+                                onTap()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(arabicDigits(selected), fontSize = 72.sp, fontWeight = FontWeight.Black, color = numberColor(selected))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Text(
+                                arabicDigits(selected),
+                                fontSize = 128.sp,
+                                fontWeight = FontWeight.Black,
+                                color = numberColor(selected),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                numberWords(selected),
+                                fontSize = 25.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF155E8A),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text("اضغط على الرقم لسماع النطق 🔊", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6B7280))
+                        }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(8),
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                        contentPadding = PaddingValues(3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(7.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
+
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        Modifier.fillMaxWidth().height(62.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items((1..100).toList()) { n ->
-                            NumberChip(n, n == selected) { selected = n; onTap() }
+                        NumberNavigationButton(
+                            text = "السابق",
+                            enabled = selected > 1,
+                            color = Color(0xFF7E57C2),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (selected > 1) {
+                                selected--
+                                onTap()
+                            }
+                        }
+                        NumberNavigationButton(
+                            text = "التالي",
+                            enabled = selected < 100,
+                            color = Color(0xFF039BE5),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (selected < 100) {
+                                selected++
+                                onTap()
+                            }
                         }
                     }
                 } else {
@@ -246,13 +281,17 @@ private fun PictureIcon(kind: PictureKind, accent: Color, modifier: Modifier) {
 }
 
 @Composable
-private fun NumberChip(number: Int, selected: Boolean, onClick: () -> Unit) {
-    val color = numberColor(number)
-    val scale by animateFloatAsState(if (selected) 1.08f else 1f, spring(), label = "num_$number")
+private fun NumberNavigationButton(text: String, enabled: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    val scale by animateFloatAsState(if (enabled) 1f else .97f, spring(), label = "nav_$text")
     Box(
-        Modifier.size(46.dp).scale(scale).shadow(if (selected) 7.dp else 2.dp, RoundedCornerShape(14.dp)).background(if (selected) color else MaterialTheme.colorScheme.surface, RoundedCornerShape(14.dp)).border(2.dp, color.copy(.65f), RoundedCornerShape(14.dp)).clickable(onClick = onClick),
+        modifier.scale(scale).shadow(if (enabled) 7.dp else 2.dp, RoundedCornerShape(18.dp))
+            .background(if (enabled) color else color.copy(alpha = .28f), RoundedCornerShape(18.dp))
+            .border(2.dp, if (enabled) color else color.copy(alpha = .2f), RoundedCornerShape(18.dp))
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
-    ) { Text(arabicDigits(number), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = if (selected) Color.White else color) }
+    ) {
+        Text(text, fontSize = 20.sp, fontWeight = FontWeight.Black, color = if (enabled) Color.White else Color.Gray)
+    }
 }
 
 @Composable
@@ -279,7 +318,6 @@ private fun Number3DButton(text: String, color: Color, modifier: Modifier, onCli
     }
 }
 
-
 private fun arabicDigits(n: Int): String = n.toString().map { c -> if (c in '0'..'9') ('٠'.code + (c - '0')).toChar() else c }.joinToString("")
 
 private fun numberWords(n: Int): String {
@@ -298,4 +336,3 @@ private fun numberWords(n: Int): String {
 private fun numberColor(n: Int): Color = when (n % 6) {
     0 -> Color(0xFF7E57C2); 1 -> Color(0xFF039BE5); 2 -> Color(0xFF43A047); 3 -> Color(0xFFFF8F00); 4 -> Color(0xFFEC407A); else -> Color(0xFF00897B)
 }
-

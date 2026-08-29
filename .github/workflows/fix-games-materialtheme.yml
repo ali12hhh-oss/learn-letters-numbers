@@ -1,0 +1,40 @@
+name: Fix GamesScreen MaterialTheme import
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add missing MaterialTheme import
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt"
+          grep -q 'containerColor = MaterialTheme.colorScheme' "$file"
+          if ! grep -q '^import androidx.compose.material3.MaterialTheme$' "$file"; then
+            sed -i '/^import androidx.compose.material3.LinearProgressIndicator$/a import androidx.compose.material3.MaterialTheme' "$file"
+          fi
+          grep -q '^import androidx.compose.material3.MaterialTheme$' "$file"
+
+      - name: Commit and remove one-time workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
+          git commit -m 'Fix missing MaterialTheme import in GamesScreen' || true
+          rm .github/workflows/fix-games-materialtheme.yml
+          git add .github/workflows/fix-games-materialtheme.yml
+          git commit --amend --no-edit
+          git push

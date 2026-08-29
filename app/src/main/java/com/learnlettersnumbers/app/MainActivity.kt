@@ -139,7 +139,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
     @Composable
     fun ArabicSection(onSettings: () -> Unit, onLetters: () -> Unit, onNumbers: () -> Unit, onTutorial: () -> Unit, onWriting: () -> Unit, onBack: () -> Unit, speak: (String) -> Unit) {
         LaunchedEffect(Unit) { speak("أهلاً بك في قسم اللغة العربية. هيا نتعلم معاً!") }
@@ -181,23 +180,23 @@ class MainActivity : ComponentActivity() {
     fun EnglishSection(onSettings: () -> Unit, onLetters: () -> Unit, onNumbers: () -> Unit, onTutorial: () -> Unit, onWriting: () -> Unit, onProgress: () -> Unit, onRewards: () -> Unit, onTests: () -> Unit, onStories: () -> Unit, onStages: () -> Unit, onGames: () -> Unit, onBack: () -> Unit, speak: (String) -> Unit) {
         LaunchedEffect(Unit) { speak("Hello! Welcome to the English section. Let's learn together!") }
         Column(
-            modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant))).padding(18.dp),
+            modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant))).padding(horizontal = 18.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onProgress, shape = RoundedCornerShape(18.dp)) { Text("تقدمي") }
-                    Button(onClick = onRewards, shape = RoundedCornerShape(18.dp)) { Text("مكافأة") }
-                    Button(onClick = onTests, shape = RoundedCornerShape(18.dp)) { Text("اختبارات") }
-                    Button(onClick = onStories, shape = RoundedCornerShape(18.dp)) { Text("قصص") }
-                    Button(onClick = onStages, shape = RoundedCornerShape(18.dp)) { Text("مراحل") }
-                    Button(onClick = onGames, shape = RoundedCornerShape(18.dp)) { Text("ألعاب") }
-                    Button(onClick = onSettings, shape = RoundedCornerShape(18.dp)) { Text("⚙ الإعدادات") }
-                    Button(onClick = onBack, shape = RoundedCornerShape(18.dp)) { Text("Back") }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    EnglishTopButton("📊 تقدمي", Color(0xFF4C8BF5), onProgress)
+                    EnglishTopButton("🏆 مكافأة", Color(0xFFFFA726), onRewards)
+                    EnglishTopButton("📝 اختبارات", Color(0xFF9B72E8), onTests)
+                    EnglishTopButton("📖 قصص", Color(0xFF26A69A), onStories)
+                    EnglishTopButton("🎯 مراحل", Color(0xFF66BB6A), onStages)
+                    EnglishTopButton("🎮 ألعاب", Color(0xFFEC407A), onGames)
+                    EnglishTopButton("⚙ الإعدادات", Color(0xFF5C6BC0), onSettings)
+                    EnglishTopButton("↩ رجوع", Color(0xFF546E7A), onBack)
                 }
                 Text("English", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF2357A6))
             }
-            Text("قسم اللغة الإنجليزية", fontSize = 17.sp, color = Color(0xFF5B5B5B), modifier = Modifier.padding(bottom = 18.dp))
+            Text("قسم اللغة الإنجليزية", fontSize = 17.sp, color = Color(0xFF5B5B5B), modifier = Modifier.padding(bottom = 8.dp))
             EnglishCard("🔤", "Letters", "الحروف الإنجليزية", Color(0xFF4C8BF5), onLetters)
             EnglishCard("🔢", "Numbers", "الأرقام الإنجليزية", Color(0xFFFF8A4C), onNumbers)
             EnglishCard("🖊️", "Learn to Write", "تعلم الكتابة خطوة بخطوة", Color(0xFF9B7EDE), onTutorial)
@@ -206,14 +205,21 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
+    fun EnglishTopButton(text: String, color: Color, onClick: () -> Unit) {
+        Button(onClick = onClick, modifier = Modifier.height(40.dp), shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(horizontal = 9.dp, vertical = 0.dp), colors = ButtonDefaults.buttonColors(containerColor = color), elevation = ButtonDefaults.buttonElevation(defaultElevation = 5.dp)) {
+            Text(text, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        }
+    }
+
+    @Composable
     fun EnglishCard(icon: String, title: String, arabic: String, color: Color, onClick: () -> Unit) {
         var pressed by remember { mutableStateOf(false) }
         val scale by animateFloatAsState(if (pressed) 0.96f else 1f, label = "scale")
         Card(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).scale(scale).clickable { pressed = true; onClick(); pressed = false },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp).scale(scale).clickable { pressed = true; onClick(); pressed = false },
             shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = color), elevation = CardDefaults.cardElevation(10.dp)
         ) {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(icon, fontSize = 38.sp)
                 Spacer(Modifier.width(18.dp))
                 Column { Text(title, color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold); Text(arabic, color = Color.White.copy(.95f), fontSize = 17.sp) }
@@ -236,21 +242,13 @@ class MainActivity : ComponentActivity() {
                 ModeButton("1–9", "الآحاد", mode == "ones", Color(0xFF4C8BF5), Modifier.weight(1f)) { mode = "ones"; selected = 1; speak("One to nine") }
                 ModeButton("10–100", "العشرات", mode == "tens", Color(0xFFFF8A4C), Modifier.weight(1f)) { mode = "tens"; selected = 10; speak("Ten to one hundred") }
             }
-            Card(Modifier.fillMaxWidth().height(178.dp).padding(bottom = 12.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(9.dp)) {
-                Column(Modifier.fillMaxSize().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Text(selected.toString(), fontSize = 78.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6), textAlign = TextAlign.Center)
-                    Button(onClick = { playNumber(selected) }, shape = RoundedCornerShape(18.dp)) { Text("🔊 Listen | استمع", fontSize = 18.sp) }
-                    Text(if (mode == "ones") "Choose a number from 1 to 9 | اختر رقمًا من الآحاد ١ إلى ٩" else "Choose a tens number from 10 to 100 | اختر رقمًا من العشرات ١٠ إلى ١٠٠", fontSize = 15.sp, modifier = Modifier.padding(top = 7.dp), textAlign = TextAlign.Center)
+            Card(Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(9.dp)) {
+                Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(selected.toString(), fontSize = 68.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6))
+                    Button(onClick = { playNumber(selected) }, shape = RoundedCornerShape(18.dp)) { Text("🔊 Listen", fontSize = 18.sp) }
+                    Text(if (mode == "ones") "Choose a number from 1 to 9" else "Choose a tens number from 10 to 100", fontSize = 16.sp, modifier = Modifier.padding(top = 7.dp), textAlign = TextAlign.Center)
                 }
             }
-            Text(
-                if (mode == "ones") "الآحاد — أرقام من 1 إلى 9" else "العشرات — أرقام من 10 إلى 100",
-                modifier = Modifier.fillMaxWidth().padding(bottom = 7.dp),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = if (mode == "ones") Color(0xFF245B8A) else Color(0xFF9A4F16),
-                textAlign = TextAlign.Center
-            )
             LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(nums) { n -> NumberTile(n, n == selected) { selected = n; repo.recordNumberSeen(n); repo.recordLesson("English numbers", n.toString()); playNumber(n) } }
             }
@@ -270,9 +268,7 @@ class MainActivity : ComponentActivity() {
         val colors = listOf(Color(0xFF4C8BF5), Color(0xFFFF8A4C), Color(0xFF6BCB77), Color(0xFF9B72E8), Color(0xFFE85D9E))
         val c = colors[(n - 1) % colors.size]
         Card(Modifier.fillMaxWidth().height(82.dp).clickable { onClick() }, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = if (selected) Color(0xFFFFC857) else c), elevation = CardDefaults.cardElevation(if (selected) 12.dp else 7.dp)) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(n.toString(), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, textAlign = TextAlign.Center)
-            }
+            Box(contentAlignment = Alignment.Center) { Text(n.toString(), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
         }
     }
 
@@ -341,39 +337,14 @@ class MainActivity : ComponentActivity() {
                         Text("اختر شكل الحرف الذي تريد كتابته", fontSize = 14.sp, color = Color(0xFF666666))
                         Spacer(Modifier.height(7.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            LetterCaseChoice(
-                                letter = baseLetter.toString(),
-                                title = "UPPERCASE",
-                                arabic = "حرف كبير",
-                                selected = selectedCase == "upper",
-                                color = Color(0xFF4C8BF5),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                selectedCase = "upper"
-                                speak("Capital letter ${baseLetter}")
-                            }
-                            LetterCaseChoice(
-                                letter = baseLetter.lowercase(),
-                                title = "lowercase",
-                                arabic = "حرف صغير",
-                                selected = selectedCase == "lower",
-                                color = Color(0xFFFF8A4C),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                selectedCase = "lower"
-                                speak("Small letter ${baseLetter.lowercase()}")
-                            }
+                            LetterCaseChoice(letter = baseLetter.toString(), title = "UPPERCASE", arabic = "حرف كبير", selected = selectedCase == "upper", color = Color(0xFF4C8BF5), modifier = Modifier.weight(1f)) { selectedCase = "upper"; speak("Capital letter ${baseLetter}") }
+                            LetterCaseChoice(letter = baseLetter.lowercase(), title = "lowercase", arabic = "حرف صغير", selected = selectedCase == "lower", color = Color(0xFFFF8A4C), modifier = Modifier.weight(1f)) { selectedCase = "lower"; speak("Small letter ${baseLetter.lowercase()}") }
                         }
                     }
                 }
             }
 
-            Card(
-                Modifier.fillMaxWidth().weight(1f),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(10.dp)
-            ) {
+            Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(10.dp)) {
                 Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (mode == "letters") "Write this letter: " else "Write this number: ", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -381,79 +352,25 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.width(8.dp))
                         IconButton(onClick = { speakTarget() }) { Text("🔊", fontSize = 24.sp) }
                     }
-
                     if (mode == "letters") {
-                        Text(
-                            if (selectedCase == "upper") "UPPERCASE: use the big form." else "lowercase: use the small form.",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
+                        Text(if (selectedCase == "upper") "UPPERCASE: use the big form." else "lowercase: use the small form.", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32), textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 4.dp))
                     }
-
-                    Text(
-                        if (mode == "letters") "اكتب الشكل المختار داخل السبورة" else "اكتب الرقم داخل السبورة",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF555555),
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-
-                    val boardModifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(4.dp)
-                        .pointerInput(inkColor) {
-                            detectDragGestures(
-                                onDragStart = { currentStroke = listOf(it) },
-                                onDrag = { change, _ ->
-                                    change.consume()
-                                    currentStroke = currentStroke + change.position
-                                },
-                                onDragEnd = {
-                                    if (currentStroke.isNotEmpty()) strokes.add(currentStroke)
-                                    currentStroke = emptyList()
-                                    encourage()
-                                },
-                                onDragCancel = { currentStroke = emptyList() }
-                            )
-                        }
+                    Text(if (mode == "letters") "اكتب الشكل المختار داخل السبورة" else "اكتب الرقم داخل السبورة", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF555555), modifier = Modifier.padding(bottom = 4.dp))
+                    val boardModifier = Modifier.fillMaxWidth().weight(1f).padding(4.dp).pointerInput(inkColor) {
+                        detectDragGestures(onDragStart = { currentStroke = listOf(it) }, onDrag = { change, _ -> change.consume(); currentStroke = currentStroke + change.position }, onDragEnd = { if (currentStroke.isNotEmpty()) strokes.add(currentStroke); currentStroke = emptyList(); encourage() }, onDragCancel = { currentStroke = emptyList() })
+                    }
                     Canvas(boardModifier.background(Color(0xFFFDFEFF), RoundedCornerShape(20.dp))) {
                         val all = strokes + listOf(currentStroke)
-                        all.forEach { pts ->
-                            if (pts.size > 1) {
-                                val path = Path().apply {
-                                    moveTo(pts[0].x, pts[0].y)
-                                    for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
-                                }
-                                drawPath(path, inkColor, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 12f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                            }
-                        }
+                        all.forEach { pts -> if (pts.size > 1) { val path = Path().apply { moveTo(pts[0].x, pts[0].y); for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y) }; drawPath(path, inkColor, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 12f, cap = StrokeCap.Round, join = StrokeJoin.Round)) } }
                     }
-
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         val colors = listOf(Color(0xFF2563EB), Color(0xFF16A34A), Color(0xFFE11D48), Color(0xFF9333EA), Color(0xFFF59E0B))
-                        colors.forEach { c ->
-                            val selected = inkColor == c
-                            val scale by animateFloatAsState(if (selected) 1.15f else 1f, label = "inkColor")
-                            Box(
-                                Modifier.padding(5.dp).size(38.dp).scale(scale).background(c, CircleShape)
-                                    .clickable { inkColor = c; speak("Color selected") }
-                            )
-                        }
+                        colors.forEach { c -> val selected = inkColor == c; val scale by animateFloatAsState(if (selected) 1.15f else 1f, label = "inkColor"); Box(Modifier.padding(5.dp).size(38.dp).scale(scale).background(c, CircleShape).clickable { inkColor = c; speak("Color selected") }) }
                     }
-
                     Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = {
-                            if (index > 0) index-- else speak("This is the first one!")
-                        }, modifier = Modifier.weight(1f)) { Text("Previous") }
+                        OutlinedButton(onClick = { if (index > 0) index-- else speak("This is the first one!") }, modifier = Modifier.weight(1f)) { Text("Previous") }
                         Button(onClick = { clearBoard(); repo.recordWritingPractice(); speak("Board cleared! Try again!") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE85D9E))) { Text("Clear") }
-                        Button(onClick = {
-                            repo.recordWritingPractice()
-                            if (index < total - 1) index++ else { repo.recordLesson("English writing", target, true); repo.addStars(1); speak("Great job! You finished!") }
-                        }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C8BF5))) { Text("Next") }
+                        Button(onClick = { repo.recordWritingPractice(); if (index < total - 1) index++ else { repo.recordLesson("English writing", target, true); repo.addStars(1); speak("Great job! You finished!") } }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C8BF5))) { Text("Next") }
                     }
                 }
             }
@@ -461,22 +378,9 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun LetterCaseChoice(
-        letter: String,
-        title: String,
-        arabic: String,
-        selected: Boolean,
-        color: Color,
-        modifier: Modifier,
-        onClick: () -> Unit
-    ) {
+    private fun LetterCaseChoice(letter: String, title: String, arabic: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
         val scale by animateFloatAsState(if (selected) 1.04f else 1f, label = "caseChoice_$title")
-        Card(
-            modifier.scale(scale).clickable { onClick() },
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = if (selected) color else MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(if (selected) 9.dp else 3.dp)
-        ) {
+        Card(modifier.scale(scale).clickable { onClick() }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(if (selected) 9.dp else 3.dp)) {
             Column(Modifier.fillMaxWidth().padding(vertical = 7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(letter, fontSize = 34.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else color)
                 Text(title, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = if (selected) Color.White else Color(0xFF245B8A))

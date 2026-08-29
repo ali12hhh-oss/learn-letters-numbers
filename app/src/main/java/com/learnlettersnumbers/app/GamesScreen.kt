@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -56,17 +57,25 @@ private val gameLevels = listOf(
     GameLevel(3, "المستوى الصعب", "لأبطال الألعاب فقط", Color(0xFFFFA6A6))
 )
 
-private const val GAMES_PREFS = "professional_games_progress_v2"
+private const val GAMES_PREFS = "professional_games_progress_v3"
 private const val TOTAL_ROUNDS = 10
+private const val DAILY_KEY = "daily_game_last"
+private const val DAILY_SCORE_KEY = "daily_game_best_score"
 
 private fun prefs(context: Context) = context.getSharedPreferences(GAMES_PREFS, Context.MODE_PRIVATE)
 private fun bestScoreKey(game: LearningGame, level: Int) = "best_score_${game.id}_$level"
 private fun bestAccuracyKey(game: LearningGame, level: Int) = "best_accuracy_${game.id}_$level"
 private fun completedKey(game: LearningGame, level: Int) = "completed_${game.id}_$level"
+private fun attemptsKey(game: LearningGame, level: Int) = "attempts_${game.id}_$level"
 
 private fun isLevelUnlocked(context: Context, game: LearningGame, level: Int): Boolean {
     if (level == 1) return true
     return prefs(context).getInt(bestAccuracyKey(game, level - 1), 0) >= 70
+}
+
+private fun todaySeed(): Int {
+    val now = java.util.Calendar.getInstance()
+    return now.get(java.util.Calendar.YEAR) * 1000 + now.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
 @Composable
@@ -83,6 +92,12 @@ fun GamesScreen(onBack: () -> Unit, repo: ProgressRepository, onSpeak: ((String,
 @Composable
 private fun GameHubScreen(onBack: () -> Unit, onGameSelected: (LearningGame) -> Unit) {
     val context = LocalContext.current
+    var category by remember { mutableStateOf("الكل") }
+    val categories = listOf("الكل", "حروف", "أرقام", "قراءة", "ذاكرة", "استماع", "متنوع")
+    val visibleGames = if (category == "الكل") games else games.filter { it.category == category }
+    val completed = games.sumOf { game -> gameLevels.count { level -> prefs(context).getBoolean(completedKey(game, level.number), false) } }
+    val dailyScore = prefs(context).getInt(DAILY_SCORE_KEY, 0)
+
     Scaffold(topBar = {
         TopAppBar(title = { Text("🎮 عالم الألعاب", fontWeight = FontWeight.ExtraBold) }, navigationIcon = {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") }
@@ -95,34 +110,44 @@ private fun GameHubScreen(onBack: () -> Unit, onGameSelected: (LearningGame) -> 
                     Spacer(Modifier.height(5.dp))
                     Text("اختر لعبتك، افتح المستويات، اجمع النجوم، وابنِ سلسلة انتصاراتك!", fontSize = 15.sp)
                     Spacer(Modifier.height(8.dp))
-                    val completed = games.sumOf { game -> gameLevels.count { level -> prefs(context).getBoolean(completedKey(game, level.number), false) } }
                     Text("🏅 تقدمك: $completed / ${games.size * gameLevels.size} مراحل مكتملة", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    if (dailyScore > 0) Text("🌟 أفضل نتيجة يومية: $dailyScore", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
+            Text("اختر الفئة", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                categories.take(4).forEach { c -> FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 12.sp) }) }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                categories.drop(4).forEach { c -> FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 12.sp) }) }
+            }
+            Spacer(Modifier.height(10.dp))
             Text("الألعاب", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(games, key = { it.id }) { game -> GameCard(game) { onGameSelected(game) } }
+                items(visibleGames, key = { it.id }) { game -> GameCard(game, context) { onGameSelected(game) } }
             }
         }
     }
 }
 
 @Composable
-private fun GameCard(game: LearningGame, onClick: () -> Unit) {
+private fun GameCard(game: LearningGame, context: Context, onClick: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) .94f else 1f, tween(110), label = "gameCardScale")
-    Card(Modifier.fillMaxWidth().height(174.dp).scale(scale).clickable { pressed = true; onClick(); pressed = false }, shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = game.color), elevation = CardDefaults.cardElevation(7.dp)) {
+    val best = gameLevels.maxOfOrNull { prefs(context).getInt(bestScoreKey(game, it.number), 0) } ?: 0
+    Card(Modifier.fillMaxWidth().height(180.dp).scale(scale).clickable { pressed = true; onClick(); pressed = false }, shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = game.color), elevation = CardDefaults.cardElevation(7.dp)) {
         Column(Modifier.fillMaxSize().padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(game.icon, fontSize = 45.sp)
             Spacer(Modifier.height(4.dp))
-            Text(game.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-            Text(game.subtitle, fontSize = 12.sp)
-            Spacer(Modifier.height(6.dp))
-            Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = .45f)) {
-                Text(game.category, Modifier.padding(horizontal = 10.dp, vertical = 3.dp), fontSize = 11.sp)
-            }
+            Text(game.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+            Text(game.subtitle, fontSize = 12.sp, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(5.dp))
+            Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = .45f)) { Text(game.category, Modifier.padding(horizontal = 10.dp, vertical = 3.dp), fontSize = 11.sp) }
+            if (best > 0) Text("⭐ أفضل نتيجة $best", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
@@ -131,18 +156,17 @@ private fun GameCard(game: LearningGame, onClick: () -> Unit) {
 private fun LevelSelectionScreen(game: LearningGame, onBack: () -> Unit, onLevelSelected: (Int) -> Unit, onSpeak: ((String, String) -> Unit)?) {
     val context = LocalContext.current
     Scaffold(topBar = {
-        TopAppBar(title = { Text("${game.icon} ${game.title}", fontWeight = FontWeight.ExtraBold) }, navigationIcon = {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") }
-        })
+        TopAppBar(title = { Text("${game.icon} ${game.title}", fontWeight = FontWeight.ExtraBold) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") } })
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("اختر مستوى التحدي", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
             Spacer(Modifier.height(6.dp))
-            Text("يفتح المستوى التالي بعد تحقيق دقة 70% أو أكثر.", fontSize = 14.sp)
+            Text("يفتح المستوى التالي بعد تحقيق دقة 70% أو أكثر.", fontSize = 14.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(18.dp))
             gameLevels.forEach { level ->
                 val unlocked = isLevelUnlocked(context, game, level.number)
                 val best = prefs(context).getInt(bestAccuracyKey(game, level.number), 0)
+                val attempts = prefs(context).getInt(attemptsKey(game, level.number), 0)
                 val scale by animateFloatAsState(if (unlocked) 1f else .97f, tween(140), label = "levelScale${level.number}")
                 Card(Modifier.fillMaxWidth().padding(vertical = 6.dp).scale(scale).clickable(enabled = unlocked) {
                     onSpeak?.invoke("${level.title}. هيا نبدأ!", "ar")
@@ -155,6 +179,7 @@ private fun LevelSelectionScreen(game: LearningGame, onBack: () -> Unit, onLevel
                             Text(level.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                             Text(if (unlocked) level.subtitle else "أكمل المستوى السابق بدقة 70%", fontSize = 13.sp)
                             if (best > 0) Text("أفضل دقة: $best%", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            if (attempts > 0) Text("المحاولات: $attempts", fontSize = 11.sp)
                         }
                         Text(if (unlocked) "ابدأ ➜" else "مغلق", fontWeight = FontWeight.Bold)
                     }
@@ -184,8 +209,8 @@ private fun questionFor(game: LearningGame, index: Int, level: Int, seed: Int): 
         }
         "sort" -> {
             val max = 6 + level * 3
-            val options = (List(5) { random.nextInt(1, max + 1) }).distinct().take(4)
-            val safe = if (options.size >= 4) options else (options + List(4 - options.size) { random.nextInt(1, max + 1) }).distinct().take(4)
+            val options = List(10) { random.nextInt(1, max + 1) }.distinct().take(4)
+            val safe = if (options.size >= 4) options else (options + (1..max).filter { it !in options }.shuffled(random)).take(4)
             val answer = safe.minOrNull() ?: 1
             RoundQuestion("ما الرقم الأصغر؟", safe.map(Int::toString).shuffled(random), answer.toString())
         }
@@ -241,6 +266,9 @@ private fun ProfessionalGameScreen(game: LearningGame, level: Int, onBack: () ->
     var timedOut by remember { mutableStateOf(false) }
     var lastGained by remember { mutableStateOf(0) }
     var memoryReady by remember { mutableStateOf(game.id != "memory") }
+    var paused by remember { mutableStateOf(false) }
+    var showQuitDialog by remember { mutableStateOf(false) }
+    var sessionCompleted by remember { mutableStateOf(false) }
     val seed = remember { Random.nextInt() }
     val context = LocalContext.current
     val total = TOTAL_ROUNDS
@@ -248,22 +276,22 @@ private fun ProfessionalGameScreen(game: LearningGame, level: Int, onBack: () ->
     val progress = ((round + if (answered) 1 else 0).toFloat() / total.toFloat()).coerceIn(0f, 1f)
     val timeLimit = when (level) { 1 -> 18; 2 -> 14; else -> 11 }
 
-    LaunchedEffect(round, answered, finished, game.id, level) {
+    LaunchedEffect(round, answered, finished, game.id, level, paused) {
         memoryReady = game.id != "memory"
-        if (game.id == "memory" && !answered && !finished) {
+        if (!paused && game.id == "memory" && !answered && !finished) {
             delay(if (level == 1) 1800 else if (level == 2) 1500 else 1200)
-            memoryReady = true
+            if (!paused && !answered && !finished) memoryReady = true
         }
     }
 
-    LaunchedEffect(round, answered, finished, level) {
-        if (!answered && !finished) {
+    LaunchedEffect(round, answered, finished, level, paused) {
+        if (!paused && !answered && !finished) {
             timeLeft = timeLimit
-            while (timeLeft > 0 && !answered && !finished) {
+            while (timeLeft > 0 && !answered && !finished && !paused) {
                 delay(1000)
                 timeLeft--
             }
-            if (timeLeft == 0 && !answered && !finished) {
+            if (timeLeft == 0 && !answered && !finished && !paused) {
                 timedOut = true
                 answered = true
                 selected = null
@@ -278,7 +306,7 @@ private fun ProfessionalGameScreen(game: LearningGame, level: Int, onBack: () ->
 
     if (finished) {
         val accuracy = (correctCount * 100f / total).roundToInt()
-        val completionBonus = if (correctCount > 0) 10 + level * 5 else 0
+        val completionBonus = if (sessionCompleted && correctCount > 0) 10 + level * 5 else 0
         val finalScore = score + completionBonus
         val p = prefs(context)
         val oldBest = p.getInt(bestScoreKey(game, level), 0)
@@ -287,30 +315,33 @@ private fun ProfessionalGameScreen(game: LearningGame, level: Int, onBack: () ->
             p.edit()
                 .putInt(bestScoreKey(game, level), maxOf(oldBest, finalScore))
                 .putInt(bestAccuracyKey(game, level), maxOf(oldAccuracy, accuracy))
-                .putBoolean(completedKey(game, level), true)
+                .putInt(attemptsKey(game, level), p.getInt(attemptsKey(game, level), 0) + 1)
+                .putBoolean(completedKey(game, level), sessionCompleted && accuracy >= 70)
                 .apply()
         }
-        GameResultScreen(game, level, finalScore, correctCount, accuracy, bestStreak, completionBonus, maxOf(oldBest, finalScore), onBack) {
-            round = 0
-            score = 0
-            correctCount = 0
-            streak = 0
-            bestStreak = 0
-            lives = 3
-            timeLeft = timeLimit
-            answered = false
-            selected = null
-            timedOut = false
-            lastGained = 0
-            finished = false
+        if (sessionCompleted) {
+            val today = todaySeed().toString()
+            val currentDaily = p.getString(DAILY_KEY, "")
+            if (currentDaily != today || finalScore > p.getInt(DAILY_SCORE_KEY, 0)) {
+                p.edit().putString(DAILY_KEY, today).putInt(DAILY_SCORE_KEY, maxOf(p.getInt(DAILY_SCORE_KEY, 0), finalScore)).apply()
+            }
+        }
+        GameResultScreen(game, level, finalScore, correctCount, accuracy, bestStreak, completionBonus, maxOf(oldBest, finalScore), sessionCompleted, onBack) {
+            round = 0; score = 0; correctCount = 0; streak = 0; bestStreak = 0; lives = 3; timeLeft = timeLimit; answered = false; selected = null; timedOut = false; lastGained = 0; finished = false; sessionCompleted = false; paused = false
         }
         return
     }
 
+    if (showQuitDialog) {
+        AlertDialog(onDismissRequest = { showQuitDialog = false }, title = { Text("الخروج من اللعبة؟", fontWeight = FontWeight.ExtraBold) }, text = { Text("سيتم إنهاء الجولة الحالية ولن تُسجّل كمحاولة مكتملة.") }, confirmButton = { TextButton(onClick = onBack) { Text("خروج") } }, dismissButton = { TextButton(onClick = { showQuitDialog = false }) { Text("متابعة") } })
+    }
+
+    if (paused) {
+        AlertDialog(onDismissRequest = { paused = false }, title = { Text("⏸ اللعبة متوقفة", fontWeight = FontWeight.ExtraBold) }, text = { Text("خذ وقتك ثم تابع عندما تكون مستعداً.") }, confirmButton = { Button(onClick = { paused = false }) { Text("متابعة ▶") } }, dismissButton = { TextButton(onClick = { paused = false; showQuitDialog = true }) { Text("إنهاء") } })
+    }
+
     Scaffold(topBar = {
-        TopAppBar(title = { Text("${game.icon} ${game.title} • مستوى $level", fontWeight = FontWeight.Bold) }, navigationIcon = {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") }
-        })
+        TopAppBar(title = { Text("${game.icon} ${game.title} • مستوى $level", fontWeight = FontWeight.Bold) }, navigationIcon = { IconButton(onClick = { showQuitDialog = true }) { Icon(Icons.Default.ArrowBack, "رجوع") } }, actions = { IconButton(onClick = { paused = true }) { Text("⏸", fontSize = 22.sp) } })
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -330,7 +361,7 @@ private fun ProfessionalGameScreen(game: LearningGame, level: Int, onBack: () ->
             if (game.id == "count") CountChallenge(round, level) else GameQuestionPanel(game, question, onSpeak, memoryReady)
             Spacer(Modifier.height(14.dp))
             question.options.forEach { option ->
-                AnswerButton(option, !answered && memoryReady, selected == option, answered && option == question.answer, answered && selected == option && option != question.answer) {
+                AnswerButton(option, !answered && memoryReady && !paused, selected == option, answered && option == question.answer, answered && selected == option && option != question.answer) {
                     selected = option
                     answered = true
                     val correct = option == question.answer
@@ -356,16 +387,13 @@ private fun ProfessionalGameScreen(game: LearningGame, level: Int, onBack: () ->
             }
             AnimatedVisibility(answered, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (timedOut) "⏰ انتهى الوقت! الإجابة: ${question.answer}" else if (selected == question.answer) "رائع! +$lastGained ⭐" else "الإجابة الصحيحة: ${question.answer}", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(if (timedOut) "⏰ انتهى الوقت! الإجابة: ${question.answer}" else if (selected == question.answer) "رائع! +$lastGained ⭐" else "الإجابة الصحيحة: ${question.answer}", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(7.dp))
                     Button(onClick = {
                         timedOut = false
-                        if (round + 1 >= total || lives <= 0) finished = true else {
-                            round++
-                            answered = false
-                            selected = null
-                            lastGained = 0
-                        }
+                        if (round + 1 >= total) { sessionCompleted = true; finished = true }
+                        else if (lives <= 0) { sessionCompleted = false; finished = true }
+                        else { round++; answered = false; selected = null; lastGained = 0 }
                     }) { Text(if (round + 1 >= total || lives <= 0) "عرض النتيجة 🏆" else "السؤال التالي ➜") }
                 }
             }
@@ -383,10 +411,13 @@ private fun GameQuestionPanel(game: LearningGame, question: RoundQuestion, onSpe
                 Text("احفظه جيدًا...", fontSize = 17.sp, fontWeight = FontWeight.Bold)
             } else {
                 Text(game.icon, fontSize = 42.sp)
-                Text(question.prompt, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                Text(question.prompt, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
                 if (game.id == "listen") {
                     Spacer(Modifier.height(5.dp))
                     FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Text("🔊 استمع") }
+                } else if (onSpeak != null) {
+                    Spacer(Modifier.height(5.dp))
+                    FilledTonalButton(onClick = { onSpeak.invoke(question.spoken, "ar") }) { Text("🔊 اسمع السؤال") }
                 }
             }
         }
@@ -396,12 +427,13 @@ private fun GameQuestionPanel(game: LearningGame, question: RoundQuestion, onSpe
 @Composable
 private fun CountChallenge(round: Int, level: Int) {
     val count = round % (7 + level * 2) + 2
+    val rows = (0 until count).toList().chunked(7)
     Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFCAFFBF).copy(alpha = .8f))) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text("عد النجوم", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Row { repeat(count) { Text("⭐", fontSize = if (level == 3) 24.sp else 28.sp) } }
             Spacer(Modifier.height(6.dp))
+            rows.forEach { row -> Row { row.forEach { Text("⭐", fontSize = if (level == 3) 24.sp else 28.sp) } } }
+            Spacer(Modifier.height(5.dp))
             Text("كم عددها؟", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
@@ -417,19 +449,21 @@ private fun AnswerButton(text: String, enabled: Boolean, selected: Boolean, corr
 }
 
 @Composable
-private fun GameResultScreen(game: LearningGame, level: Int, score: Int, correctCount: Int, accuracy: Int, bestStreak: Int, bonus: Int, bestScore: Int, onBack: () -> Unit, onReplay: () -> Unit) {
+private fun GameResultScreen(game: LearningGame, level: Int, score: Int, correctCount: Int, accuracy: Int, bestStreak: Int, bonus: Int, bestScore: Int, completed: Boolean, onBack: () -> Unit, onReplay: () -> Unit) {
     val rank = when { accuracy >= 90 -> "أسطورة 🏆"; accuracy >= 70 -> "بطل ⭐"; accuracy >= 50 -> "ممتاز 👏"; else -> "واصل التدريب 💪" }
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("🏆", fontSize = 80.sp)
-        Text("انتهت اللعبة!", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-        Text("${game.title} • المستوى $level", fontSize = 21.sp)
+        Text(if (completed) "🏆" else "💪", fontSize = 80.sp)
+        Text(if (completed) "انتهت اللعبة!" else "انتهت المحاولة", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+        Text("${game.title} • المستوى $level", fontSize = 21.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text(rank, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
         Text("النتيجة: ⭐ $score", fontSize = 25.sp, fontWeight = FontWeight.Bold)
         Text("أفضل نتيجة: ⭐ $bestScore", fontSize = 17.sp)
         Text("الدقة: $accuracy%", fontSize = 18.sp)
+        Text("الإجابات الصحيحة: $correctCount/$TOTAL_ROUNDS", fontSize = 16.sp)
         Text("أفضل سلسلة: 🔥 $bestStreak", fontSize = 18.sp)
-        Text("مكافأة الإنهاء: +$bonus ⭐", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        if (bonus > 0) Text("مكافأة الإنهاء: +$bonus ⭐", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        if (!completed) Text("أكمل جميع الأسئلة لفتح التقدم الكامل.", fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp))
         Spacer(Modifier.height(20.dp))
         Button(onClick = onReplay, modifier = Modifier.fillMaxWidth()) { Text("العب مرة أخرى") }
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("العودة للمستويات") }

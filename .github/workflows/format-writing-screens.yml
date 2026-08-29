@@ -1,0 +1,54 @@
+name: Rearrange Writing Screens
+on:
+  push:
+    paths:
+      - '.github/workflows/format-writing-screens.yml'
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rearrange writing layouts
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          # Arabic writing/reading screen: give the actual writing board most of the space,
+          # keep the target preview compact, and keep controls in one clean row.
+          p = Path('app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('Modifier.fillMaxWidth().weight(.36f)', 'Modifier.fillMaxWidth().weight(.22f)', 1)
+          s = s.replace('Modifier.fillMaxWidth().weight(.64f)', 'Modifier.fillMaxWidth().weight(.78f)', 1)
+          s = s.replace('fontSize = when (mode) { ReadingMode.WORDS -> 55.sp; else -> 72.sp }', 'fontSize = when (mode) { ReadingMode.WORDS -> 48.sp; else -> 62.sp }', 1)
+          s = s.replace('Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {', 'Row(Modifier.fillMaxWidth().height(38.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {', 1)
+          s = s.replace('fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF246078)', 'fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF246078)', 1)
+          s = s.replace('Spacer(Modifier.height(7.dp))\n                Text(\n                    encouragement(mode),', 'Spacer(Modifier.height(4.dp))\n                Text(\n                    encouragement(mode),', 1)
+          s = s.replace('padding(horizontal = 14.dp, vertical = 6.dp)', 'padding(horizontal = 12.dp, vertical = 4.dp)', 1)
+          s = s.replace('Spacer(Modifier.height(6.dp))\n                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {', 'Spacer(Modifier.height(4.dp))\n                Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {', 1)
+          p.write_text(s, encoding='utf-8')
+
+          # English writing screen lives in MainActivity.kt. Make the writing canvas
+          # dominant, reduce non-essential vertical chrome, and standardize controls.
+          p = Path('app/src/main/java/com/learnlettersnumbers/app/MainActivity.kt')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('modifier = Modifier.fillMaxWidth().weight(1f),\n                shape = RoundedCornerShape(28.dp),', 'modifier = Modifier.fillMaxWidth().weight(1.25f),\n                shape = RoundedCornerShape(28.dp),', 1)
+          s = s.replace('Text("Choose how you want to write this letter", fontSize = 16.sp', 'Text("Choose how you want to write this letter", fontSize = 14.sp', 1)
+          s = s.replace('Text("اختر شكل الحرف الذي تريد كتابته", fontSize = 14.sp', 'Text("اختر شكل الحرف الذي تريد كتابته", fontSize = 12.sp', 1)
+          s = s.replace('Text(target, fontSize = 42.sp', 'Text(target, fontSize = 36.sp', 1)
+          s = s.replace('Text(\n                        if (mode == "letters") "UPPERCASE: use the big form." else "lowercase: use the small form.",\n                        fontSize = 15.sp,', 'Text(\n                        if (mode == "letters") "UPPERCASE: use the big form." else "lowercase: use the small form.",\n                        fontSize = 13.sp,', 1)
+          s = s.replace('Text(\n                        if (mode == "letters") "اكتب الشكل المختار داخل السبورة" else "اكتب الرقم داخل السبورة",\n                        fontSize = 15.sp,', 'Text(\n                        if (mode == "letters") "اكتب الشكل المختار داخل السبورة" else "اكتب الرقم داخل السبورة",\n                        fontSize = 13.sp,', 1)
+          s = s.replace('Modifier.fillMaxWidth().weight(1f).padding(4.dp)', 'Modifier.fillMaxWidth().weight(1.35f).padding(4.dp)', 1)
+          s = s.replace('Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)', 'Modifier.fillMaxWidth().height(54.dp).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)', 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit source changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/learnlettersnumbers/app/ReadingScreen.kt app/src/main/java/com/learnlettersnumbers/app/MainActivity.kt
+          git diff --cached --quiet && exit 0
+          git commit -m 'Improve writing screen layout and board size'
+          git push

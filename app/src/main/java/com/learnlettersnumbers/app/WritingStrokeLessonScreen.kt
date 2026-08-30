@@ -43,7 +43,7 @@ private fun arabicFormSymbol(index: Int, form: ArabicForm): String {
     return when (form) {
         ArabicForm.INITIAL -> if (c in joinable) "$cـ" else c
         ArabicForm.MEDIAL -> if (c in joinable) "ـ${c}ـ" else c
-        ArabicForm.FINAL -> if (c in joinable) "ـ$ c".replace("$ ", "") else c
+        ArabicForm.FINAL -> if (c in joinable) "ـ${c}" else c
     }
 }
 
@@ -54,12 +54,7 @@ private fun arabicFormName(form: ArabicForm): String = when (form) {
 }
 
 @Composable
-fun WritingStrokeLessonScreen(
-    language: String,
-    numbers: Boolean,
-    onBack: () -> Unit,
-    speak: (String, String) -> Unit
-) {
+fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> Unit, speak: (String, String) -> Unit) {
     val arabic = language == "ar"
     var index by remember { mutableIntStateOf(0) }
     var form by remember { mutableStateOf(ArabicForm.INITIAL) }
@@ -96,28 +91,16 @@ fun WritingStrokeLessonScreen(
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(if (arabic) "تعلم الكتابة" else "Learn to Write", fontWeight = FontWeight.ExtraBold) },
-                    navigationIcon = {
-                        TextButton(onClick = onBack) {
-                            Text(if (arabic) "رجوع" else "Back", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                )
-            }
-        ) { padding ->
-            Column(
-                Modifier.fillMaxSize().padding(padding).padding(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+        Scaffold(topBar = {
+            TopAppBar(
+                title = { Text(if (arabic) "تعلم الكتابة" else "Learn to Write", fontWeight = FontWeight.ExtraBold) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(if (arabic) "رجوع" else "Back", fontWeight = FontWeight.Bold) } }
+            )
+        }) { padding ->
+            Column(Modifier.fillMaxSize().padding(padding).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع اليد من نقطة البداية إلى النهاية 👆"
-                    else "See the complete letter, choose its case, then follow the hand from the start to the end 👆",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
+                    if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع اليد من نقطة البداية إلى النهاية 👆" else "See the complete letter, choose its case, then follow the hand from the start to the end 👆",
+                    fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
@@ -128,7 +111,6 @@ fun WritingStrokeLessonScreen(
                         FormButton("أخري", "نهاية الحرف", form == ArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ArabicForm.FINAL; replay++ }
                     }
                 }
-
                 if (!arabic && !numbers) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FormButton("UPPERCASE", "حروف كبيرة", englishCase == WritingEnglishCase.UPPER, Color(0xFF4C8BF5), Modifier.weight(1f)) { englishCase = WritingEnglishCase.UPPER; replay++ }
@@ -137,16 +119,8 @@ fun WritingStrokeLessonScreen(
                 }
 
                 Spacer(Modifier.height(7.dp))
-                Card(
-                    Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    elevation = CardDefaults.cardElevation(5.dp)
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(5.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         Text("${currentIndex + 1} / $total", fontWeight = FontWeight.ExtraBold)
                         Spacer(Modifier.width(12.dp))
                         Text(symbol, fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color(0xFF315CFF))
@@ -156,24 +130,15 @@ fun WritingStrokeLessonScreen(
                 }
 
                 Spacer(Modifier.height(7.dp))
-                Card(
-                    Modifier.fillMaxWidth().weight(1f),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)),
-                    elevation = CardDefaults.cardElevation(9.dp)
-                ) {
+                Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)), elevation = CardDefaults.cardElevation(9.dp)) {
                     TraceTeachingBoard(symbol = symbol, replay = replay, arabic = arabic)
                 }
 
                 Spacer(Modifier.height(7.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LessonButton(if (arabic) "السابق\nPrevious" else "Previous", Color(0xFF5C6BC0), currentIndex > 0, Modifier.weight(1f)) {
-                        if (currentIndex > 0) { index = currentIndex - 1; replay++ }
-                    }
+                    LessonButton(if (arabic) "السابق\nPrevious" else "Previous", Color(0xFF5C6BC0), currentIndex > 0, Modifier.weight(1f)) { if (currentIndex > 0) { index = currentIndex - 1; replay++ } }
                     LessonButton("🔄 ${if (arabic) "إعادة" else "Replay"}", Color(0xFF039BE5), true, Modifier.weight(1f)) { replay++ }
-                    LessonButton(if (arabic) "التالي\nNext" else "Next", Color(0xFF2EAD69), currentIndex < total - 1, Modifier.weight(1f)) {
-                        if (currentIndex < total - 1) { index = currentIndex + 1; replay++ }
-                    }
+                    LessonButton(if (arabic) "التالي\nNext" else "Next", Color(0xFF2EAD69), currentIndex < total - 1, Modifier.weight(1f)) { if (currentIndex < total - 1) { index = currentIndex + 1; replay++ } }
                 }
             }
         }
@@ -182,12 +147,7 @@ fun WritingStrokeLessonScreen(
 
 @Composable
 private fun FormButton(title: String, subtitle: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Card(
-        modifier = modifier.height(64.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White),
-        elevation = CardDefaults.cardElevation(if (selected) 9.dp else 3.dp)
-    ) {
+    Card(modifier = modifier.height(64.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White), elevation = CardDefaults.cardElevation(if (selected) 9.dp else 3.dp)) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(title, fontSize = 17.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else color, textAlign = TextAlign.Center)
             Text(subtitle, fontSize = 12.sp, color = if (selected) Color.White else Color.DarkGray, textAlign = TextAlign.Center)
@@ -197,23 +157,12 @@ private fun FormButton(title: String, subtitle: String, selected: Boolean, color
 
 @Composable
 private fun LessonButton(text: String, color: Color, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(58.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))
-    ) {
+    Button(onClick = onClick, enabled = enabled, modifier = modifier.height(58.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))) {
         Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, textAlign = TextAlign.Center)
     }
 }
 
-private data class TeachingSample(
-    val x: Float,
-    val y: Float,
-    val tangentX: Float,
-    val tangentY: Float
-)
+private data class TeachingSample(val x: Float, val y: Float, val tangentX: Float, val tangentY: Float)
 
 private fun startHint(symbol: String, arabic: Boolean, width: Float, height: Float): Offset {
     val hint = if (!arabic) {
@@ -275,7 +224,6 @@ private fun buildTeachingSamples(path: AndroidPath, hint: Offset): List<Teaching
     } while (measure.nextContour())
 
     if (contours.isEmpty()) return emptyList()
-
     val ordered = contours.sortedByDescending { contour -> PathMeasure(contour, false).length }
     val output = mutableListOf<TeachingSample>()
 
@@ -304,16 +252,16 @@ private fun buildTeachingSamples(path: AndroidPath, hint: Offset): List<Teaching
         }
 
         val samples = if (contourMeasure.isClosed) {
-            val result = ArrayList<TeachingSample>(221)
+            val closedSamples = ArrayList<TeachingSample>(221)
             for (i in 0..220) {
                 var d = (start + length * i / 220f) % length
                 if (d < 0f) d += length
                 val p = FloatArray(2)
                 val t = FloatArray(2)
                 contourMeasure.getPosTan(d, p, t)
-                result.add(TeachingSample(p[0], p[1], t[0], t[1]))
+                closedSamples.add(TeachingSample(p[0], p[1], t[0], t[1]))
             }
-            result
+            closedSamples
         } else {
             sampleContour(contourMeasure, start, 220)
         }
@@ -335,9 +283,7 @@ private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean) {
         progress.animateTo(1f, animationSpec = tween(5600, easing = LinearEasing))
     }
 
-    Box(
-        Modifier.fillMaxSize().padding(8.dp).background(Color(0xFFF2F7FF), RoundedCornerShape(24.dp)).border(3.dp, Color(0xFFD5E5F5), RoundedCornerShape(24.dp))
-    ) {
+    Box(Modifier.fillMaxSize().padding(8.dp).background(Color(0xFFF2F7FF), RoundedCornerShape(24.dp)).border(3.dp, Color(0xFFD5E5F5), RoundedCornerShape(24.dp))) {
         Canvas(Modifier.fillMaxSize().padding(8.dp)) {
             val width = size.width
             val height = size.height
@@ -355,37 +301,27 @@ private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean) {
             paint.getTextPath(symbol, 0, symbol.length, width / 2f, height * 0.68f, rawPath)
             val bounds = android.graphics.RectF()
             rawPath.computeBounds(bounds, true)
-
             val maxWidth = width * 0.82f
             val maxHeight = height * 0.76f
-            val scaleX = maxWidth / bounds.width().coerceAtLeast(1f)
-            val scaleY = maxHeight / bounds.height().coerceAtLeast(1f)
-            val scale = min(scaleX, scaleY)
-
+            val scale = min(maxWidth / bounds.width().coerceAtLeast(1f), maxHeight / bounds.height().coerceAtLeast(1f))
             val matrix = Matrix().apply {
                 setScale(scale, scale)
-                postTranslate(
-                    width / 2f - (bounds.left + bounds.right) * scale / 2f,
-                    height * 0.54f - (bounds.top + bounds.bottom) * scale / 2f
-                )
+                postTranslate(width / 2f - (bounds.left + bounds.right) * scale / 2f, height * 0.54f - (bounds.top + bounds.bottom) * scale / 2f)
             }
             val glyphPath = AndroidPath(rawPath)
             glyphPath.transform(matrix)
-
             drawContext.canvas.nativeCanvas.drawPath(glyphPath, paint)
 
             val hint = startHint(symbol, arabic, width, height)
             val samples: List<TeachingSample> = buildTeachingSamples(glyphPath, hint)
             if (samples.isEmpty()) return@Canvas
 
-            val maxIndex = samples.lastIndex.toFloat()
-            val position = progress.value * maxIndex
+            val position = progress.value * samples.lastIndex.toFloat()
             val indexA = position.toInt().coerceIn(0, samples.lastIndex)
             val indexB = (indexA + 1).coerceAtMost(samples.lastIndex)
             val fraction = position - indexA.toFloat()
             val a = samples[indexA]
             val b = samples[indexB]
-
             val x = a.x + (b.x - a.x) * fraction
             val y = a.y + (b.y - a.y) * fraction
             val tx = a.tangentX + (b.tangentX - a.tangentX) * fraction
@@ -411,21 +347,9 @@ private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean) {
             nativeCanvas.restore()
         }
 
-        Column(
-            Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                if (arabic) "ابدأ من 🟢 ثم اتبع اليد فوق الحرف حتى النهاية 👆" else "Start at 🟢 and follow the hand over the letter to the end 👆",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                if (arabic) "الحرف كامل وواضح — بدون خط إرشاد" else "The complete letter stays visible — no guide line",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
+        Column(Modifier.align(Alignment.TopCenter).padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(if (arabic) "ابدأ من 🟢 ثم اتبع اليد فوق الحرف حتى النهاية 👆" else "Start at 🟢 and follow the hand over the letter to the end 👆", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+            Text(if (arabic) "الحرف كامل وواضح — بدون خط إرشاد" else "The complete letter stays visible — no guide line", fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

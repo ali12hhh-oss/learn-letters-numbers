@@ -1,7 +1,9 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,10 +23,11 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.min
 
 private enum class ArabicForm { INITIAL, MEDIAL, FINAL }
-private enum class EnglishCase { UPPER, LOWER }
+private enum class WritingEnglishCase { UPPER, LOWER }
 
 private val arLetters = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","و","ي")
 private val arNames = listOf("الألف","الباء","التاء","الثاء","الجيم","الحاء","الخاء","الدال","الذال","الراء","الزاي","السين","الشين","الصاد","الضاد","الطاء","الظاء","العين","الغين","الفاء","القاف","الكاف","اللام","الميم","النون","الهاء","الواو","الياء")
@@ -34,9 +37,9 @@ private fun arabicFormSymbol(i: Int, form: ArabicForm): String {
     val c = arLetters[i]
     val join = setOf("ب","ت","ث","ج","ح","خ","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","ي")
     return when (form) {
-        ArabicForm.INITIAL -> if (c in join) "$cـ" else c
+        ArabicForm.INITIAL -> if (c in join) "${c}ـ" else c
         ArabicForm.MEDIAL -> if (c in join) "ـ${c}ـ" else c
-        ArabicForm.FINAL -> if (c in join) "ـ$c" else c
+        ArabicForm.FINAL -> if (c in join) "ـ${c}" else c
     }
 }
 
@@ -51,7 +54,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
     val arabic = language == "ar"
     var index by remember { mutableIntStateOf(0) }
     var form by remember { mutableStateOf(ArabicForm.INITIAL) }
-    var enCase by remember { mutableStateOf(EnglishCase.UPPER) }
+    var enCase by remember { mutableStateOf(WritingEnglishCase.UPPER) }
     var replay by remember { mutableIntStateOf(0) }
 
     val total = when {
@@ -63,13 +66,13 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
     val symbol = when {
         numbers -> (safeIndex).toString()
         arabic -> arabicFormSymbol(safeIndex, form)
-        enCase == EnglishCase.UPPER -> enLetters[safeIndex].toString()
+        enCase == WritingEnglishCase.UPPER -> enLetters[safeIndex].toString()
         else -> enLetters[safeIndex].lowercase()
     }
     val name = when {
         numbers -> "الرقم $symbol"
         arabic -> "${arNames[safeIndex]} — ${arabicFormName(form)}"
-        enCase == EnglishCase.UPPER -> "${enLetters[safeIndex]} — حروف كبيرة"
+        enCase == WritingEnglishCase.UPPER -> "${enLetters[safeIndex]} — حروف كبيرة"
         else -> "${enLetters[safeIndex].lowercase()} — حروف صغيرة"
     }
 
@@ -77,7 +80,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
         val message = when {
             numbers -> if (arabic) "تعلم كتابة الرقم $symbol" else "Learn to write number $symbol"
             arabic -> "تعلم كتابة ${arNames[safeIndex]}، الشكل ${arabicFormName(form)}"
-            enCase == EnglishCase.UPPER -> "Learn to write capital letter ${enLetters[safeIndex]}"
+            enCase == WritingEnglishCase.UPPER -> "Learn to write capital letter ${enLetters[safeIndex]}"
             else -> "Learn to write lowercase letter ${enLetters[safeIndex].lowercase()}"
         }
         speak(message, language)
@@ -91,12 +94,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
             )
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع إصبع اليد من نقطة البداية 👆"
-                    else "See the complete letter, choose its case, then follow the hand from the start point 👆",
-                    fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Text(if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع إصبع اليد من نقطة البداية 👆" else "See the complete letter, choose its case, then follow the hand from the start point 👆", fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 8.dp))
 
                 if (arabic && !numbers) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -107,8 +105,8 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
                 }
                 if (!arabic && !numbers) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FormButton("UPPERCASE", "حروف كبيرة", enCase == EnglishCase.UPPER, Color(0xFF4C8BF5), Modifier.weight(1f)) { enCase = EnglishCase.UPPER; replay++ }
-                        FormButton("lowercase", "حروف صغيرة", enCase == EnglishCase.LOWER, Color(0xFFFF8A4C), Modifier.weight(1f)) { enCase = EnglishCase.LOWER; replay++ }
+                        FormButton("UPPERCASE", "حروف كبيرة", enCase == WritingEnglishCase.UPPER, Color(0xFF4C8BF5), Modifier.weight(1f)) { enCase = WritingEnglishCase.UPPER; replay++ }
+                        FormButton("lowercase", "حروف صغيرة", enCase == WritingEnglishCase.LOWER, Color(0xFFFFA8A8), Modifier.weight(1f)) { enCase = WritingEnglishCase.LOWER; replay++ }
                     }
                 }
 
@@ -125,14 +123,14 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
 
                 Spacer(Modifier.height(7.dp))
                 Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)), elevation = CardDefaults.cardElevation(9.dp)) {
-                    TraceTeachingBoard(symbol = symbol, replay = replay, arabic = arabic, englishLower = !arabic && enCase == EnglishCase.LOWER)
+                    TraceTeachingBoard(symbol = symbol, replay = replay, arabic = arabic, englishLower = !arabic && enCase == WritingEnglishCase.LOWER)
                 }
 
                 Spacer(Modifier.height(7.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LessonButton(if (arabic) "السابق" else "Previous", Color(0xFF5C6BC0), safeIndex > 0, Modifier.weight(1f)) { if (safeIndex > 0) { index = safeIndex - 1; replay++ } }
+                    LessonButton(if (arabic) "السابق\nPrevious" else "Previous", Color(0xFF5C6BC0), safeIndex > 0, Modifier.weight(1f)) { if (safeIndex > 0) { index = safeIndex - 1; replay++ } }
                     LessonButton("🔄 ${if (arabic) "إعادة" else "Replay"}", Color(0xFF039BE5), true, Modifier.weight(1f)) { replay++ }
-                    LessonButton(if (arabic) "التالي" else "Next", Color(0xFF2EAD69), safeIndex < total - 1, Modifier.weight(1f)) { if (safeIndex < total - 1) { index = safeIndex + 1; replay++ } }
+                    LessonButton(if (arabic) "التالي\nNext" else "Next", Color(0xFF2EAD69), safeIndex < total - 1, Modifier.weight(1f)) { if (safeIndex < total - 1) { index = safeIndex + 1; replay++ } }
                 }
             }
         }
@@ -158,8 +156,11 @@ private fun LessonButton(text: String, color: Color, enabled: Boolean, modifier:
 
 @Composable
 private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean, englishLower: Boolean) {
-    var progress by remember(symbol, replay) { mutableFloatStateOf(0f) }
-    LaunchedEffect(symbol, replay) { animate(0f, 1f, tween(3600, easing = LinearEasing)) { v, _ -> progress = v } }
+    val progress = remember(symbol, replay) { Animatable(0f) }
+    LaunchedEffect(symbol, replay) {
+        progress.snapTo(0f)
+        progress.animateTo(1f, animationSpec = tween(3600, easing = LinearEasing))
+    }
 
     Box(Modifier.fillMaxSize().padding(8.dp).background(Color(0xFFF2F7FF), RoundedCornerShape(24.dp)).border(3.dp, Color(0xFFD5E5F5), RoundedCornerShape(24.dp))) {
         Canvas(Modifier.fillMaxSize().padding(8.dp)) {
@@ -182,8 +183,8 @@ private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean, eng
             drawCircle(Color.White, 8f, start)
             drawCircle(Color(0xFF27AE60), 5f, start)
 
-            val x = start.x + (end.x - start.x) * progress
-            val y = start.y + (end.y - start.y) * progress
+            val x = start.x + (end.x - start.x) * progress.value
+            val y = start.y + (end.y - start.y) * progress.value
             drawCircle(Color(0xFFFF8A00), 19f, Offset(x, y))
             drawCircle(Color.White, 8f, Offset(x, y))
         }

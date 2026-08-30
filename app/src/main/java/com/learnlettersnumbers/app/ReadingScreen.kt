@@ -79,13 +79,11 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
                 Spacer(Modifier.weight(1f))
                 Text("القراءة والكتابة", fontSize = 26.sp, fontWeight = FontWeight.Black, color = Color(0xFF155B83))
             }
-
             Row(Modifier.fillMaxWidth().height(54.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 ReadingModeButton("الحروف", mode == ReadingMode.LETTERS, Modifier.weight(1f)) { mode = ReadingMode.LETTERS; index = 0; clear(); onTap() }
                 ReadingModeButton("الأرقام", mode == ReadingMode.NUMBERS, Modifier.weight(1f)) { mode = ReadingMode.NUMBERS; index = 0; clear(); onTap() }
                 ReadingModeButton("كلمات", mode == ReadingMode.WORDS, Modifier.weight(1f)) { mode = ReadingMode.WORDS; index = 0; clear(); onTap() }
             }
-
             if (mode == ReadingMode.LETTERS) {
                 Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth().height(50.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -94,52 +92,43 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
                     ReadingFormButton("أخري", form == ReadingLetterForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ReadingLetterForm.FINAL; onTap() }
                 }
             }
-
             Row(Modifier.fillMaxWidth().height(50.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Text("${currentIndex + 1} / $total", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                 Spacer(Modifier.width(10.dp))
                 Text(target, fontSize = 34.sp, fontWeight = FontWeight.Black, color = Color(0xFF294C78), textAlign = TextAlign.Center)
             }
-
             Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(25.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF7FBFF)), elevation = CardDefaults.cardElevation(9.dp)) {
                 Column(Modifier.fillMaxSize().padding(6.dp)) {
                     Canvas(
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
+                        Modifier.fillMaxWidth().weight(1f)
                             .background(Color.White, RoundedCornerShape(20.dp))
                             .border(2.dp, Color(0xFFD9E8F0), RoundedCornerShape(20.dp))
                             .pointerInput(inkColor) {
-                                detectTapGestures(
-                                    onTap = { point ->
-                                        // A tap is a real visible dot, not an invisible zero-length path.
-                                        strokes = strokes + ReadingStroke(listOf(point), inkColor)
-                                        onTap()
-                                    }
-                                )
+                                detectTapGestures(onTap = { point ->
+                                    strokes = strokes + ReadingStroke(listOf(point), inkColor)
+                                    onTap()
+                                })
                             }
                             .pointerInput(inkColor) {
                                 detectDragGestures(
                                     onDragStart = { point -> current = listOf(point) },
                                     onDrag = { change, _ -> change.consumePositionChange(); current = current + change.position },
-                                    onDragEnd = {
-                                        if (current.size == 1) strokes = strokes + ReadingStroke(current, inkColor)
-                                        else if (current.size > 1) strokes = strokes + ReadingStroke(current, inkColor)
-                                        current = emptyList()
-                                    },
+                                    onDragEnd = { if (current.isNotEmpty()) strokes = strokes + ReadingStroke(current, inkColor); current = emptyList() },
                                     onDragCancel = { current = emptyList() }
                                 )
                             }
                     ) {
                         strokes.forEach { s ->
                             if (s.points.size == 1) {
-                                drawCircle(color = s.color, radius = 8f, center = s.points.first())
+                                // نقطة فعلية مرئية عند النقر، وليست مساراً بطول صفر.
+                                drawCircle(color = s.color, radius = 12f, center = s.points.first())
                             } else {
-                                drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 15f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                                // خط الكتابة عريض وواضح حتى يظهر أثناء الكتابة بالنقاط والمسارات.
+                                drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 22f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                             }
                         }
-                        if (current.size == 1) drawCircle(color = inkColor, radius = 8f, center = current.first())
-                        if (current.size > 1) drawPath(pathOfReading(current), color = inkColor, style = Stroke(width = 15f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        if (current.size == 1) drawCircle(color = inkColor, radius = 12f, center = current.first())
+                        if (current.size > 1) drawPath(pathOfReading(current), color = inkColor, style = Stroke(width = 22f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                     Spacer(Modifier.height(5.dp))
                     Row(Modifier.fillMaxWidth().height(38.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -149,7 +138,6 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
                     }
                 }
             }
-
             Spacer(Modifier.height(5.dp))
             Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 ReadingNavButton("السابق", Color(0xFF5C6BC0), Modifier.weight(1f)) { previous() }

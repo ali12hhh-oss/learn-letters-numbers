@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,6 +33,13 @@ fun SettingsScreen(
     var showTerms by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
+    var showAudioTest by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val audio = remember { LocalAudioManager(context.applicationContext) }
+
+    DisposableEffect(Unit) {
+        onDispose { audio.releaseAll() }
+    }
 
     val bg = if (darkMode) {
         Brush.verticalGradient(listOf(Color(0xFF26365F), Color(0xFF493B78), Color(0xFF355184)))
@@ -67,6 +75,8 @@ fun SettingsScreen(
             ) {
                 repo.setDarkMode(it); onDarkModeChanged(it)
             }
+
+            AudioTestCard(audio, showAudioTest) { showAudioTest = !showAudioTest }
 
             InfoButton("📘 تعليم استخدام التطبيق", "شرح الأقسام والأزرار وطريقة التعلم") { showUsage = true }
             InfoButton("🔐 الخصوصية", "البيانات المحلية وسياسة الخصوصية") { showPrivacy = true }
@@ -115,6 +125,61 @@ English: Letters، Numbers، Learn to Write، وWriting.
         },
         dismissButton = { TextButton(onClick = { showDelete = false }) { Text("إلغاء") } }
     )
+}
+
+@Composable
+private fun AudioTestCard(audio: LocalAudioManager, expanded: Boolean, onToggle: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(7.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("🎧 اختبار الصوت", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("تجربة عينات عربية وإنجليزية محلياً دون إنترنت", fontSize = 13.sp)
+                }
+                TextButton(onClick = onToggle) { Text(if (expanded) "إخفاء" else "فتح") }
+            }
+
+            if (expanded) {
+                Text("الحروف العربية", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                SampleRow(listOf("أ" to "ar_letter_01_sound", "ب" to "ar_letter_02_sound", "ح" to "ar_letter_06_sound", "م" to "ar_letter_24_sound", "ي" to "ar_letter_28_sound")) { audio.playRequired(it) }
+
+                Text("الأرقام العربية", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                SampleRow(listOf("١" to "ar_number_001", "٢" to "ar_number_002", "٥" to "ar_number_005", "١٠" to "ar_number_010", "٢٠" to "ar_number_020")) { audio.playRequired(it) }
+
+                Text("English letters", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                SampleRow(listOf("A" to "en_letter_01_sound", "B" to "en_letter_02_sound", "C" to "en_letter_03_sound", "M" to "en_letter_13_sound", "S" to "en_letter_19_sound")) { audio.playRequired(it) }
+
+                Text("English numbers", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                SampleRow(listOf("1" to "en_number_001", "2" to "en_number_002", "5" to "en_number_005", "10" to "en_number_010", "20" to "en_number_020")) { audio.playRequired(it) }
+
+                Text("رسائل تشجيع", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { audio.speakOffline("أحسنت! عمل رائع!", "ar") }, modifier = Modifier.weight(1f)) { Text("عربي") }
+                    Button(onClick = { audio.speakOffline("Great job! Keep going!", "en") }, modifier = Modifier.weight(1f)) { Text("English") }
+                }
+                Text("ملاحظة: رسائل التشجيع التجريبية تستخدم صوت Android المثبت على الجهاز فقط إذا كان الصوت غير متصل بالشبكة.", fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SampleRow(samples: List<Pair<String, String>>, play: (String) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        samples.forEach { (label, resource) ->
+            Button(
+                onClick = { play(resource) },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 3.dp, vertical = 5.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) { Text("🔊 $label", fontSize = 13.sp, maxLines = 1) }
+        }
+    }
 }
 
 @Composable

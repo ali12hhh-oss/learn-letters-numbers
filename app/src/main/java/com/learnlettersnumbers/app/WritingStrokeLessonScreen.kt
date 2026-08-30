@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalLayoutDirection
+import kotlin.math.atan2
 import kotlin.math.min
 
 private enum class ArabicForm { INITIAL, MEDIAL, FINAL }
@@ -96,7 +97,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع إصبع اليد من نقطة البداية إلى النهاية 👆" else "See the complete letter, choose its case, then follow the hand from the start point to the end 👆",
+                    if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع حركة اليد من نقطة البداية إلى النهاية 👆" else "See the complete letter, choose its case, then follow the hand from the start point to the end 👆",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -161,19 +162,134 @@ private fun LessonButton(text: String, color: Color, enabled: Boolean, modifier:
     }
 }
 
-/**
- * Teaching board for ALL letters.
- * The old implementation drew one straight line from start to end. That has been removed.
- * The hand now follows the real outline of the displayed glyph itself. The guide path is
- * intentionally invisible; only the complete letter, green start marker and moving hand are shown.
- */
+private data class TeachingSample(
+    val x: Float,
+    val y: Float,
+    val tangentX: Float,
+    val tangentY: Float
+)
+
+private fun startHint(symbol: String, arabic: Boolean, w: Float, h: Float): Pair<Float, Float> {
+    if (!arabic) {
+        return when (symbol.lowercase()) {
+            "a" -> .32f to .18f
+            "b", "d", "p", "q", "r" -> .62f to .18f
+            "c", "e", "o", "s" -> .72f to .35f
+            "f", "t" -> .58f to .16f
+            "g" -> .72f to .42f
+            "h", "k", "l", "m", "n" -> .28f to .18f
+            "i", "j" -> .52f to .16f
+            "u", "v", "w", "x", "y", "z" -> .28f to .20f
+            else -> .5f to .2f
+        }.let { (x, y) -> x * w to y * h }
+    }
+
+    val base = symbol.firstOrNull { it in arLetters }?.toString() ?: symbol.firstOrNull()?.toString().orEmpty()
+    val hint = when (base) {
+        "ا" -> .55f to .18f
+        "ب", "ت", "ث" -> .76f to .56f
+        "ج", "ح", "خ" -> .76f to .30f
+        "د", "ذ", "ر", "ز" -> .76f to .25f
+        "س", "ش" -> .78f to .40f
+        "ص", "ض" -> .76f to .30f
+        "ط", "ظ" -> .65f to .18f
+        "ع", "غ" -> .75f to .34f
+        "ف", "ق" -> .75f to .24f
+        "ك" -> .72f to .20f
+        "ل" -> .60f to .16f
+        "م" -> .75f to .35f
+        "ن" -> .75f to .35f
+        "ه" -> .70f to .35f
+        "و" -> .70f to .28f
+        "ي" -> .76f to .55f
+        else -> .72f to .30f
+    }
+    return hint.first * w to hint.second * h
+}
+
+private fun sampleContour(measure: PathMeasure, startDistance: Float, steps: Int): List<TeachingSample> {
+    val length = measure.length
+    if (length <= 0f) return emptyList()
+    val closed = measure.isClosed
+    val result = ArrayList<TeachingSample>(steps + 1)
+    for (i in 0..steps) {
+        val raw = startDistance + length * i / steps.toFloat()
+        val d = if (closed) {
+            var v = raw % length
+            if (v < 0f) v += length
+            v
+        } else raw.coerceIn(0f, length)
+        val pos = FloatArray(2)
+        val tan = FloatArray(2)
+        measure.getPosTan(d, pos, tan)
+        result += TeachingSample(pos[0], pos[1], tan[0], tan[1])
+    }
+    return result
+}
+
+private fun distanceSquared(a: TeachingSample, x: Float, y: Float): Float {
+    val dx = a.x - x
+    val dy = a.y - y
+    return dx * dx + dy * dy
+}
+
+private fun buildTeachingSamples(glyphPath: AndroidPath, hintX: Float, hintY: Float): List<TeachingSample> {
+    val contours = mutableListOf<Pair<Float, AndroidPath>>()
+    val probe = PathMeasure(glyphPath, false)
+    do {
+        val len = probe.length
+        if (len > 1f) {
+            val segment = AndroidPath()
+            probe.getSegment(0f, len, segment, true)
+            contours += len to segment
+        }
+    } while (probe.nextContour())
+
+    if (contours.isEmpty()) return emptyList()
+
+    // The main body is always first. Dots/inner contours are taught afterwards.
+    contours.sortByDescending { it.first }
+    val output = mutableListOf<TeachingSample>()
+
+    contours.forEachIndexed { index, (_, contour) ->
+        val measure = PathMeasure(contour, false)
+        val length = measure.length
+        if (length <= 1f) return@forEachIndexed
+
+        var startDistance = 0f
+        if (index == 0 && measure.isClosed) {
+            val steps = 180
+            var best = Float.MAX_VALUE
+            for (i in 0 until steps) {
+                val d = length * i / steps.toFloat()
+                val p = FloatArray(2)
+                measure.getPosTan(d, p, null)
+                val dx = p[0] - hintX
+                val dy = p[1] - hintY
+                val score = dx * dx + dy * dy
+                if (score < best) {
+                    best = score
+                    startDistance = d
+                }
+            }
+        }
+
+        val samples = sampleContour(measure, startDistance, 220)
+        if (samples.isNotEmpty()) {
+            if (output.isNotEmpty()) output += samples.first()
+            output += samples
+        }
+    }
+    return output
+}
+
 @Composable
 private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean) {
     val progress = remember(symbol, replay) { Animatable(0f) }
 
     LaunchedEffect(symbol, replay) {
         progress.snapTo(0f)
-        progress.animateTo(1f, animationSpec = tween(5200, easing = LinearEasing))
+        progress.animateTo(1f, animationSpec = tween(5600, easing = LinearEasing))
     }
 
     Box(
@@ -186,96 +302,72 @@ private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean) {
         Canvas(Modifier.fillMaxSize().padding(8.dp)) {
             val w = size.width
             val h = size.height
-            val targetW = w * 0.76f
-            val targetH = h * 0.70f
             val textSize = min(w, h) * if (arabic) 0.78f else 0.72f
-
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 this.textSize = textSize
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
+                textAlign = Paint.Align.CENTER
                 style = Paint.Style.FILL
+                color = android.graphics.Color.rgb(72, 89, 110)
+                alpha = 72
             }
 
-            // Build the actual glyph outline for every Arabic form and every
-            // English upper/lower-case letter. There is no generic straight line.
+            // Draw the complete target glyph first. The child always sees the
+            // real letter; only the hand moves, there is deliberately NO line.
             val rawPath = AndroidPath()
-            paint.getTextPath(symbol, 0, symbol.length, 0f, 0f, rawPath)
-
+            paint.getTextPath(symbol, 0, symbol.length, w / 2f, h * 0.68f, rawPath)
             val bounds = android.graphics.RectF()
             rawPath.computeBounds(bounds, true)
-            val bw = bounds.width().coerceAtLeast(1f)
-            val bh = bounds.height().coerceAtLeast(1f)
-            val scale = min(targetW / bw, targetH / bh)
-
+            val maxW = w * 0.82f
+            val maxH = h * 0.76f
+            val scale = min(maxW / bounds.width().coerceAtLeast(1f), maxH / bounds.height().coerceAtLeast(1f))
             val matrix = Matrix().apply {
                 setScale(scale, scale)
                 postTranslate(
                     w / 2f - (bounds.left + bounds.right) * scale / 2f,
-                    h * 0.52f - (bounds.top + bounds.bottom) * scale / 2f
+                    h * 0.54f - (bounds.top + bounds.bottom) * scale / 2f
                 )
             }
             val glyphPath = AndroidPath(rawPath)
             glyphPath.transform(matrix)
-
-            // Keep the complete letter visible throughout the lesson.
-            paint.color = android.graphics.Color.rgb(95, 113, 132)
-            paint.alpha = 70
             drawContext.canvas.nativeCanvas.drawPath(glyphPath, paint)
 
-            // Measure every real contour of the glyph. The hand travels along
-            // those contours; the path itself is never drawn as a guide line.
-            val contours = mutableListOf<Float>()
-            var measure = PathMeasure(glyphPath, false)
-            do {
-                contours += measure.length
-            } while (measure.nextContour())
+            val (hintX, hintY) = startHint(symbol, arabic, w, h)
+            val samples = buildTeachingSamples(glyphPath, hintX, hintY)
 
-            val totalLength = contours.sum().coerceAtLeast(1f)
-            val targetDistance = totalLength * progress.value
+            if (samples.isEmpty()) return@Canvas
 
-            var remaining = targetDistance
-            var point = floatArrayOf(w / 2f, h / 2f)
-            var angle = 0f
-            measure = PathMeasure(glyphPath, false)
-            var found = false
-            while (true) {
-                val len = measure.length
-                if (remaining <= len || !measure.nextContour()) {
-                    val pos = FloatArray(2)
-                    val tan = FloatArray(2)
-                    measure.getPosTan(remaining.coerceIn(0f, len), pos, tan)
-                    point = pos
-                    angle = Math.toDegrees(kotlin.math.atan2(tan[1].toDouble(), tan[0].toDouble())).toFloat()
-                    found = true
-                    break
-                }
-                remaining -= len
+            val indexFloat = progress.value * (samples.lastIndex.toFloat())
+            val sampleIndex = indexFloat.toInt().coerceIn(0, samples.lastIndex)
+            val nextIndex = (sampleIndex + 1).coerceAtMost(samples.lastIndex)
+            val fraction = indexFloat - sampleIndex
+            val a = samples[sampleIndex]
+            val b = samples[nextIndex]
+            val x = a.x + (b.x - a.x) * fraction
+            val y = a.y + (b.y - a.y) * fraction
+            val tx = a.tangentX + (b.tangentX - a.tangentX) * fraction
+            val ty = a.tangentY + (b.tangentY - a.tangentY) * fraction
+
+            // One clearly visible green starting point.
+            val start = samples.first()
+            drawCircle(Color(0xFF27AE60), 20f, Offset(start.x, start.y))
+            drawCircle(Color.White, 10f, Offset(start.x, start.y))
+            drawCircle(Color(0xFF27AE60), 6f, Offset(start.x, start.y))
+
+            // The hand itself is the guide. It moves over the real letter path.
+            val angle = Math.toDegrees(atan2(ty.toDouble(), tx.toDouble())).toFloat()
+            val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = min(w, h) * 0.115f
+                textAlign = Paint.Align.CENTER
+                color = android.graphics.Color.WHITE
             }
-
-            // Exact starting point of the first real contour.
-            val startMeasure = PathMeasure(glyphPath, false)
-            val startPos = FloatArray(2)
-            startMeasure.getPosTan(0f, startPos, null)
-            drawCircle(Color(0xFF27AE60), 19f, Offset(startPos[0], startPos[1]))
-            drawCircle(Color.White, 8f, Offset(startPos[0], startPos[1]))
-            drawCircle(Color(0xFF27AE60), 5f, Offset(startPos[0], startPos[1]))
-
-            if (found) {
-                val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    textSize = min(w, h) * 0.105f
-                    textAlign = Paint.Align.CENTER
-                    color = android.graphics.Color.WHITE
-                }
-                val handX = point[0]
-                val handY = point[1]
-                val canvas = drawContext.canvas.nativeCanvas
-                canvas.save()
-                canvas.rotate(angle, handX, handY)
-                val fm = handPaint.fontMetrics
-                val centeredY = handY - (fm.ascent + fm.descent) / 2f
-                canvas.drawText("☝️", handX, centeredY, handPaint)
-                canvas.restore()
-            }
+            val canvas = drawContext.canvas.nativeCanvas
+            canvas.save()
+            canvas.rotate(angle, x, y)
+            val fm = handPaint.fontMetrics
+            val centeredY = y - (fm.ascent + fm.descent) / 2f
+            canvas.drawText("☝️", x, centeredY, handPaint)
+            canvas.restore()
         }
 
         Column(
@@ -289,7 +381,7 @@ private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean) {
                 textAlign = TextAlign.Center
             )
             Text(
-                if (arabic) "الحرف كامل وواضح — لا يوجد خط إرشاد مستقيم" else "The complete letter is visible — no straight guide line",
+                if (arabic) "الحرف كامل وواضح — بدون خط إرشاد" else "The complete letter stays visible — no guide line",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )

@@ -1,29 +1,30 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path as AndroidPath
+import android.graphics.PathMeasure
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.min
 
 private enum class ArabicForm { INITIAL, MEDIAL, FINAL }
@@ -64,7 +65,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
     }
     val safeIndex = index.coerceIn(0, total - 1)
     val symbol = when {
-        numbers -> (safeIndex).toString()
+        numbers -> safeIndex.toString()
         arabic -> arabicFormSymbol(safeIndex, form)
         enCase == WritingEnglishCase.UPPER -> enLetters[safeIndex].toString()
         else -> enLetters[safeIndex].lowercase()
@@ -94,7 +95,13 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
             )
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع إصبع اليد من نقطة البداية 👆" else "See the complete letter, choose its case, then follow the hand from the start point 👆", fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 8.dp))
+                Text(
+                    if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع إصبع اليد من نقطة البداية إلى النهاية 👆" else "See the complete letter, choose its case, then follow the hand from the start point to the end 👆",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
 
                 if (arabic && !numbers) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -123,7 +130,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
 
                 Spacer(Modifier.height(7.dp))
                 Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)), elevation = CardDefaults.cardElevation(9.dp)) {
-                    TraceTeachingBoard(symbol = symbol, replay = replay, arabic = arabic, englishLower = !arabic && enCase == WritingEnglishCase.LOWER)
+                    TraceTeachingBoard(symbol = symbol, replay = replay, arabic = arabic)
                 }
 
                 Spacer(Modifier.height(7.dp))
@@ -154,44 +161,138 @@ private fun LessonButton(text: String, color: Color, enabled: Boolean, modifier:
     }
 }
 
+/**
+ * Teaching board for ALL letters.
+ * The old implementation drew one straight line from start to end. That has been removed.
+ * The hand now follows the real outline of the displayed glyph itself. The guide path is
+ * intentionally invisible; only the complete letter, green start marker and moving hand are shown.
+ */
 @Composable
-private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean, englishLower: Boolean) {
+private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean) {
     val progress = remember(symbol, replay) { Animatable(0f) }
+
     LaunchedEffect(symbol, replay) {
         progress.snapTo(0f)
-        progress.animateTo(1f, animationSpec = tween(3600, easing = LinearEasing))
+        progress.animateTo(1f, animationSpec = tween(5200, easing = LinearEasing))
     }
 
-    Box(Modifier.fillMaxSize().padding(8.dp).background(Color(0xFFF2F7FF), RoundedCornerShape(24.dp)).border(3.dp, Color(0xFFD5E5F5), RoundedCornerShape(24.dp))) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(8.dp)
+            .background(Color(0xFFF2F7FF), RoundedCornerShape(24.dp))
+            .border(3.dp, Color(0xFFD5E5F5), RoundedCornerShape(24.dp))
+    ) {
         Canvas(Modifier.fillMaxSize().padding(8.dp)) {
             val w = size.width
             val h = size.height
-            val textSize = min(w, h) * if (arabic) .72f else if (englishLower) .62f else .66f
-            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            val targetW = w * 0.76f
+            val targetH = h * 0.70f
+            val textSize = min(w, h) * if (arabic) 0.78f else 0.72f
+
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 this.textSize = textSize
-                textAlign = android.graphics.Paint.Align.CENTER
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
-                color = android.graphics.Color.rgb(92, 115, 138)
-                alpha = 80
+                style = Paint.Style.FILL
             }
-            drawContext.canvas.nativeCanvas.drawText(symbol, w / 2f, h * .69f, paint)
 
-            val start = if (arabic) Offset(w * .68f, h * .28f) else Offset(w * .50f, h * .18f)
-            val end = if (arabic) Offset(w * .35f, h * .72f) else Offset(w * .50f, h * .82f)
-            drawLine(Color(0xFF315CFF), start, end, 10f, cap = StrokeCap.Round)
-            drawCircle(Color(0xFF27AE60), 18f, start)
-            drawCircle(Color.White, 8f, start)
-            drawCircle(Color(0xFF27AE60), 5f, start)
+            // Build the actual glyph outline for every Arabic form and every
+            // English upper/lower-case letter. There is no generic straight line.
+            val rawPath = AndroidPath()
+            paint.getTextPath(symbol, 0, symbol.length, 0f, 0f, rawPath)
 
-            val x = start.x + (end.x - start.x) * progress.value
-            val y = start.y + (end.y - start.y) * progress.value
-            drawCircle(Color(0xFFFF8A00), 19f, Offset(x, y))
-            drawCircle(Color.White, 8f, Offset(x, y))
+            val bounds = android.graphics.RectF()
+            rawPath.computeBounds(bounds, true)
+            val bw = bounds.width().coerceAtLeast(1f)
+            val bh = bounds.height().coerceAtLeast(1f)
+            val scale = min(targetW / bw, targetH / bh)
+
+            val matrix = Matrix().apply {
+                setScale(scale, scale)
+                postTranslate(
+                    w / 2f - (bounds.left + bounds.right) * scale / 2f,
+                    h * 0.52f - (bounds.top + bounds.bottom) * scale / 2f
+                )
+            }
+            val glyphPath = AndroidPath(rawPath)
+            glyphPath.transform(matrix)
+
+            // Keep the complete letter visible throughout the lesson.
+            paint.color = android.graphics.Color.rgb(95, 113, 132)
+            paint.alpha = 70
+            drawContext.canvas.nativeCanvas.drawPath(glyphPath, paint)
+
+            // Measure every real contour of the glyph. The hand travels along
+            // those contours; the path itself is never drawn as a guide line.
+            val contours = mutableListOf<Float>()
+            var measure = PathMeasure(glyphPath, false)
+            do {
+                contours += measure.length
+            } while (measure.nextContour())
+
+            val totalLength = contours.sum().coerceAtLeast(1f)
+            val targetDistance = totalLength * progress.value
+
+            var remaining = targetDistance
+            var point = floatArrayOf(w / 2f, h / 2f)
+            var angle = 0f
+            measure = PathMeasure(glyphPath, false)
+            var found = false
+            while (true) {
+                val len = measure.length
+                if (remaining <= len || !measure.nextContour()) {
+                    val pos = FloatArray(2)
+                    val tan = FloatArray(2)
+                    measure.getPosTan(remaining.coerceIn(0f, len), pos, tan)
+                    point = pos
+                    angle = Math.toDegrees(kotlin.math.atan2(tan[1].toDouble(), tan[0].toDouble())).toFloat()
+                    found = true
+                    break
+                }
+                remaining -= len
+            }
+
+            // Exact starting point of the first real contour.
+            val startMeasure = PathMeasure(glyphPath, false)
+            val startPos = FloatArray(2)
+            startMeasure.getPosTan(0f, startPos, null)
+            drawCircle(Color(0xFF27AE60), 19f, Offset(startPos[0], startPos[1]))
+            drawCircle(Color.White, 8f, Offset(startPos[0], startPos[1]))
+            drawCircle(Color(0xFF27AE60), 5f, Offset(startPos[0], startPos[1]))
+
+            if (found) {
+                val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    textSize = min(w, h) * 0.105f
+                    textAlign = Paint.Align.CENTER
+                    color = android.graphics.Color.WHITE
+                }
+                val handX = point[0]
+                val handY = point[1]
+                val canvas = drawContext.canvas.nativeCanvas
+                canvas.save()
+                canvas.rotate(angle, handX, handY)
+                val fm = handPaint.fontMetrics
+                val centeredY = handY - (fm.ascent + fm.descent) / 2f
+                canvas.drawText("☝️", handX, centeredY, handPaint)
+                canvas.restore()
+            }
         }
-        Text("☝️", fontSize = 44.sp, modifier = Modifier.align(Alignment.Center))
-        Column(Modifier.align(Alignment.TopCenter).padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (arabic) "ابدأ من 🟢 ثم اتبع إصبع اليد 👆" else "Start at 🟢 and follow the hand 👆", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
-            Text(if (arabic) "الحرف كامل وواضح داخل السبورة" else "The complete letter is shown clearly", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+
+        Column(
+            Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                if (arabic) "ابدأ من 🟢 ثم اتبع اليد فوق الحرف حتى النهاية 👆" else "Start at 🟢 and follow the hand over the letter to the end 👆",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                if (arabic) "الحرف كامل وواضح — لا يوجد خط إرشاد مستقيم" else "The complete letter is visible — no straight guide line",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

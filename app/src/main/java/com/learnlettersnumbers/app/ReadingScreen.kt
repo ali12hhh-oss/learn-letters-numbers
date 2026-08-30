@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -103,17 +104,42 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
             Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(25.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF7FBFF)), elevation = CardDefaults.cardElevation(9.dp)) {
                 Column(Modifier.fillMaxSize().padding(6.dp)) {
                     Canvas(
-                        Modifier.fillMaxWidth().weight(1f).background(Color.White, RoundedCornerShape(20.dp)).border(2.dp, Color(0xFFD9E8F0), RoundedCornerShape(20.dp)).pointerInput(inkColor) {
-                            detectDragGestures(
-                                onDragStart = { point -> current = listOf(point) },
-                                onDrag = { change, _ -> change.consumePositionChange(); current = current + change.position },
-                                onDragEnd = { if (current.size > 1) strokes = strokes + ReadingStroke(current, inkColor); current = emptyList() },
-                                onDragCancel = { current = emptyList() }
-                            )
-                        }
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .background(Color.White, RoundedCornerShape(20.dp))
+                            .border(2.dp, Color(0xFFD9E8F0), RoundedCornerShape(20.dp))
+                            .pointerInput(inkColor) {
+                                detectTapGestures(
+                                    onTap = { point ->
+                                        // A tap is a real visible dot, not an invisible zero-length path.
+                                        strokes = strokes + ReadingStroke(listOf(point), inkColor)
+                                        onTap()
+                                    }
+                                )
+                            }
+                            .pointerInput(inkColor) {
+                                detectDragGestures(
+                                    onDragStart = { point -> current = listOf(point) },
+                                    onDrag = { change, _ -> change.consumePositionChange(); current = current + change.position },
+                                    onDragEnd = {
+                                        if (current.size == 1) strokes = strokes + ReadingStroke(current, inkColor)
+                                        else if (current.size > 1) strokes = strokes + ReadingStroke(current, inkColor)
+                                        current = emptyList()
+                                    },
+                                    onDragCancel = { current = emptyList() }
+                                )
+                            }
                     ) {
-                        strokes.forEach { s -> drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
-                        if (current.size > 1) drawPath(pathOfReading(current), color = inkColor, style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        strokes.forEach { s ->
+                            if (s.points.size == 1) {
+                                drawCircle(color = s.color, radius = 8f, center = s.points.first())
+                            } else {
+                                drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 15f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                            }
+                        }
+                        if (current.size == 1) drawCircle(color = inkColor, radius = 8f, center = current.first())
+                        if (current.size > 1) drawPath(pathOfReading(current), color = inkColor, style = Stroke(width = 15f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                     Spacer(Modifier.height(5.dp))
                     Row(Modifier.fillMaxWidth().height(38.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

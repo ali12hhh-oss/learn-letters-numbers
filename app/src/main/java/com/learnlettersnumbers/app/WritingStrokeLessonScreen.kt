@@ -71,7 +71,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
     var form by remember { mutableStateOf(ArabicForm.INITIAL) }
     var englishCase by remember { mutableStateOf(WritingEnglishCase.UPPER) }
     var replay by remember { mutableIntStateOf(0) }
-    val total = if (numbers) 100 else if (arabic) arLetters.size else enLetters.size
+    val total = if (numbers) 10 else if (arabic) arLetters.size else enLetters.size
     val current = index.coerceIn(0, total - 1)
     val symbol = when {
         numbers -> if (arabic) (current + 1).toString().map { ch -> "٠١٢٣٤٥٦٧٨٩"[ch - '0'] }.joinToString("") else (current + 1).toString()

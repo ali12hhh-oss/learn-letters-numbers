@@ -112,8 +112,8 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
                             )
                         }
                     ) {
-                        strokes.forEach { s -> drawPath(pathOfReading(s.points), s.color, Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
-                        if (current.size > 1) drawPath(pathOfReading(current), inkColor, Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        strokes.forEach { s -> drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
+                        if (current.size > 1) drawPath(pathOfReading(current), color = inkColor, style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                     Spacer(Modifier.height(5.dp))
                     Row(Modifier.fillMaxWidth().height(38.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

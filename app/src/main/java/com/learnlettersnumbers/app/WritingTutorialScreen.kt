@@ -1,273 +1,149 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 
-private data class WritingStep(
-    val symbol: String,
-    val name: String,
-    val instruction: String,
-    val language: String
-)
+private enum class TutorialArabicForm { INITIAL, MEDIAL, FINAL }
+private enum class TutorialEnglishCase { UPPER, LOWER }
 
-private val arabicSteps = listOf(
-    WritingStep("ا", "الألف", "ابدأ من أعلى الحرف واسحب القلم إلى الأسفل.", "ar"),
-    WritingStep("ب", "الباء", "ابدأ من اليمين، ارسم الجسم ثم ضع النقطة أسفل الحرف.", "ar"),
-    WritingStep("ت", "التاء", "ارسم الجسم من اليمين ثم ضع نقطتين فوق الحرف.", "ar"),
-    WritingStep("ث", "الثاء", "ارسم الجسم ثم ضع ثلاث نقاط فوق الحرف.", "ar"),
-    WritingStep("ج", "الجيم", "ابدأ من اليمين وارسم القوس ثم النقطة أسفل الحرف.", "ar"),
-    WritingStep("ح", "الحاء", "ابدأ من اليمين وارسم القوس بسلاسة.", "ar"),
-    WritingStep("خ", "الخاء", "ارسم شكل الحاء ثم ضع النقطة فوقه.", "ar"),
-    WritingStep("د", "الدال", "ابدأ من اليمين وارسم الانحناءة إلى اليسار.", "ar"),
-    WritingStep("ذ", "الذال", "اكتب الدال ثم أضف النقطة فوقه.", "ar"),
-    WritingStep("ر", "الراء", "ابدأ من اليمين وانزل بانحناءة قصيرة.", "ar"),
-    WritingStep("ز", "الزاي", "اكتب الراء ثم أضف النقطة فوقه.", "ar"),
-    WritingStep("س", "السين", "ابدأ من اليمين وارسم أسنان السين الثلاثة.", "ar"),
-    WritingStep("ش", "الشين", "اكتب السين ثم أضف ثلاث نقاط فوقه.", "ar"),
-    WritingStep("ص", "الصاد", "ابدأ من اليمين وارسم جسم الصاد بانحناءة واسعة.", "ar"),
-    WritingStep("ض", "الضاد", "اكتب الصاد ثم أضف النقطة فوقه.", "ar"),
-    WritingStep("ط", "الطاء", "ابدأ من الأعلى ثم أكمل جسم الطاء.", "ar"),
-    WritingStep("ظ", "الظاء", "اكتب الطاء ثم أضف النقطة فوقه.", "ar"),
-    WritingStep("ع", "العين", "ابدأ من اليمين وارسم منحنى العين إلى الأسفل.", "ar"),
-    WritingStep("غ", "الغين", "اكتب العين ثم أضف النقطة فوقه.", "ar"),
-    WritingStep("ف", "الفاء", "ارسم جسم الفاء ثم ضع النقطة فوقه.", "ar"),
-    WritingStep("ق", "القاف", "ارسم جسم القاف ثم ضع نقطتين فوقه.", "ar"),
-    WritingStep("ك", "الكاف", "ابدأ من الأعلى وارسم ساق الكاف ثم جسمه.", "ar"),
-    WritingStep("ل", "اللام", "ابدأ من الأعلى وانزل بخط مائل إلى اليسار.", "ar"),
-    WritingStep("م", "الميم", "ابدأ من اليمين وارسم انحناءة الميم.", "ar"),
-    WritingStep("ن", "النون", "ارسم جسم النون ثم ضع النقطة فوقه.", "ar"),
-    WritingStep("ه", "الهاء", "ابدأ من اليمين وارسم دائرة الهاء بسلاسة.", "ar"),
-    WritingStep("و", "الواو", "ابدأ من الأعلى وارسم الانحناءة ثم الذيل.", "ar"),
-    WritingStep("ي", "الياء", "ارسم جسم الياء ثم ضع نقطتين تحته.", "ar")
-)
+private val tutorialArabic = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","و","ي")
+private val tutorialArabicNames = listOf("الألف","الباء","التاء","الثاء","الجيم","الحاء","الخاء","الدال","الذال","الراء","الزاي","السين","الشين","الصاد","الضاد","الطاء","الظاء","العين","الغين","الفاء","القاف","الكاف","اللام","الميم","النون","الهاء","الواو","الياء")
 
-private val englishSteps = ('A'..'Z').map { ch ->
-    val lower = ch.lowercase()
-    val instruction = when (ch) {
-        'A' -> "Start at the top, go down, then cross the middle."
-        'B' -> "Start at the top, draw the stem, then make the two curves."
-        'C' -> "Start at the top and curve around to the bottom."
-        'D' -> "Start at the top, draw the stem, then curve to the bottom."
-        'E' -> "Draw the vertical line, then the top, middle, and bottom lines."
-        'F' -> "Draw the vertical line, then the top and middle lines."
-        'G' -> "Start at the top, curve around, then finish the inner stroke."
-        'H' -> "Draw both vertical lines, then connect them in the middle."
-        'I' -> "Draw the top, vertical stroke, and bottom."
-        'J' -> "Start at the top, go down, then curve at the bottom."
-        'K' -> "Draw the vertical line, then the two diagonal strokes."
-        'L' -> "Draw the vertical line, then the bottom line."
-        'M' -> "Start at the top and draw the two outer lines and center strokes."
-        'N' -> "Draw the first vertical, diagonal, then second vertical."
-        'O' -> "Start at the top and draw one smooth oval."
-        'P' -> "Draw the vertical line, then the upper curve."
-        'Q' -> "Draw an oval, then add the small diagonal tail."
-        'R' -> "Draw the stem and upper curve, then the diagonal leg."
-        'S' -> "Start at the top and make a smooth S curve."
-        'T' -> "Draw the top line, then the vertical stroke."
-        'U' -> "Start at the top, go down, curve, and go back up."
-        'V' -> "Start at the top and meet at the bottom point."
-        'W' -> "Start at the top and make four connected diagonal strokes."
-        'X' -> "Draw one diagonal stroke, then cross it with the other."
-        'Y' -> "Draw the two upper strokes, then the center downstroke."
-        else -> "Draw the upper diagonal, then the lower diagonal strokes."
+private fun tutorialArabicSymbol(index: Int, form: TutorialArabicForm): String {
+    return when (val c = tutorialArabic[index]) {
+        "ا" -> "ا"
+        "ب" -> arrayOf("ﺑ","ﺒ","ﺐ")[form.ordinal]
+        "ت" -> arrayOf("ﺗ","ﺘ","ﺖ")[form.ordinal]
+        "ث" -> arrayOf("ﺛ","ﺜ","ﺚ")[form.ordinal]
+        "ج" -> arrayOf("ﺟ","ﺠ","ﺞ")[form.ordinal]
+        "ح" -> arrayOf("ﺣ","ﺤ","ﺢ")[form.ordinal]
+        "خ" -> arrayOf("ﺧ","ﺨ","ﺦ")[form.ordinal]
+        "د" -> if (form == TutorialArabicForm.FINAL) "ﺪ" else "د"
+        "ذ" -> if (form == TutorialArabicForm.FINAL) "ﺬ" else "ذ"
+        "ر" -> if (form == TutorialArabicForm.FINAL) "ﺮ" else "ر"
+        "ز" -> if (form == TutorialArabicForm.FINAL) "ﺰ" else "ز"
+        "س" -> arrayOf("ﺳ","ﺴ","ﺲ")[form.ordinal]
+        "ش" -> arrayOf("ﺷ","ﺸ","ﺶ")[form.ordinal]
+        "ص" -> arrayOf("ﺻ","ﺼ","ﺺ")[form.ordinal]
+        "ض" -> arrayOf("ﺿ","ﻀ","ﺾ")[form.ordinal]
+        "ط" -> arrayOf("ﻃ","ﻄ","ﻂ")[form.ordinal]
+        "ظ" -> arrayOf("ﻇ","ﻈ","ﻆ")[form.ordinal]
+        "ع" -> arrayOf("ﻋ","ﻌ","ﻊ")[form.ordinal]
+        "غ" -> arrayOf("ﻏ","ﻐ","ﻎ")[form.ordinal]
+        "ف" -> arrayOf("ﻓ","ﻔ","ﻒ")[form.ordinal]
+        "ق" -> arrayOf("ﻗ","ﻘ","ﻖ")[form.ordinal]
+        "ك" -> arrayOf("ﻛ","ﻜ","ﻚ")[form.ordinal]
+        "ل" -> arrayOf("ﻟ","ﻠ","ﻞ")[form.ordinal]
+        "م" -> arrayOf("ﻣ","ﻤ","ﻢ")[form.ordinal]
+        "ن" -> arrayOf("ﻧ","ﻨ","ﻦ")[form.ordinal]
+        "ه" -> arrayOf("ﻫ","ﻬ","ﻪ")[form.ordinal]
+        "و" -> if (form == TutorialArabicForm.FINAL) "ﻮ" else "و"
+        "ي" -> arrayOf("ﻳ","ﻴ","ﻲ")[form.ordinal]
+        else -> c
     }
-    WritingStep("$ch $lower", "$ch / $lower", instruction, "en")
-}
-
-
-private fun arabicDigits(n: Int): String = n.toString().map { ch ->
-    when (ch) {
-        '0' -> '٠'; '1' -> '١'; '2' -> '٢'; '3' -> '٣'; '4' -> '٤'
-        '5' -> '٥'; '6' -> '٦'; '7' -> '٧'; '8' -> '٨'; else -> '٩'
-    }
-}.joinToString("")
-
-private fun numberSteps(language: String): List<WritingStep> = (1..100).map { n ->
-    val symbol = if (language == "ar") arabicDigits(n) else n.toString()
-    val instruction = if (language == "ar")
-        "ابدأ من النقطة الخضراء واتبع السهم خطوة بخطوة لكتابة الرقم $symbol."
-    else
-        "Start at the green dot and follow the arrow step by step to write $symbol."
-    WritingStep(symbol, symbol, instruction, language)
 }
 
 @Composable
-fun WritingTutorialScreen(
-    language: String,
-    onBack: () -> Unit,
-    speak: (String, String) -> Unit
-) {
+fun WritingTutorialScreen(language: String, onBack: () -> Unit, speak: (String, String) -> Unit) {
+    val arabic = language == "ar"
     var mode by remember { mutableStateOf("letters") }
-    val steps = if (mode == "letters") {
-        if (language == "ar") arabicSteps else englishSteps
-    } else numberSteps(language)
-    var index by remember(mode) { mutableStateOf(0) }
-    var replayKey by remember { mutableStateOf(0) }
-    val item = steps[index]
+    var index by remember { mutableIntStateOf(0) }
+    var replay by remember { mutableIntStateOf(0) }
+    var arabicForm by remember { mutableStateOf(TutorialArabicForm.INITIAL) }
+    var englishCase by remember { mutableStateOf(TutorialEnglishCase.UPPER) }
 
-    LaunchedEffect(index, replayKey) {
-        val message = if (language == "ar") {
-            "تعلم كتابة ${item.name}. ${item.instruction}"
-        } else {
-            "Learn to write ${item.name}. ${item.instruction}"
-        }
-        speak(message, item.language)
+    val total = if (mode == "letters") if (arabic) tutorialArabic.size else 26 else 100
+    val current = index.coerceIn(0, total - 1)
+    val symbol = when {
+        mode == "numbers" -> if (arabic) (current + 1).toString().map { "٠١٢٣٤٥٦٧٨٩"[it - '0'] }.joinToString("") else (current + 1).toString()
+        arabic -> tutorialArabicSymbol(current, arabicForm)
+        englishCase == TutorialEnglishCase.UPPER -> ('A'.code + current).toChar().toString()
+        else -> ('A'.code + current).toChar().lowercase()
     }
 
-    Scaffold(
-        topBar = {
+    LaunchedEffect(mode, current, arabicForm, englishCase, replay) {
+        speak(if (arabic) "تعلم كتابة $symbol" else "Learn to write $symbol", language)
+    }
+
+    CompositionLocalProvider(LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+        Scaffold(topBar = {
             TopAppBar(
-                title = { Text(if (language == "ar") "تعلم الكتابة" else "Learn to Write") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "رجوع")
-                    }
-                }
+                title = { Text(if (arabic) "تعلم الكتابة" else "Learn to Write", fontWeight = FontWeight.ExtraBold) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(if (arabic) "رجوع" else "Back", fontWeight = FontWeight.Bold) } }
             )
-        }
-    ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                if (language == "ar") {
-                    if (mode == "letters") "شاهد السهم ثم جرّب كتابة الحرف بنفسك ✏️" else "شاهد السهم ثم جرّب كتابة الرقم بنفسك ✏️"
-                } else {
-                    if (mode == "letters") "Watch the arrow, then write the letter yourself ✏️" else "Watch the arrow, then write the number yourself ✏️"
-                },
-                fontSize = 21.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = { mode = "letters"; replayKey++ }
-                ) { Text(if (language == "ar") "الحروف" else "Letters") }
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = { mode = "numbers"; replayKey++ }
-                ) { Text(if (language == "ar") "الأرقام" else "Numbers") }
-            }
-            Spacer(Modifier.height(12.dp))
-            Card(
-                Modifier.fillMaxWidth().weight(1f),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E8)),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(
-                    Modifier.fillMaxSize().padding(14.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        item.symbol,
-                        fontSize = 112.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF315CFF)
-                    )
-                    Text(
-                        if (language == "ar")
-                            "نقطة البداية → اتجاه القلم → النهاية"
-                        else
-                            "Start point → stroke direction → finish",
-                        fontSize = 14.sp
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    AnimatedWritingGuide(key = "$index-$replayKey")
-                    Spacer(Modifier.height(10.dp))
-                    Text(item.instruction, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        }) { padding ->
+            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 8.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    ChoiceButton(if (arabic) "الحروف" else "Letters", mode == "letters", Color(0xFF4C8BF5), Modifier.weight(1f)) { mode = "letters"; index = 0; replay++ }
+                    ChoiceButton(if (arabic) "الأرقام" else "Numbers", mode == "numbers", Color(0xFFFF8A4C), Modifier.weight(1f)) { mode = "numbers"; index = 0; replay++ }
                 }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    enabled = index > 0,
-                    onClick = { index-- }
-                ) { Text("السابق") }
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        replayKey++
-                        speak(item.instruction, item.language)
+                Spacer(Modifier.height(4.dp))
+
+                if (mode == "letters" && arabic) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        ChoiceButton("أولي", arabicForm == TutorialArabicForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { arabicForm = TutorialArabicForm.INITIAL; replay++ }
+                        ChoiceButton("وسطي", arabicForm == TutorialArabicForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { arabicForm = TutorialArabicForm.MEDIAL; replay++ }
+                        ChoiceButton("أخري", arabicForm == TutorialArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { arabicForm = TutorialArabicForm.FINAL; replay++ }
                     }
-                ) { Text("🔊 أعد الشرح") }
-                Button(
-                    modifier = Modifier.weight(1f),
-                    enabled = index < steps.lastIndex,
-                    onClick = { index++ }
-                ) { Text("التالي") }
+                    Spacer(Modifier.height(4.dp))
+                } else if (mode == "letters") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        ChoiceButton("UPPERCASE", englishCase == TutorialEnglishCase.UPPER, Color(0xFF4C8BF5), Modifier.weight(1f)) { englishCase = TutorialEnglishCase.UPPER; replay++ }
+                        ChoiceButton("lowercase", englishCase == TutorialEnglishCase.LOWER, Color(0xFFFF8A4C), Modifier.weight(1f)) { englishCase = TutorialEnglishCase.LOWER; replay++ }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+
+                Row(Modifier.fillMaxWidth().height(48.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Text("${current + 1} / $total", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(symbol, fontSize = 34.sp, fontWeight = FontWeight.Black, color = Color(0xFF315CFF))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (arabic) (if (mode == "letters") tutorialArabicNames[current] else "الرقم $symbol") else (if (mode == "letters") symbol else "Number $symbol"), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)), elevation = CardDefaults.cardElevation(8.dp)) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                        factory = { WritingTraceView(it) },
+                        update = { it.setLesson(symbol, replay) }
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    NavButton(if (arabic) "السابق" else "Previous", Color(0xFF5C6BC0), current > 0, Modifier.weight(1f)) { if (current > 0) { index = current - 1; replay++ } }
+                    NavButton(if (arabic) "إعادة" else "Replay", Color(0xFF039BE5), true, Modifier.weight(1f)) { replay++ }
+                    NavButton(if (arabic) "التالي" else "Next", Color(0xFF2EAD69), current < total - 1, Modifier.weight(1f)) { if (current < total - 1) { index = current + 1; replay++ } }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun AnimatedWritingGuide(key: String) {
-    var progress by remember(key) { mutableStateOf(0f) }
-
-    LaunchedEffect(key) {
-        animate(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = tween(2400, easing = LinearEasing)
-        ) { value, _ -> progress = value }
+private fun ChoiceButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    Card(modifier.height(54.dp).clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White), elevation = CardDefaults.cardElevation(if (selected) 7.dp else 2.dp)) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text, fontSize = 16.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else color) }
     }
+}
 
-    Canvas(
-        Modifier.fillMaxWidth().height(105.dp).background(Color(0xFFF1F6FF))
-    ) {
-        val start = if (key.hashCode() % 2 == 0) Offset(size.width * .16f, size.height * .55f) else Offset(size.width * .84f, size.height * .55f)
-        val end = if (key.hashCode() % 2 == 0) Offset(size.width * .84f, size.height * .55f) else Offset(size.width * .16f, size.height * .55f)
-        val current = Offset(
-            start.x + (end.x - start.x) * progress,
-            start.y + (end.y - start.y) * progress
-        )
-
-        drawLine(
-            color = Color(0xFFB8C7E8),
-            start = start,
-            end = end,
-            strokeWidth = 12f,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 18f))
-        )
-        drawCircle(Color(0xFF27AE60), 14f, start)
-        drawCircle(Color(0xFF315CFF), 18f, current)
-
-        val arrowSize = 20f
-        drawLine(
-            Color(0xFF315CFF),
-            current,
-            Offset(current.x - arrowSize, current.y - arrowSize / 2),
-            strokeWidth = 7f,
-            cap = StrokeCap.Round
-        )
-        drawLine(
-            Color(0xFF315CFF),
-            current,
-            Offset(current.x - arrowSize, current.y + arrowSize / 2),
-            strokeWidth = 7f,
-            cap = StrokeCap.Round
-        )
+@Composable
+private fun NavButton(text: String, color: Color, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Button(onClick = onClick, enabled = enabled, modifier = modifier.height(58.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))) {
+        Text(text, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
     }
 }

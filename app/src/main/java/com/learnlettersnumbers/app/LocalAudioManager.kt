@@ -3,17 +3,60 @@ package com.learnlettersnumbers.app
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
+import java.util.Locale
 
 /**
- * Local-only audio engine. Every spoken action resolves to a real file in res/raw.
- * There is deliberately no TextToSpeech fallback.
+ * Local-only audio engine.
+ *
+ * Normal app sounds remain bundled in res/raw. Stories can additionally use an
+ * Android embedded TTS voice, but only when that voice explicitly reports that
+ * it does NOT require a network connection. No network TTS is ever selected.
  */
-class LocalAudioManager(private val context: Context) {
+class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var player: MediaPlayer? = null
     private var queue: List<Int> = emptyList()
     private var queueIndex = 0
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+    private var ttsArabicVoice: Voice? = null
+    private var ttsEnglishVoice: Voice? = null
+
     var enabled: Boolean = true
         private set
+
+    init {
+        // Android's TTS engine is used only for an already-installed embedded voice.
+        // We never request or trigger a network voice/download from the app.
+        tts = TextToSpeech(context.applicationContext, this)
+    }
+
+    override fun onInit(status: Int) {
+        if (status != TextToSpeech.SUCCESS) return
+        val engine = tts ?: return
+        ttsArabicVoice = findOfflineVoice(engine, "ar")
+        ttsEnglishVoice = findOfflineVoice(engine, "en")
+        ttsReady = ttsArabicVoice != null || ttsEnglishVoice != null
+        engine.setSpeechRate(0.88f)
+        engine.setPitch(1.0f)
+        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) = Unit
+            override fun onDone(utteranceId: String?) = Unit
+            override fun onError(utteranceId: String?) = Unit
+        })
+    }
+
+    private fun findOfflineVoice(engine: TextToSpeech, language: String): Voice? {
+        return engine.voices
+            ?.asSequence()
+            ?.filter { it.locale.language.equals(language, ignoreCase = true) }
+            ?.filter { !it.isNetworkConnectionRequired }
+            ?.sortedWith(compareByDescending<Voice> { it.quality }.thenBy { it.latency })
+            ?.firstOrNull()
+    }
 
     fun setEnabled(value: Boolean) {
         enabled = value
@@ -22,6 +65,14 @@ class LocalAudioManager(private val context: Context) {
 
     fun playRequired(resourceName: String): Boolean {
         if (!enabled) return false
+
+        // The existing StoriesScreen requests story_01 ... story_20.
+        // For those requests, prefer the on-device embedded TTS voice.
+        if (resourceName.matches(Regex("story_\\d{2}"))) {
+            val index = resourceName.removePrefix("story_").toIntOrNull()
+            if (index != null && speakStoryFromScreen(index)) return true
+        }
+
         stop()
         val id = rawId(resourceName)
         start(id, resourceName)
@@ -37,7 +88,7 @@ class LocalAudioManager(private val context: Context) {
         return true
     }
 
-    /** Maps common app messages to bundled audio; no dynamic TTS is used. */
+    /** Maps common app messages to bundled audio; no dynamic network TTS is used. */
     fun playSemantic(text: String, language: String): Boolean {
         if (!enabled) return false
         val lower = text.lowercase()
@@ -80,13 +131,11 @@ class LocalAudioManager(private val context: Context) {
             val j = symbols.indexOf(symbol)
             if (j >= 0) return playRequired("ar_letter_%02d_sound".format(j + 1))
         }
-        // Specific number requests use the exact bundled number file.
         parseNumber(text, language)?.let { n ->
             return playRequired(if (language == "ar") "ar_number_%03d".format(n) else "en_number_%03d".format(n))
         }
         return false
     }
-
 
     fun playOperationExample(example: NumbersExampleAudio): Boolean {
         val resources = listOf(
@@ -97,14 +146,63 @@ class LocalAudioManager(private val context: Context) {
         return playSequence(resources)
     }
 
+    /** Speaks arbitrary text only with an already-installed offline voice. */
+    fun speakOffline(text: String, language: String): Boolean {
+        if (!enabled || text.isBlank() || !ttsReady) return false
+        val engine = tts ?: return false
+        val voice = if (language == "ar") ttsArabicVoice else ttsEnglishVoice
+        if (voice == null || voice.isNetworkConnectionRequired) return false
+
+        stopMediaOnly()
+        engine.stop()
+        engine.setVoice(voice)
+        engine.setSpeechRate(if (language == "ar") 0.84f else 0.88f)
+        engine.setPitch(1.0f)
+        val params = Bundle().apply {
+            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "offline_${System.nanoTime()}")
+        }
+        return engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, params.getString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID)) == TextToSpeech.SUCCESS
+    }
+
+    /**
+     * Keeps StoriesScreen unchanged while replacing its story_XX playback with
+     * the story's actual text. If no embedded offline voice exists, the old
+     * bundled MP3 remains the safe fallback.
+     */
+    private fun speakStoryFromScreen(index: Int): Boolean {
+        if (!ttsReady) return false
+        return try {
+            val holder = Class.forName("com.learnlettersnumbers.app.StoriesScreenKt")
+            val fieldName = if (index <= 10) "arabicStories" else "englishStories"
+            val field = holder.getDeclaredField(fieldName).apply { isAccessible = true }
+            val stories = field.get(null) as? List<*> ?: return false
+            val item = stories.getOrNull(if (index <= 10) index - 1 else index - 11) ?: return false
+            val textField = item.javaClass.getDeclaredField("text").apply { isAccessible = true }
+            val text = textField.get(item) as? String ?: return false
+            speakOffline(text, if (index <= 10) "ar" else "en")
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
     fun stop() {
         queue = emptyList()
         queueIndex = 0
+        try { tts?.stop() } catch (_: Exception) {}
+        stopMediaOnly()
+    }
+
+    private fun stopMediaOnly() {
         try { player?.stop() } catch (_: Exception) {}
         releasePlayer()
     }
 
-    fun releaseAll() = stop()
+    fun releaseAll() {
+        stop()
+        try { tts?.shutdown() } catch (_: Exception) {}
+        tts = null
+        ttsReady = false
+    }
 
     private fun rawId(name: String): Int {
         val id = context.resources.getIdentifier(name, "raw", context.packageName)

@@ -1,14 +1,6 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
-import android.animation.ValueAnimator
-import android.content.Context
-import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.PathMeasure
-import android.graphics.RectF
-import android.view.View
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +16,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import kotlin.math.hypot
-import kotlin.math.min
 
 private enum class ArabicForm { INITIAL, MEDIAL, FINAL }
 private enum class WritingEnglishCase { UPPER, LOWER }
@@ -35,8 +25,7 @@ private val arNames = listOf("الألف","الباء","التاء","الثاء"
 private val enLetters = ('A'..'Z').toList()
 
 private fun arabicFormSymbol(index: Int, form: ArabicForm): String {
-    val c = arLetters[index]
-    return when (c) {
+    return when (val c = arLetters[index]) {
         "ا" -> "ا"
         "ب" -> arrayOf("ﺑ","ﺒ","ﺐ")[form.ordinal]
         "ت" -> arrayOf("ﺗ","ﺘ","ﺖ")[form.ordinal]
@@ -82,10 +71,10 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
     var form by remember { mutableStateOf(ArabicForm.INITIAL) }
     var englishCase by remember { mutableStateOf(WritingEnglishCase.UPPER) }
     var replay by remember { mutableIntStateOf(0) }
-    val total = if (numbers) 10 else if (arabic) arLetters.size else enLetters.size
+    val total = if (numbers) 100 else if (arabic) arLetters.size else enLetters.size
     val current = index.coerceIn(0, total - 1)
     val symbol = when {
-        numbers -> (current + 1).toString()
+        numbers -> if (arabic) (current + 1).toString().map { ch -> "٠١٢٣٤٥٦٧٨٩"[ch - '0'] }.joinToString("") else (current + 1).toString()
         arabic -> arabicFormSymbol(current, form)
         englishCase == WritingEnglishCase.UPPER -> enLetters[current].toString()
         else -> enLetters[current].lowercase()
@@ -114,44 +103,40 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
                 navigationIcon = { TextButton(onClick = onBack) { Text(if (arabic) "رجوع" else "Back", fontWeight = FontWeight.Bold, fontSize = 17.sp) } }
             )
         }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 10.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع اليد من نقطة البداية إلى النهاية 👆" else "See the complete letter, choose its case, then follow the hand from the start to the end 👆",
-                    fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 7.dp)
-                )
+            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 8.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (arabic && !numbers) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FormButton("أولي", "بداية الحرف", form == ArabicForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { form = ArabicForm.INITIAL; replay++ }
-                        FormButton("وسطي", "وسط الحرف", form == ArabicForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { form = ArabicForm.MEDIAL; replay++ }
-                        FormButton("أخري", "نهاية الحرف", form == ArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ArabicForm.FINAL; replay++ }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        FormButton("أولي", form == ArabicForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { form = ArabicForm.INITIAL; replay++ }
+                        FormButton("وسطي", form == ArabicForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { form = ArabicForm.MEDIAL; replay++ }
+                        FormButton("أخري", form == ArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ArabicForm.FINAL; replay++ }
                     }
+                    Spacer(Modifier.height(4.dp))
                 } else if (!arabic && !numbers) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FormButton("UPPERCASE", "حروف كبيرة", englishCase == WritingEnglishCase.UPPER, Color(0xFF4C8BF5), Modifier.weight(1f)) { englishCase = WritingEnglishCase.UPPER; replay++ }
-                        FormButton("lowercase", "حروف صغيرة", englishCase == WritingEnglishCase.LOWER, Color(0xFFFF8A4C), Modifier.weight(1f)) { englishCase = WritingEnglishCase.LOWER; replay++ }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        FormButton("UPPERCASE", englishCase == WritingEnglishCase.UPPER, Color(0xFF4C8BF5), Modifier.weight(1f)) { englishCase = WritingEnglishCase.UPPER; replay++ }
+                        FormButton("lowercase", englishCase == WritingEnglishCase.LOWER, Color(0xFFFF8A4C), Modifier.weight(1f)) { englishCase = WritingEnglishCase.LOWER; replay++ }
                     }
+                    Spacer(Modifier.height(4.dp))
                 }
-                Spacer(Modifier.height(6.dp))
-                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(5.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        Text("${current + 1} / $total", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
-                        Spacer(Modifier.width(10.dp))
-                        Text(symbol, fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color(0xFF315CFF))
-                        Spacer(Modifier.width(9.dp))
-                        Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    }
+
+                Row(Modifier.fillMaxWidth().height(48.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Text("${current + 1} / $total", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(symbol, fontSize = 34.sp, fontWeight = FontWeight.Black, color = Color(0xFF315CFF))
+                    Spacer(Modifier.width(8.dp))
+                    Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.height(6.dp))
-                Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)), elevation = CardDefaults.cardElevation(9.dp)) {
+
+                Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)), elevation = CardDefaults.cardElevation(8.dp)) {
                     AndroidView(
-                        modifier = Modifier.fillMaxSize().padding(7.dp),
-                        factory = { TraceTeachingView(it) },
-                        update = { it.setLesson(symbol, arabic, replay) }
+                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                        factory = { WritingTraceView(it) },
+                        update = { it.setLesson(symbol, replay) }
                     )
                 }
-                Spacer(Modifier.height(6.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     LessonButton(if (arabic) "السابق\nPrevious" else "Previous", Color(0xFF5C6BC0), current > 0, Modifier.weight(1f)) { if (current > 0) { index = current - 1; replay++ } }
                     LessonButton("🔄 ${if (arabic) "إعادة" else "Replay"}", Color(0xFF039BE5), true, Modifier.weight(1f)) { replay++ }
                     LessonButton(if (arabic) "التالي\nNext" else "Next", Color(0xFF2EAD69), current < total - 1, Modifier.weight(1f)) { if (current < total - 1) { index = current + 1; replay++ } }
@@ -162,127 +147,17 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
 }
 
 @Composable
-private fun FormButton(title: String, subtitle: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Card(modifier.height(66.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White), elevation = CardDefaults.cardElevation(if (selected) 8.dp else 3.dp)) {
-        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+private fun FormButton(title: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    Card(modifier.height(56.dp).clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White), elevation = CardDefaults.cardElevation(if (selected) 7.dp else 2.dp)) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(title, fontSize = 17.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else color, textAlign = TextAlign.Center)
-            Text(subtitle, fontSize = 12.sp, color = if (selected) Color.White else Color.DarkGray, textAlign = TextAlign.Center)
         }
     }
 }
 
 @Composable
 private fun LessonButton(text: String, color: Color, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled, modifier = modifier.height(60.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))) {
+    Button(onClick = onClick, enabled = enabled, modifier = modifier.height(58.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))) {
         Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, textAlign = TextAlign.Center)
-    }
-}
-
-private data class TeachingSample(val x: Float, val y: Float, val tx: Float, val ty: Float)
-
-private class TraceTeachingView(context: Context) : View(context) {
-    private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.rgb(125, 139, 158); alpha = 82; style = Paint.Style.FILL
-        typeface = android.graphics.Typeface.DEFAULT_BOLD; textAlign = Paint.Align.CENTER
-    }
-    private val startPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(39,174,96); style = Paint.Style.FILL }
-    private val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; style = Paint.Style.FILL }
-    private val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(255,174,0); textAlign = Paint.Align.CENTER }
-    private val glyphPath = Path()
-    private var symbol = "A"
-    private var arabic = false
-    private var progress = 0f
-    private var lastKey = ""
-    private var animator: ValueAnimator? = null
-    private var samples: List<TeachingSample> = emptyList()
-
-    fun setLesson(newSymbol: String, newArabic: Boolean, replay: Int) {
-        val key = "$newSymbol|$newArabic|$replay"
-        if (key == lastKey) return
-        lastKey = key; symbol = newSymbol; arabic = newArabic; progress = 0f
-        rebuildSamples(); startAnimation(); invalidate()
-    }
-
-    private fun startAnimation() {
-        animator?.cancel()
-        animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 5600L
-            addUpdateListener { progress = it.animatedValue as Float; invalidate() }
-            start()
-        }
-    }
-
-    override fun onDetachedFromWindow() { animator?.cancel(); animator = null; super.onDetachedFromWindow() }
-
-    private fun startHint(letter: String): Pair<Float, Float> {
-        if (!arabic) return when (letter.lowercase()) {
-            "a" -> .32f to .20f; "b","d","p","q","r" -> .62f to .18f; "c","e","o","s" -> .72f to .35f
-            "f","t" -> .58f to .16f; "g" -> .72f to .42f; "h","k","l","m","n" -> .28f to .18f
-            "i","j" -> .52f to .16f; else -> .28f to .20f
-        }
-        val base = arLetters.firstOrNull { letter.contains(it) } ?: letter
-        return when (base) {
-            "ا" -> .52f to .16f; "ب","ت","ث","ي" -> .78f to .55f; "ج","ح","خ" -> .78f to .30f
-            "د","ذ","ر","ز" -> .78f to .25f; "س","ش" -> .80f to .40f; "ص","ض" -> .78f to .30f
-            "ط","ظ" -> .65f to .18f; "ع","غ" -> .76f to .34f; "ف","ق" -> .76f to .24f
-            "ك" -> .72f to .20f; "ل" -> .60f to .16f; "م","ن","ه" -> .76f to .35f; "و" -> .70f to .28f
-            else -> .72f to .30f
-        }
-    }
-
-    private fun rebuildSamples() {
-        if (width <= 0 || height <= 0) return
-        glyphPaint.textSize = min(width.toFloat(), height.toFloat()) * if (arabic) .82f else .76f
-        glyphPath.reset(); glyphPaint.getTextPath(symbol, 0, symbol.length, width / 2f, height * .68f, glyphPath)
-        val bounds = RectF(); glyphPath.computeBounds(bounds, true)
-        val scale = min(width * .80f / bounds.width().coerceAtLeast(1f), height * .76f / bounds.height().coerceAtLeast(1f))
-        val matrix = Matrix().apply {
-            setScale(scale, scale)
-            postTranslate(width / 2f - (bounds.left + bounds.right) * scale / 2f, height * .54f - (bounds.top + bounds.bottom) * scale / 2f)
-        }
-        glyphPath.transform(matrix); samples = buildSamples(glyphPath, startHint(symbol))
-    }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) { rebuildSamples(); if (samples.isNotEmpty()) startAnimation() }
-
-    private fun buildSamples(path: Path, hint: Pair<Float, Float>): List<TeachingSample> {
-        val contours = mutableListOf<Path>(); val measure = PathMeasure(path, false)
-        do {
-            if (measure.length > 1f) { val contour = Path(); measure.getSegment(0f, measure.length, contour, true); contours.add(contour) }
-        } while (measure.nextContour())
-        if (contours.isEmpty()) return emptyList()
-        val ordered = contours.sortedByDescending { PathMeasure(it, false).length }
-        val out = mutableListOf<TeachingSample>()
-        ordered.forEachIndexed { contourIndex, contour ->
-            val m = PathMeasure(contour, false); val length = m.length
-            if (length <= 1f) return@forEachIndexed
-            var start = 0f
-            if (contourIndex == 0 && m.isClosed) {
-                val tx = hint.first * width; val ty = hint.second * height; var best = Float.MAX_VALUE
-                for (i in 0 until 240) {
-                    val p = FloatArray(2); m.getPosTan(length * i / 240f, p, null)
-                    val score = hypot(p[0] - tx, p[1] - ty); if (score < best) { best = score; start = length * i / 240f }
-                }
-            }
-            for (i in 0..260) {
-                var d = start + length * i / 260f
-                if (m.isClosed) d %= length
-                val p = FloatArray(2); val t = FloatArray(2); m.getPosTan(d.coerceAtMost(length), p, t)
-                out.add(TeachingSample(p[0], p[1], t[0], t[1]))
-            }
-        }
-        return out
-    }
-
-    override fun onDraw(canvas: android.graphics.Canvas) {
-        super.onDraw(canvas); canvas.drawColor(android.graphics.Color.rgb(242,247,255))
-        if (glyphPath.isEmpty()) return
-        canvas.drawPath(glyphPath, glyphPaint); if (samples.isEmpty()) return
-        val first = samples.first(); canvas.drawCircle(first.x, first.y, 16f, startPaint); canvas.drawCircle(first.x, first.y, 7f, whitePaint); canvas.drawCircle(first.x, first.y, 4f, startPaint)
-        val pos = progress * (samples.size - 1); val ia = pos.toInt().coerceIn(0, samples.lastIndex); val ib = (ia + 1).coerceAtMost(samples.lastIndex); val f = pos - ia
-        val a = samples[ia]; val b = samples[ib]; val x = a.x + (b.x-a.x)*f; val y = a.y + (b.y-a.y)*f
-        val tx = a.tx + (b.tx-a.tx)*f; val ty = a.ty + (b.ty-a.ty)*f; val angle = Math.toDegrees(kotlin.math.atan2(ty.toDouble(), tx.toDouble())).toFloat()
-        handPaint.textSize = min(width.toFloat(), height.toFloat()) * .12f
-        canvas.save(); canvas.rotate(angle, x, y); canvas.drawText("☝", x, y - (handPaint.ascent()+handPaint.descent())/2f, handPaint); canvas.restore()
     }
 }

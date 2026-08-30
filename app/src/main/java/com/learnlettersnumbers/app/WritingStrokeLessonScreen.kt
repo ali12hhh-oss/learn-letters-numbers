@@ -1,16 +1,15 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.learnlettersnumbers.app
 
+import android.animation.ValueAnimator
+import android.content.Context
 import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Path as AndroidPath
+import android.graphics.Path
 import android.graphics.PathMeasure
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import android.graphics.RectF
+import android.view.View
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,16 +17,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalLayoutDirection
-import kotlin.math.atan2
+import kotlin.math.hypot
 import kotlin.math.min
 
 private enum class ArabicForm { INITIAL, MEDIAL, FINAL }
@@ -37,14 +35,25 @@ private val arLetters = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر"
 private val arNames = listOf("الألف","الباء","التاء","الثاء","الجيم","الحاء","الخاء","الدال","الذال","الراء","الزاي","السين","الشين","الصاد","الضاد","الطاء","الظاء","العين","الغين","الفاء","القاف","الكاف","اللام","الميم","النون","الهاء","الواو","الياء")
 private val enLetters = ('A'..'Z').toList()
 
+/* Arabic presentation forms are used instead of tatweel placeholders so the lesson
+   always shows the actual requested initial/medial/final shape. */
+private val arabicForms = mapOf(
+    "ا" to arrayOf("ا","ا","ا"), "ب" to arrayOf("ﺑ","ﺒ","ﺐ"), "ت" to arrayOf("ﺗ","ﺘ","ﺖ"),
+    "ث" to arrayOf("ﺛ","ﺜ","ﺚ"), "ج" to arrayOf("ﺟ","ﺠ","ﺞ"), "ح" to arrayOf("ﺣ","ﺤ","ﺢ"),
+    "خ" to arrayOf("ﺧ","ﺨ","ﺦ"), "د" to arrayOf("د","د","ﺪ"), "ذ" to arrayOf("ذ","ذ","ﺬ"),
+    "ر" to arrayOf("ر","ر","ﺮ"), "ز" to arrayOf("ز","ز","ﺰ"), "س" to arrayOf("ﺳ","ﺴ","ﺲ"),
+    "ش" to arrayOf("ﺷ","ﺸ","ﺶ"), "ص" to arrayOf("ﺻ","ﺼ","ﺺ"), "ض" to arrayOf("ﺿ","ﻀ","ﺾ"),
+    "ط" to arrayOf("ﻃ","ﻄ","ﻂ"), "ظ" to arrayOf("ﻇ","ﻈ","ﻆ"), "ع" to arrayOf("ﻋ","ﻌ","ﻊ"),
+    "غ" to arrayOf("ﻏ","ﻐ","ﻎ"), "ف" to arrayOf("ﻓ","ﻔ","ﻒ"), "ق" to arrayOf("ﻗ","ﻘ","ﻖ"),
+    "ك" to arrayOf("ﻛ","ﻜ","ﻚ"), "ل" to arrayOf("ﻟ","ﻠ","ﻞ"), "م" to arrayOf("ﻣ","ﻤ","ﻢ"),
+    "ن" to arrayOf("ﻧ","ﻨ","ﻦ"), "ه" to arrayOf("ﻫ","ﻬ","ﻪ"), "و" to arrayOf("و","و","ﻮ"),
+    "ي" to arrayOf("ﻳ","ﻴ","ﻲ")
+)
+
 private fun arabicFormSymbol(index: Int, form: ArabicForm): String {
-    val c = arLetters[index]
-    val joinable = setOf("ب","ت","ث","ج","ح","خ","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","ي")
-    return when (form) {
-        ArabicForm.INITIAL -> if (c in joinable) "$cـ" else c
-        ArabicForm.MEDIAL -> if (c in joinable) "ـ${c}ـ" else c
-        ArabicForm.FINAL -> if (c in joinable) "ـ${c}" else c
-    }
+    val base = arLetters[index]
+    val forms = arabicForms[base] ?: arrayOf(base, base, base)
+    return forms[form.ordinal]
 }
 
 private fun arabicFormName(form: ArabicForm): String = when (form) {
@@ -83,7 +92,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
     LaunchedEffect(currentIndex, form, englishCase, replay) {
         val message = when {
             numbers -> if (arabic) "تعلم كتابة الرقم $symbol" else "Learn to write number $symbol"
-            arabic -> "تعلم كتابة ${arNames[currentIndex]}، الشكل ${arabicFormName(form)}"
+            arabic -> "تعلم كتابة ${arNames[currentIndex}، الشكل ${arabicFormName(form)}"
             englishCase == WritingEnglishCase.UPPER -> "Learn to write capital letter ${enLetters[currentIndex]}"
             else -> "Learn to write lowercase letter ${enLetters[currentIndex].lowercase()}"
         }
@@ -94,14 +103,17 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
         Scaffold(topBar = {
             TopAppBar(
                 title = { Text(if (arabic) "تعلم الكتابة" else "Learn to Write", fontWeight = FontWeight.ExtraBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text(if (arabic) "رجوع" else "Back", fontWeight = FontWeight.Bold) } }
+                navigationIcon = { TextButton(onClick = onBack) { Text(if (arabic) "رجوع" else "Back", fontWeight = FontWeight.Bold, fontSize = 17.sp) } }
             )
         }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                Modifier.fillMaxSize().padding(padding).padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     if (arabic) "شاهد الحرف كاملاً، اختر شكله، ثم اتبع اليد من نقطة البداية إلى النهاية 👆" else "See the complete letter, choose its case, then follow the hand from the start to the end 👆",
                     fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 7.dp)
                 )
 
                 if (arabic && !numbers) {
@@ -110,35 +122,47 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
                         FormButton("وسطي", "وسط الحرف", form == ArabicForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { form = ArabicForm.MEDIAL; replay++ }
                         FormButton("أخري", "نهاية الحرف", form == ArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ArabicForm.FINAL; replay++ }
                     }
-                }
-                if (!arabic && !numbers) {
+                } else if (!arabic && !numbers) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FormButton("UPPERCASE", "حروف كبيرة", englishCase == WritingEnglishCase.UPPER, Color(0xFF4C8BF5), Modifier.weight(1f)) { englishCase = WritingEnglishCase.UPPER; replay++ }
                         FormButton("lowercase", "حروف صغيرة", englishCase == WritingEnglishCase.LOWER, Color(0xFFFF8A4C), Modifier.weight(1f)) { englishCase = WritingEnglishCase.LOWER; replay++ }
                     }
                 }
 
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(6.dp))
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(5.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        Text("${currentIndex + 1} / $total", fontWeight = FontWeight.ExtraBold)
-                        Spacer(Modifier.width(12.dp))
-                        Text(symbol, fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color(0xFF315CFF))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        Text("${currentIndex + 1} / $total", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
                         Spacer(Modifier.width(10.dp))
+                        Text(symbol, fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color(0xFF315CFF))
+                        Spacer(Modifier.width(9.dp))
                         Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                Spacer(Modifier.height(7.dp))
-                Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)), elevation = CardDefaults.cardElevation(9.dp)) {
-                    TraceTeachingBoard(symbol = symbol, replay = replay, arabic = arabic)
+                Spacer(Modifier.height(6.dp))
+                Card(
+                    Modifier.fillMaxWidth().weight(1f),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)),
+                    elevation = CardDefaults.cardElevation(9.dp)
+                ) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize().padding(7.dp),
+                        factory = { context -> TraceTeachingView(context) },
+                        update = { view -> view.setLesson(symbol, arabic, replay) }
+                    )
                 }
 
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(6.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LessonButton(if (arabic) "السابق\nPrevious" else "Previous", Color(0xFF5C6BC0), currentIndex > 0, Modifier.weight(1f)) { if (currentIndex > 0) { index = currentIndex - 1; replay++ } }
+                    LessonButton(if (arabic) "السابق\nPrevious" else "Previous", Color(0xFF5C6BC0), currentIndex > 0, Modifier.weight(1f)) {
+                        if (currentIndex > 0) { index = currentIndex - 1; replay++ }
+                    }
                     LessonButton("🔄 ${if (arabic) "إعادة" else "Replay"}", Color(0xFF039BE5), true, Modifier.weight(1f)) { replay++ }
-                    LessonButton(if (arabic) "التالي\nNext" else "Next", Color(0xFF2EAD69), currentIndex < total - 1, Modifier.weight(1f)) { if (currentIndex < total - 1) { index = currentIndex + 1; replay++ } }
+                    LessonButton(if (arabic) "التالي\nNext" else "Next", Color(0xFF2EAD69), currentIndex < total - 1, Modifier.weight(1f)) {
+                        if (currentIndex < total - 1) { index = currentIndex + 1; replay++ }
+                    }
                 }
             }
         }
@@ -147,7 +171,12 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
 
 @Composable
 private fun FormButton(title: String, subtitle: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Card(modifier = modifier.height(64.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White), elevation = CardDefaults.cardElevation(if (selected) 9.dp else 3.dp)) {
+    Card(
+        modifier = modifier.height(66.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White),
+        elevation = CardDefaults.cardElevation(if (selected) 8.dp else 3.dp)
+    ) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(title, fontSize = 17.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else color, textAlign = TextAlign.Center)
             Text(subtitle, fontSize = 12.sp, color = if (selected) Color.White else Color.DarkGray, textAlign = TextAlign.Center)
@@ -157,199 +186,181 @@ private fun FormButton(title: String, subtitle: String, selected: Boolean, color
 
 @Composable
 private fun LessonButton(text: String, color: Color, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled, modifier = modifier.height(58.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(60.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))
+    ) {
         Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, textAlign = TextAlign.Center)
     }
 }
 
-private data class TeachingSample(val x: Float, val y: Float, val tangentX: Float, val tangentY: Float)
+private data class TeachingSample(val x: Float, val y: Float, val tx: Float, val ty: Float)
 
-private fun startHint(symbol: String, arabic: Boolean, width: Float, height: Float): Offset {
-    val hint = if (!arabic) {
-        when (symbol.lowercase()) {
-            "a" -> 0.32f to 0.18f
-            "b", "d", "p", "q", "r" -> 0.62f to 0.18f
-            "c", "e", "o", "s" -> 0.72f to 0.35f
-            "f", "t" -> 0.58f to 0.16f
-            "g" -> 0.72f to 0.42f
-            "h", "k", "l", "m", "n" -> 0.28f to 0.18f
-            "i", "j" -> 0.52f to 0.16f
-            else -> 0.28f to 0.20f
+private class TraceTeachingView(context: Context) : View(context) {
+    private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.rgb(125, 139, 158)
+        alpha = 82
+        style = Paint.Style.FILL
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+    private val startPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(39, 174, 96); style = Paint.Style.FILL }
+    private val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; style = Paint.Style.FILL }
+    private val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.rgb(255, 174, 0)
+        style = Paint.Style.FILL
+        textAlign = Paint.Align.CENTER
+    }
+    private var symbol = "A"
+    private var arabic = false
+    private var progress = 0f
+    private var lastKey = ""
+    private var animator: ValueAnimator? = null
+    private var samples: List<TeachingSample> = emptyList()
+    private val glyphPath = Path()
+
+    fun setLesson(newSymbol: String, newArabic: Boolean, replay: Int) {
+        val key = "$newSymbol|$newArabic|$replay"
+        if (key == lastKey) return
+        lastKey = key
+        symbol = newSymbol
+        arabic = newArabic
+        progress = 0f
+        rebuildSamples()
+        animator?.cancel()
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 5600L
+            addUpdateListener {
+                progress = it.animatedValue as Float
+                invalidate()
+            }
+            start()
         }
-    } else {
-        val base = symbol.firstOrNull { it in arLetters }?.toString().orEmpty()
-        when (base) {
-            "ا" -> 0.55f to 0.18f
-            "ب", "ت", "ث", "ي" -> 0.76f to 0.56f
-            "ج", "ح", "خ" -> 0.76f to 0.30f
-            "د", "ذ", "ر", "ز" -> 0.76f to 0.25f
-            "س", "ش" -> 0.78f to 0.40f
-            "ص", "ض" -> 0.76f to 0.30f
-            "ط", "ظ" -> 0.65f to 0.18f
-            "ع", "غ" -> 0.75f to 0.34f
-            "ف", "ق" -> 0.75f to 0.24f
-            "ك" -> 0.72f to 0.20f
-            "ل" -> 0.60f to 0.16f
-            "م", "ن", "ه" -> 0.75f to 0.35f
-            "و" -> 0.70f to 0.28f
-            else -> 0.72f to 0.30f
+        invalidate()
+    }
+
+    override fun onDetachedFromWindow() {
+        animator?.cancel()
+        animator = null
+        super.onDetachedFromWindow()
+    }
+
+    private fun startHint(letter: String): Pair<Float, Float> {
+        if (!arabic) return when (letter.lowercase()) {
+            "a" -> .32f to .20f; "b", "d", "p", "q", "r" -> .62f to .18f
+            "c", "e", "o", "s" -> .72f to .35f; "f", "t" -> .58f to .16f
+            "g" -> .72f to .42f; "h", "k", "l", "m", "n" -> .28f to .18f
+            "i", "j" -> .52f to .16f; else -> .28f to .20f
+        }
+        val base = arLetters.firstOrNull { letter.contains(it) } ?: letter
+        return when (base) {
+            "ا" -> .52f to .16f; "ب", "ت", "ث", "ي" -> .78f to .55f
+            "ج", "ح", "خ" -> .78f to .30f; "د", "ذ", "ر", "ز" -> .78f to .25f
+            "س", "ش" -> .80f to .40f; "ص", "ض" -> .78f to .30f
+            "ط", "ظ" -> .65f to .18f; "ع", "غ" -> .76f to .34f
+            "ف", "ق" -> .76f to .24f; "ك" -> .72f to .20f
+            "ل" -> .60f to .16f; "م", "ن", "ه" -> .76f to .35f
+            "و" -> .70f to .28f; else -> .72f to .30f
         }
     }
-    return Offset(hint.first * width, hint.second * height)
-}
 
-private fun sampleContour(measure: PathMeasure, startDistance: Float, steps: Int): List<TeachingSample> {
-    val length = measure.length
-    if (length <= 0f) return emptyList()
-    val result = ArrayList<TeachingSample>(steps + 1)
-    for (i in 0..steps) {
-        val d = (startDistance + length * i / steps.toFloat()).coerceAtMost(length)
-        val position = FloatArray(2)
-        val tangent = FloatArray(2)
-        measure.getPosTan(d, position, tangent)
-        result.add(TeachingSample(position[0], position[1], tangent[0], tangent[1]))
-    }
-    return result
-}
-
-private fun buildTeachingSamples(path: AndroidPath, hint: Offset): List<TeachingSample> {
-    val contours = mutableListOf<AndroidPath>()
-    val measure = PathMeasure(path, false)
-    do {
-        if (measure.length > 1f) {
-            val contour = AndroidPath()
-            measure.getSegment(0f, measure.length, contour, true)
-            contours.add(contour)
+    private fun rebuildSamples() {
+        if (width <= 0 || height <= 0) return
+        glyphPaint.textSize = min(width.toFloat(), height.toFloat()) * if (arabic) .82f else .76f
+        glyphPath.reset()
+        glyphPaint.getTextPath(symbol, 0, symbol.length, width / 2f, height * .68f, glyphPath)
+        val bounds = RectF()
+        glyphPath.computeBounds(bounds, true)
+        val maxW = width * .80f
+        val maxH = height * .76f
+        val scale = min(maxW / bounds.width().coerceAtLeast(1f), maxH / bounds.height().coerceAtLeast(1f))
+        val matrix = Matrix().apply {
+            setScale(scale, scale)
+            postTranslate(width / 2f - (bounds.left + bounds.right) * scale / 2f, height * .54f - (bounds.top + bounds.bottom) * scale / 2f)
         }
-    } while (measure.nextContour())
+        glyphPath.transform(matrix)
+        samples = buildSamples(glyphPath, startHint(symbol))
+    }
 
-    if (contours.isEmpty()) return emptyList()
-    val ordered = contours.sortedByDescending { contour -> PathMeasure(contour, false).length }
-    val output = mutableListOf<TeachingSample>()
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        rebuildSamples()
+    }
 
-    ordered.forEachIndexed { contourIndex, contour ->
-        val contourMeasure = PathMeasure(contour, false)
-        val length = contourMeasure.length
-        if (length <= 1f) return@forEachIndexed
+    private fun buildSamples(path: Path, hint: Pair<Float, Float>): List<TeachingSample> {
+        val contours = mutableListOf<Path>()
+        val measure = PathMeasure(path, false)
+        do {
+            if (measure.length > 1f) {
+                val contour = Path()
+                measure.getSegment(0f, measure.length, contour, true)
+                contours.add(contour)
+            }
+        } while (measure.nextContour())
+        if (contours.isEmpty()) return emptyList()
 
-        var start = 0f
-        if (contourIndex == 0 && contourMeasure.isClosed) {
-            var bestDistance = 0f
-            var bestScore = Float.MAX_VALUE
-            for (i in 0 until 180) {
-                val d = length * i / 180f
-                val p = FloatArray(2)
-                contourMeasure.getPosTan(d, p, null)
-                val dx = p[0] - hint.x
-                val dy = p[1] - hint.y
-                val score = dx * dx + dy * dy
-                if (score < bestScore) {
-                    bestScore = score
-                    bestDistance = d
+        val ordered = contours.sortedByDescending { PathMeasure(it, false).length }
+        val out = mutableListOf<TeachingSample>()
+        ordered.forEachIndexed { contourIndex, contour ->
+            val m = PathMeasure(contour, false)
+            val length = m.length
+            if (length <= 1f) return@forEachIndexed
+            var start = 0f
+            if (contourIndex == 0 && m.isClosed) {
+                val targetX = hint.first * width
+                val targetY = hint.second * height
+                var best = Float.MAX_VALUE
+                for (i in 0 until 240) {
+                    val d = length * i / 240f
+                    val p = FloatArray(2)
+                    m.getPosTan(d, p, null)
+                    val score = hypot(p[0] - targetX, p[1] - targetY)
+                    if (score < best) { best = score; start = d }
                 }
             }
-            start = bestDistance
-        }
-
-        val samples = if (contourMeasure.isClosed) {
-            val closedSamples = ArrayList<TeachingSample>(221)
-            for (i in 0..220) {
-                var d = (start + length * i / 220f) % length
+            val count = 260
+            for (i in 0..count) {
+                var d = start + length * i / count.toFloat()
+                if (m.isClosed) d %= length
                 if (d < 0f) d += length
                 val p = FloatArray(2)
                 val t = FloatArray(2)
-                contourMeasure.getPosTan(d, p, t)
-                closedSamples.add(TeachingSample(p[0], p[1], t[0], t[1]))
+                m.getPosTan(d.coerceAtMost(length), p, t)
+                out.add(TeachingSample(p[0], p[1], t[0], t[1]))
             }
-            closedSamples
-        } else {
-            sampleContour(contourMeasure, start, 220)
         }
-
-        if (samples.isNotEmpty()) {
-            if (output.isNotEmpty()) output.add(samples.first())
-            output.addAll(samples)
-        }
-    }
-    return output
-}
-
-@Composable
-private fun TraceTeachingBoard(symbol: String, replay: Int, arabic: Boolean) {
-    val progress = remember(symbol, replay) { Animatable(0f) }
-
-    LaunchedEffect(symbol, replay) {
-        progress.snapTo(0f)
-        progress.animateTo(1f, animationSpec = tween(5600, easing = LinearEasing))
+        return out
     }
 
-    Box(Modifier.fillMaxSize().padding(8.dp).background(Color(0xFFF2F7FF), RoundedCornerShape(24.dp)).border(3.dp, Color(0xFFD5E5F5), RoundedCornerShape(24.dp))) {
-        Canvas(Modifier.fillMaxSize().padding(8.dp)) {
-            val width = size.width
-            val height = size.height
-            val textSize = min(width, height) * if (arabic) 0.78f else 0.72f
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                this.textSize = textSize
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                textAlign = Paint.Align.CENTER
-                style = Paint.Style.FILL
-                color = android.graphics.Color.rgb(72, 89, 110)
-                alpha = 72
-            }
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        canvas.drawColor(android.graphics.Color.rgb(242, 247, 255))
+        if (glyphPath.isEmpty) return
 
-            val rawPath = AndroidPath()
-            paint.getTextPath(symbol, 0, symbol.length, width / 2f, height * 0.68f, rawPath)
-            val bounds = android.graphics.RectF()
-            rawPath.computeBounds(bounds, true)
-            val maxWidth = width * 0.82f
-            val maxHeight = height * 0.76f
-            val scale = min(maxWidth / bounds.width().coerceAtLeast(1f), maxHeight / bounds.height().coerceAtLeast(1f))
-            val matrix = Matrix().apply {
-                setScale(scale, scale)
-                postTranslate(width / 2f - (bounds.left + bounds.right) * scale / 2f, height * 0.54f - (bounds.top + bounds.bottom) * scale / 2f)
-            }
-            val glyphPath = AndroidPath(rawPath)
-            glyphPath.transform(matrix)
-            drawContext.canvas.nativeCanvas.drawPath(glyphPath, paint)
+        canvas.drawPath(glyphPath, glyphPaint)
+        if (samples.isEmpty()) return
 
-            val hint = startHint(symbol, arabic, width, height)
-            val samples: List<TeachingSample> = buildTeachingSamples(glyphPath, hint)
-            if (samples.isEmpty()) return@Canvas
+        val first = samples.first()
+        canvas.drawCircle(first.x, first.y, 16f, startPaint)
+        canvas.drawCircle(first.x, first.y, 7f, whitePaint)
+        canvas.drawCircle(first.x, first.y, 4f, startPaint)
 
-            val position = progress.value * samples.lastIndex.toFloat()
-            val indexA = position.toInt().coerceIn(0, samples.lastIndex)
-            val indexB = (indexA + 1).coerceAtMost(samples.lastIndex)
-            val fraction = position - indexA.toFloat()
-            val a = samples[indexA]
-            val b = samples[indexB]
-            val x = a.x + (b.x - a.x) * fraction
-            val y = a.y + (b.y - a.y) * fraction
-            val tx = a.tangentX + (b.tangentX - a.tangentX) * fraction
-            val ty = a.tangentY + (b.tangentY - a.tangentY) * fraction
+        val pos = progress * (samples.size - 1).toFloat()
+        val ia = pos.toInt().coerceIn(0, samples.lastIndex)
+        val ib = (ia + 1).coerceAtMost(samples.lastIndex)
+        val f = pos - ia
+        val a = samples[ia]
+        val b = samples[ib]
+        val x = a.x + (b.x - a.x) * f
+        val y = a.y + (b.y - a.y) * f
+        val angle = Math.toDegrees(kotlin.math.atan2((a.ty + (b.ty - a.ty) * f).toDouble(), (a.tx + (b.tx - a.tx) * f).toDouble())).toFloat()
 
-            val start = samples.first()
-            drawCircle(Color(0xFF27AE60), 20f, Offset(start.x, start.y))
-            drawCircle(Color.White, 10f, Offset(start.x, start.y))
-            drawCircle(Color(0xFF27AE60), 6f, Offset(start.x, start.y))
-
-            val angle = Math.toDegrees(atan2(ty.toDouble(), tx.toDouble())).toFloat()
-            val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                textSize = min(width, height) * 0.115f
-                textAlign = Paint.Align.CENTER
-                color = android.graphics.Color.BLACK
-            }
-            val nativeCanvas = drawContext.canvas.nativeCanvas
-            nativeCanvas.save()
-            nativeCanvas.rotate(angle, x, y)
-            val metrics = handPaint.fontMetrics
-            val centeredY = y - (metrics.ascent + metrics.descent) / 2f
-            nativeCanvas.drawText("☝", x, centeredY, handPaint)
-            nativeCanvas.restore()
-        }
-
-        Column(Modifier.align(Alignment.TopCenter).padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (arabic) "ابدأ من 🟢 ثم اتبع اليد فوق الحرف حتى النهاية 👆" else "Start at 🟢 and follow the hand over the letter to the end 👆", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
-            Text(if (arabic) "الحرف كامل وواضح — بدون خط إرشاد" else "The complete letter stays visible — no guide line", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        }
+        handPaint.textSize = min(width.toFloat(), height.toFloat()) * .12f
+        canvas.save()
+        canvas.rotate(angle, x, y)
+        canvas.drawText("☝", x, y - (handPaint.ascent() + handPaint.descent()) / 2f, handPaint)
+        canvas.restore()
     }
 }

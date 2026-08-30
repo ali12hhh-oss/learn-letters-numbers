@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 
-private enum class EnglishCase { LOWER, UPPER }
+private enum class EnglishLettersCase { LOWER, UPPER }
 
 private val englishLetters = ('A'..'Z').toList()
 private val letterColors = listOf(
@@ -35,7 +35,6 @@ private val letterColors = listOf(
     0xFFFFA726,0xFF5C6BC0
 ).map { Color(it) }
 
-// Friendly, colorful emoji illustrations for children.
 private val letterEmojis = listOf(
     "🍎", "⚽", "🐱", "🐶", "🐘", "🐟", "🦒", "🍦", "🍨", "🐸", "🦁", "🌙", "🐭",
     "🍊", "🐼", "👑", "🤖", "🌈", "☀️", "🐯", "☂️", "🚐", "🐳", "🎄", "🎁", "🦓"
@@ -58,22 +57,18 @@ internal fun EnglishLettersScreen(
     soundsEnabled: () -> Boolean = { true }
 ) {
     var letterIndex by remember { mutableIntStateOf(0) }
-    var case by remember { mutableStateOf(EnglishCase.UPPER) }
+    var letterCase by remember { mutableStateOf(EnglishLettersCase.UPPER) }
     val letter = englishLetters[letterIndex]
-    val shown = if (case == EnglishCase.UPPER) letter.toString() else letter.lowercase()
+    val shown = if (letterCase == EnglishLettersCase.UPPER) letter.toString() else letter.lowercase()
 
-    LaunchedEffect(letterIndex, case) {
+    LaunchedEffect(letterIndex, letterCase) {
         if (soundsEnabled()) playEnglishLetterSound(audio, letterIndex + 1)
         onLetterSeen(letterIndex)
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            Column(
-                Modifier.fillMaxSize().padding(14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Header: English title with Arabic explanation above the controls.
+            Column(Modifier.fillMaxSize().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Small3DButton("رجوع\nBack", false, Color(0xFF42A5F5), Modifier.width(100.dp)) { onBack(); onTap() }
                     Spacer(Modifier.weight(1f))
@@ -82,44 +77,17 @@ internal fun EnglishLettersScreen(
                         Text("English Letters", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245B8A))
                     }
                 }
-
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    "اختر شكل الحرف / Choose letter case",
-                    modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF0B8), RoundedCornerShape(16.dp)).padding(8.dp),
-                    textAlign = TextAlign.Center,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF704400)
-                )
+                Text("اختر شكل الحرف / Choose letter case", modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF0B8), RoundedCornerShape(16.dp)).padding(8.dp), textAlign = TextAlign.Center, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF704400))
                 Spacer(Modifier.height(7.dp))
-
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CaseButton("حروف صغيرة\nlowercase", case == EnglishCase.LOWER, Modifier.weight(1f)) { case = EnglishCase.LOWER; onTap() }
-                    CaseButton("حروف كبيرة\nUPPERCASE", case == EnglishCase.UPPER, Modifier.weight(1f)) { case = EnglishCase.UPPER; onTap() }
+                    CaseButton("حروف صغيرة\nlowercase", letterCase == EnglishLettersCase.LOWER, Modifier.weight(1f)) { letterCase = EnglishLettersCase.LOWER; onTap() }
+                    CaseButton("حروف كبيرة\nUPPERCASE", letterCase == EnglishLettersCase.UPPER, Modifier.weight(1f)) { letterCase = EnglishLettersCase.UPPER; onTap() }
                 }
-
                 Spacer(Modifier.height(9.dp))
-                Text(
-                    "ممتاز! اضغط على الحرف واستمع إلى صوته\nGreat job! Tap the letter and listen to its sound 🌟",
-                    modifier = Modifier.background(Color(0xFFDDF6FF), RoundedCornerShape(18.dp)).padding(horizontal = 14.dp, vertical = 8.dp),
-                    color = Color(0xFF14577D),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    textAlign = TextAlign.Center
-                )
-
+                Text("ممتاز! اضغط على الحرف واستمع إلى صوته\nGreat job! Tap the letter and listen to its sound 🌟", modifier = Modifier.background(Color(0xFFDDF6FF), RoundedCornerShape(18.dp)).padding(horizontal = 14.dp, vertical = 8.dp), color = Color(0xFF14577D), fontWeight = FontWeight.Bold, fontSize = 15.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(8.dp))
-
-                // Main display only: no letter grid at the top.
-                Box(
-                    Modifier.fillMaxWidth().weight(1f)
-                        .shadow(12.dp, RoundedCornerShape(30.dp))
-                        .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFE7F7FF))), RoundedCornerShape(30.dp))
-                        .border(5.dp, letterColors[letterIndex], RoundedCornerShape(30.dp))
-                        .clickable { if (soundsEnabled()) playEnglishLetterSound(audio, letterIndex + 1); onTap() },
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFE7F7FF))), RoundedCornerShape(30.dp)).border(5.dp, letterColors[letterIndex], RoundedCornerShape(30.dp)).clickable { if (soundsEnabled()) playEnglishLetterSound(audio, letterIndex + 1); onTap() }, contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(letterEmojis[letterIndex], fontSize = 58.sp)
                         Spacer(Modifier.height(3.dp))
@@ -128,59 +96,35 @@ internal fun EnglishLettersScreen(
                         Spacer(Modifier.height(3.dp))
                         Text(letterWords[letterIndex], fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6A4A18), textAlign = TextAlign.Center)
                         Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
                             Small3DButton("🔊\nصوت الحرف\nLetter sound", false, Color(0xFF66BB6A), Modifier.weight(1f)) { if (soundsEnabled()) playEnglishLetterSound(audio, letterIndex + 1); onTap() }
                             Small3DButton("🔤\nاسم الحرف\nLetter name", false, Color(0xFFFFA726), Modifier.weight(1f)) { if (soundsEnabled()) playEnglishLetterName(audio, letterIndex + 1); onTap() }
                         }
                     }
                 }
-
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Small3DButton(
-                        "السابق\nPrevious", letterIndex == 0, Color(0xFFAB47BC), Modifier.weight(1f)
-                    ) { if (letterIndex > 0) letterIndex--; onTap() }
-                    Small3DButton(
-                        "التالي\nNext", letterIndex == 25, Color(0xFFEF5350), Modifier.weight(1f)
-                    ) { if (letterIndex < 25) letterIndex++; onTap() }
+                    Small3DButton("السابق\nPrevious", letterIndex == 0, Color(0xFFAB47BC), Modifier.weight(1f)) { if (letterIndex > 0) letterIndex--; onTap() }
+                    Small3DButton("التالي\nNext", letterIndex == 25, Color(0xFFEF5350), Modifier.weight(1f)) { if (letterIndex < 25) letterIndex++; onTap() }
                 }
             }
         }
     }
 }
 
-@Composable
-private fun CaseButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Box(
-        modifier.height(58.dp).shadow(if (selected) 9.dp else 3.dp, RoundedCornerShape(17.dp))
-            .background(if (selected) Color(0xFF42A5F5) else MaterialTheme.colorScheme.surface, RoundedCornerShape(17.dp))
-            .border(2.dp, Color(0xFF90CAF9), RoundedCornerShape(17.dp)).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
+@Composable private fun CaseButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(modifier.height(58.dp).shadow(if (selected) 9.dp else 3.dp, RoundedCornerShape(17.dp)).background(if (selected) Color(0xFF42A5F5) else MaterialTheme.colorScheme.surface, RoundedCornerShape(17.dp)).border(2.dp, Color(0xFF90CAF9), RoundedCornerShape(17.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Text(text, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = if (selected) Color.White else Color(0xFF245B8A), textAlign = TextAlign.Center)
     }
 }
 
-@Composable
-private fun Small3DButton(text: String, disabled: Boolean, color: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+@Composable private fun Small3DButton(text: String, disabled: Boolean, color: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) .94f else 1f, spring(dampingRatio = .55f, stiffness = 650f), label = text)
-    Box(
-        modifier.height(54.dp).scale(scale).shadow(if (disabled) 2.dp else 7.dp, RoundedCornerShape(16.dp))
-            .background(if (disabled) Color(0xFFE8EEF2) else color, RoundedCornerShape(16.dp))
-            .border(2.dp, Color.White.copy(alpha = .75f), RoundedCornerShape(16.dp))
-            .clickable(enabled = !disabled) { pressed = true; onClick(); pressed = false }
-            .padding(horizontal = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier.height(54.dp).scale(scale).shadow(if (disabled) 2.dp else 7.dp, RoundedCornerShape(16.dp)).background(if (disabled) Color(0xFFE8EEF2) else color, RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(alpha = .75f), RoundedCornerShape(16.dp)).clickable(enabled = !disabled) { pressed = true; onClick(); pressed = false }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
         Text(text, fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.ExtraBold, color = if (disabled) Color.Gray else Color.White, textAlign = TextAlign.Center)
     }
 }
 
-private fun playEnglishLetterSound(audio: LocalAudioManager, index: Int) {
-    audio.playRequired("en_letter_%02d_sound".format(index))
-}
-
-private fun playEnglishLetterName(audio: LocalAudioManager, index: Int) {
-    audio.playRequired("en_letter_%02d_name".format(index))
-}
+private fun playEnglishLetterSound(audio: LocalAudioManager, index: Int) { audio.playRequired("en_letter_%02d_sound".format(index)) }
+private fun playEnglishLetterName(audio: LocalAudioManager, index: Int) { audio.playRequired("en_letter_%02d_name".format(index)) }

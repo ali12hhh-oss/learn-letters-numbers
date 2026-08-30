@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
@@ -24,7 +25,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(Unit){speak("Hello! Welcome to the English section. Let's learn together!")}
         Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background,MaterialTheme.colorScheme.surfaceVariant))).padding(horizontal=18.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally){
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Row(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){EnglishTopButton("📊 تقدمي",Color(0xFF4C8BF5),onProgress);EnglishTopButton("🏆 مكافأة",Color(0xFFFFA726),onRewards);EnglishTopButton("📝 اختبارات",Color(0xFF9B72E8),onTests);EnglishTopButton("📖 قصص",Color(0xFF26A69A),onStories);EnglishTopButton("🎯 مراحل",Color(0xFF66BB6A),onStages);EnglishTopButton("🎮 ألعاب",Color(0xFFEC407A),onGames);EnglishTopButton("⚙ الإعدادات",Color(0xFF5C6BC0),onSettings);EnglishTopButton("↩ رجوع",Color(0xFF546E7A),onBack)};Text("English",fontSize=30.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6))}
-            Text("قسم اللغة الإنجليزية",fontSize=17.sp,color=Color(0xFF5B5B5B),modifier=Modifier.padding(bottom=8.dp));EnglishCard("🔤","Letters","الحروف الإنجليزية",Color(0xFF4C8BF5),onLetters);EnglishCard("🔢","Numbers","الأرقام الإنجليزية",Color(0xFFFF8A4C),onNumbers);EnglishCard("🖊️","Learn to Write","تعلم الكتابة خطوة بخطوة",Color(0xFF9B7EDE),onTutorial);EnglishCard("✏️","Writing","الكتابة والتدريب",Color(0xFF6BCB77),onWriting)
+            Text("قسم اللغة الإنجليزية",fontSize=17.sp,color=Color(0xFF5B5B5B),modifier=Modifier.padding(bottom=8.dp));EnglishCard("🔤","Letters","الحروف الإنجليزية",Color(0xFF4C8BF5),onLetters);EnglishCard("🔢","Numbers","الأرقام الإنجليزية",Color(0xFFFF8A4C),onNumbers);EnglishCard("🖊️","Learn to Write","تعلم الكتابة خطوة بخطوة",Color(0xFF9B72E8),onTutorial);EnglishCard("✏️","Writing","الكتابة والتدريب",Color(0xFF6BCB77),onWriting)
         }
     }
 
@@ -152,8 +152,16 @@ class MainActivity : ComponentActivity() {
             Row(Modifier.fillMaxWidth().height(46.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){Text(if(mode=="letters")"${index+1} / 26" else "${index+1} / 100",fontWeight=FontWeight.ExtraBold,fontSize=13.sp);Spacer(Modifier.width(10.dp));Text(target,fontSize=34.sp,fontWeight=FontWeight.Black,color=Color(0xFF2357A6));Spacer(Modifier.width(8.dp));IconButton(onClick={speakTarget()}){Text("🔊",fontSize=22.sp)}}
             Card(Modifier.fillMaxWidth().weight(1f),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(9.dp)){
                 Column(Modifier.fillMaxSize().padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                    val boardModifier=Modifier.fillMaxWidth().weight(1f).background(Color(0xFFFDFEFF),RoundedCornerShape(20.dp)).pointerInput(inkColor){detectDragGestures(onDragStart={currentStroke=listOf(it)},onDrag={change,_->change.consume();currentStroke=currentStroke+change.position},onDragEnd={if(currentStroke.isNotEmpty())strokes.add(currentStroke);currentStroke=emptyList()},onDragCancel={currentStroke=emptyList()})}
-                    Canvas(boardModifier){val all=strokes+listOf(currentStroke);all.forEach{pts->if(pts.size>1){val path=Path().apply{moveTo(pts[0].x,pts[0].y);for(i in 1 until pts.size)lineTo(pts[i].x,pts[i].y)};drawPath(path,inkColor,style=androidx.compose.ui.graphics.drawscope.Stroke(width=12f,cap=StrokeCap.Round,join=StrokeJoin.Round))}}}
+                    val boardModifier=Modifier.fillMaxWidth().weight(1f).background(Color(0xFFFDFEFF),RoundedCornerShape(20.dp))
+                        .pointerInput(inkColor){detectTapGestures(onTap={point->strokes.add(listOf(point))})}
+                        .pointerInput(inkColor){detectDragGestures(onDragStart={currentStroke=listOf(it)},onDrag={change,_->change.consume();currentStroke=currentStroke+change.position},onDragEnd={if(currentStroke.isNotEmpty())strokes.add(currentStroke);currentStroke=emptyList()},onDragCancel={currentStroke=emptyList()})}
+                    Canvas(boardModifier){
+                        val all=strokes+listOf(currentStroke)
+                        all.forEach{pts->
+                            if(pts.size==1){drawCircle(inkColor,8f,pts.first())}
+                            else if(pts.size>1){val path=Path().apply{moveTo(pts[0].x,pts[0].y);for(i in 1 until pts.size)lineTo(pts[i].x,pts[i].y)};drawPath(path,inkColor,style=androidx.compose.ui.graphics.drawscope.Stroke(width=15f,cap=StrokeCap.Round,join=StrokeJoin.Round))}
+                        }
+                    }
                     Row(Modifier.fillMaxWidth().height(42.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){val colors=listOf(Color(0xFF2563EB),Color(0xFF16A34A),Color(0xFFE11D48),Color(0xFF9333EA),Color(0xFFF59E0B));colors.forEach{c->Box(Modifier.padding(4.dp).size(32.dp).background(c,CircleShape).clickable{inkColor=c})}}
                 }
             }

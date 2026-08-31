@@ -38,7 +38,6 @@ fun HomeSection(onArabic:()->Unit,onEnglish:()->Unit,onProgress:()->Unit,onRewar
             avatar=uri.toString();ChildProfileRepository.saveAvatar(avatar)
         }
     }
-    LaunchedEffect(Unit){speak("أهلاً بك في تطبيق تعلم الحروف والأرقام!")}
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides LayoutDirection.Rtl){
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF7ED6F7),Color(0xFFB9E8C7),Color(0xFFFFE6A8))))){
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal=12.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){

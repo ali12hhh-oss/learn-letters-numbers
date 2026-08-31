@@ -11,10 +11,8 @@ import android.speech.tts.Voice
 /**
  * Offline-first audio engine.
  *
- * The tested on-device embedded Android TTS voice is preferred for spoken
- * letters, numbers, introductions and encouragement. Existing bundled OGG
- * files are deliberately retained and remain the fallback if an offline
- * voice is unavailable. No network TTS is requested.
+ * The tested on-device embedded Android TTS voice is the only speech path.
+ * No bundled legacy audio files and no network TTS are used.
  */
 class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var player: MediaPlayer? = null
@@ -61,9 +59,8 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
     }
 
     /**
-     * Plays a local resource name. For spoken educational content, the tested
-     * offline TTS voice is preferred; the old bundled file is retained as a
-     * fallback. This lets us test the new voice throughout the app safely.
+     * Resolves the educational resource name to text and speaks it with the
+     * tested offline Android TTS voice. Legacy bundled audio is not used.
      */
     fun playRequired(resourceName: String): Boolean {
         if (!enabled) return false
@@ -74,21 +71,15 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         }
 
         val offline = offlineTextForResource(resourceName)
-        if (offline != null && speakOffline(offline.first, offline.second)) return true
-
-        stop()
-        val id = rawId(resourceName)
-        start(id, resourceName)
-        return true
+        return offline != null && speakOffline(offline.first, offline.second)
     }
 
     fun playSequence(resourceNames: List<String>): Boolean {
         if (!enabled || resourceNames.isEmpty()) return false
-        stop()
-        queue = resourceNames.map { rawId(it) }
-        queueIndex = 0
-        playQueueItem()
-        return true
+        val parts = resourceNames.mapNotNull { offlineTextForResource(it) }
+        if (parts.isEmpty()) return false
+        val language = parts.first().second
+        return speakOffline(parts.joinToString(" ") { it.first }, language)
     }
 
     /** Maps common app messages to the new offline voice first. */

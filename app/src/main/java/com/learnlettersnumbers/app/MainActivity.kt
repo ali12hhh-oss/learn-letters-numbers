@@ -200,6 +200,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Composable
+    fun ModeButton(text:String, arabicText:String, selected:Boolean, color:Color, modifier:Modifier, onClick:()->Unit){
+        Card(modifier.height(54.dp).clickable(onClick=onClick),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=if(selected)color else Color.White),elevation=CardDefaults.cardElevation(if(selected)7.dp else 2.dp)){
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
+                Column(horizontalAlignment=Alignment.CenterHorizontally){
+                    Text(text,fontSize=16.sp,fontWeight=FontWeight.Black,color=if(selected)Color.White else color)
+                    Text(arabicText,fontSize=11.sp,fontWeight=FontWeight.Bold,color=if(selected)Color.White else Color(0xFF666666))
+                }
+            }
+        }
+    }
+
     @Composable private fun LetterCaseChoice(letter:String,title:String,arabic:String,selected:Boolean,color:Color,modifier:Modifier,onClick:()->Unit){val scale by animateFloatAsState(if(selected)1.04f else 1f,label="caseChoice_$title");Card(modifier.scale(scale).clickable{onClick()},shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=if(selected)color else MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(if(selected)9.dp else 3.dp)){Column(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(letter,fontSize=34.sp,fontWeight=FontWeight.Black,color=if(selected)Color.White else color);Text(title,fontSize=14.sp,fontWeight=FontWeight.ExtraBold,color=if(selected)Color.White else Color(0xFF245B8A));Text(arabic,fontSize=12.sp,color=if(selected)Color.White else Color(0xFF666666))}}
     }
 

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
@@ -120,8 +122,18 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun EnglishSection(onSettings:()->Unit,onLetters:()->Unit,onNumbers:()->Unit,onTutorial:()->Unit,onWriting:()->Unit,onProgress:()->Unit,onRewards:()->Unit,onTests:()->Unit,onStories:()->Unit,onStages:()->Unit,onGames:()->Unit,onBack:()->Unit,speak:(String)->Unit){
         Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background,MaterialTheme.colorScheme.surfaceVariant))).padding(horizontal=18.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally){
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Row(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){EnglishTopButton("📊 تقدمي",Color(0xFF4C8BF5),onProgress);EnglishTopButton("🏆 مكافأة",Color(0xFFFFA726),onRewards);EnglishTopButton("📝 اختبارات",Color(0xFF9B72E8),onTests);EnglishTopButton("📖 قصص",Color(0xFF26A69A),onStories);EnglishTopButton("🎯 مراحل",Color(0xFF66BB6A),onStages);EnglishTopButton("🎮 ألعاب",Color(0xFFEC407A),onGames);EnglishTopButton("⚙ الإعدادات",Color(0xFF5C6BC0),onSettings);EnglishTopButton("↩ رجوع",Color(0xFF546E7A),onBack)};Text("English",fontSize=30.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6))}
-            Text("قسم اللغة الإنجليزية",fontSize=17.sp,color=Color(0xFF5B5B5B),modifier=Modifier.padding(bottom=8.dp));EnglishCard("🔤","Letters","الحروف الإنجليزية",Color(0xFF4C8BF5),onLetters);EnglishCard("🔢","Numbers","الأرقام الإنجليزية",Color(0xFFFF8A4C),onNumbers);EnglishCard("🖊️","Learn to Write","تعلم الكتابة خطوة بخطوة",Color(0xFF9B72E8),onTutorial);EnglishCard("✏️","Writing","الكتابة والتدريب",Color(0xFF6BCB77),onWriting)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                Button(onClick=onBack,modifier=Modifier.height(42.dp),shape=RoundedCornerShape(14.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF546E7A)),elevation=ButtonDefaults.buttonElevation(defaultElevation=6.dp)){Text("↩ رجوع",fontSize=14.sp,fontWeight=FontWeight.ExtraBold,color=Color.White)}
+                Spacer(Modifier.width(10.dp))
+                Text("English",fontSize=30.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6),modifier=Modifier.weight(1f),textAlign=TextAlign.End)
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){EnglishTopButton("📊 تقدمي",Color(0xFF4C8BF5),onProgress);EnglishTopButton("🏆 مكافأة",Color(0xFFFFA726),onRewards);EnglishTopButton("📝 اختبارات",Color(0xFF9B72E8),onTests);EnglishTopButton("📖 قصص",Color(0xFF26A69A),onStories);EnglishTopButton("🎯 مراحل",Color(0xFF66BB6A),onStages);EnglishTopButton("🎮 ألعاب",Color(0xFFEC407A),onGames);EnglishTopButton("⚙ الإعدادات",Color(0xFF5C6BC0),onSettings)}
+            Text("قسم اللغة الإنجليزية",fontSize=17.sp,color=Color(0xFF5B5B5B),modifier=Modifier.padding(bottom=8.dp))
+            EnglishCard("🔤","Letters","الحروف الإنجليزية",Color(0xFF4C8BF5),onLetters)
+            EnglishCard("🔢","Numbers","الأرقام الإنجليزية",Color(0xFFFF8A4C),onNumbers)
+            EnglishCard("🖊️","Learn to Write","تعلم الكتابة خطوة بخطوة",Color(0xFF9B72E8),onTutorial)
+            EnglishCard("✏️","Writing","الكتابة والتدريب",Color(0xFF6BCB77),onWriting)
         }
     }
 
@@ -157,7 +169,7 @@ class MainActivity : ComponentActivity() {
                         val all=strokes+listOf(currentStroke)
                         all.forEach{pts->
                             if(pts.size==1){drawCircle(inkColor,8f,pts.first())}
-                            else if(pts.size>1){val path=Path().apply{moveTo(pts[0].x,pts[0].y);for(i in 1 until pts.size)lineTo(pts[i].x,pts[i].y)};drawPath(path,inkColor,style=androidx.compose.ui.graphics.drawscope.Stroke(width=15f,cap=StrokeCap.Round,join=StrokeJoin.Round))}
+                            else if(pts.size>1){val path=Path().apply{moveTo(pts[0].x,pts[0].y);for(i in 1 until pts.size)lineTo(pts[i].x,pts[i].y)};drawPath(path,inkColor,style=androidx.compose.ui.graphics.drawscope.Stroke(width=36f,cap=StrokeCap.Round,join=StrokeJoin.Round))}
                         }
                     }
                     Row(Modifier.fillMaxWidth().height(42.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){val colors=listOf(Color(0xFF2563EB),Color(0xFF16A34A),Color(0xFFE11D48),Color(0xFF9333EA),Color(0xFFF59E0B));colors.forEach{c->Box(Modifier.padding(4.dp).size(32.dp).background(c,CircleShape).clickable{inkColor=c})}}

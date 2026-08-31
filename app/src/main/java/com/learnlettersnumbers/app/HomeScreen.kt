@@ -27,16 +27,25 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 
 @Composable
-fun HomeSection(onArabic:()->Unit,onEnglish:()->Unit,onProgress:()->Unit,onRewards:()->Unit,onTests:()->Unit,onStories:()->Unit,onGames:()->Unit,onStages:()->Unit,onSettings:()->Unit,onChildProfile:()->Unit,speak:(String)->Unit){
+fun HomeSection(onArabic:()->Unit,onEnglish:()->Unit,onProgress:()->Unit,onRewards:()->Unit,onTests:()->Unit,onStories:()->Unit,onGames:()->Unit,onStages:()->Unit,onSettings:()->Unit,speak:(String)->Unit){
     val context=LocalContext.current
     var childName by remember{mutableStateOf(ChildProfileRepository.loadName())}
     var avatar by remember{mutableStateOf(ChildProfileRepository.loadAvatar())}
     var showProfile by remember{mutableStateOf(!ChildProfileRepository.promptSeen())}
+    var showProfilePage by remember{mutableStateOf(false)}
+    var showEditProfile by remember{mutableStateOf(false)}
     val galleryLauncher=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri:Uri?->if(uri!=null){try{context.contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:SecurityException){};avatar=uri.toString();ChildProfileRepository.saveAvatar(avatar)}}
+
+    if(showProfilePage){
+        ChildProfileScreen(repo=ProgressRepository(context),onBack={showProfilePage=false},onEdit={showEditProfile=true})
+        if(showEditProfile){ProfileEditorDialogV2(onSaved={childName=ChildProfileRepository.loadName();avatar=ChildProfileRepository.loadAvatar();showEditProfile=false},onCancel={showEditProfile=false})}
+        return
+    }
+
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides LayoutDirection.Rtl){
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF7ED6F7),Color(0xFFB9E8C7),Color(0xFFFFE6A8))))){
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal=12.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                Row(Modifier.fillMaxWidth(),Arrangement.SpaceBetween,Alignment.Top){ProfileCard(childName,avatar){onChildProfile()};Icon3D("⚙","الإعدادات",Color(0xFF6843C6),onSettings)}
+                Row(Modifier.fillMaxWidth(),Arrangement.SpaceBetween,Alignment.Top){ProfileCard(childName,avatar){showProfilePage=true};Icon3D("⚙","الإعدادات",Color(0xFF6843C6),onSettings)}
                 Spacer(Modifier.height(10.dp));TitleBanner();Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth(),Arrangement.spacedBy(9.dp),Alignment.CenterVertically){LangCard(Modifier.weight(1f),"العربية","تعلّم الحروف والأرقام والقراءة والقواعد",Color(0xFFF39A12),"عربي",onArabic);LangCard(Modifier.weight(1f),"الإنجليزية","تعلّم الحروف والأرقام والكتابة",Color(0xFF1979D4),"A B C",onEnglish)}
                 Spacer(Modifier.height(9.dp));Text("اختر ما تريد أن تتعلمه",Modifier.background(Color(0xFF285E7F).copy(alpha=.92f),RoundedCornerShape(18.dp)).padding(horizontal=16.dp,vertical=6.dp),color=Color.White,fontSize=15.sp,fontWeight=FontWeight.Black);Spacer(Modifier.height(6.dp))
@@ -47,7 +56,7 @@ fun HomeSection(onArabic:()->Unit,onEnglish:()->Unit,onProgress:()->Unit,onRewar
         }
     }
     var draft by remember(childName){mutableStateOf(childName)}
-    if(showProfile){ProfileEditorDialog(name=draft,avatar=avatar,onNameChange={draft=it},onBoy={avatar="boy";ChildProfileRepository.saveAvatar("boy")},onGirl={avatar="girl";ChildProfileRepository.saveAvatar("girl")},onGallery={galleryLauncher.launch(arrayOf("image/*"))},onSave={val n=draft.trim();ChildProfileRepository.saveName(n);ProgressRepository(context).setChildName(n);childName=n;ChildProfileRepository.markPromptSeen();showProfile=false;onChildProfile()},onSkip={ChildProfileRepository.markPromptSeen();showProfile=false},canDismiss=childName.isNotBlank())}
+    if(showProfile){ProfileEditorDialog(name=draft,avatar=avatar,onNameChange={draft=it},onBoy={avatar="boy";ChildProfileRepository.saveAvatar("boy")},onGirl={avatar="girl";ChildProfileRepository.saveAvatar("girl")},onGallery={galleryLauncher.launch(arrayOf("image/*"))},onSave={val n=draft.trim();ChildProfileRepository.saveName(n);ProgressRepository(context).setChildName(n);childName=n;ChildProfileRepository.markPromptSeen();showProfile=false;showProfilePage=true},onSkip={ChildProfileRepository.markPromptSeen();showProfile=false},canDismiss=childName.isNotBlank())}
 }
 
 @Composable private fun ProfileEditorDialog(name:String,avatar:String,onNameChange:(String)->Unit,onBoy:()->Unit,onGirl:()->Unit,onGallery:()->Unit,onSave:()->Unit,onSkip:()->Unit,canDismiss:Boolean){AlertDialog(onDismissRequest={if(canDismiss)onSkip()},title={Text("ملف الطفل",fontWeight=FontWeight.Black)},text={Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.fillMaxWidth()){Text("اختر شخصية لطفلك أو صورة من الاستوديو",color=Color(0xFF35566F),fontSize=13.sp,fontWeight=FontWeight.Bold,textAlign=TextAlign.Center);Spacer(Modifier.height(10.dp));ProfileAvatarPreview(avatar);Spacer(Modifier.height(12.dp));Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){AvatarChoice("ولد","boy",avatar,Color(0xFF2B82D7),onBoy,Modifier.weight(1f));AvatarChoice("بنت","girl",avatar,Color(0xFFE65A9A),onGirl,Modifier.weight(1f))};Spacer(Modifier.height(8.dp));OutlinedButton(onClick=onGallery,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp)){Text("اختيار صورة من الاستوديو 📷",fontWeight=FontWeight.Bold)};Spacer(Modifier.height(10.dp));OutlinedTextField(value=name,onValueChange=onNameChange,label={Text("اسم الطفل")},singleLine=true,modifier=Modifier.fillMaxWidth())}},confirmButton={Button(onClick=onSave,shape=RoundedCornerShape(14.dp)){Text("حفظ الملف")}},dismissButton={TextButton(onClick=onSkip){Text("تخطي")}},properties=DialogProperties(dismissOnBackPress=canDismiss,dismissOnClickOutside=canDismiss))}

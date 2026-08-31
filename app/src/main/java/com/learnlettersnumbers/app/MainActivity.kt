@@ -36,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.min
 
 class MainActivity : ComponentActivity() {
     private var tone: ToneGenerator? = null
@@ -140,12 +139,34 @@ class MainActivity : ComponentActivity() {
     @Composable fun EnglishTopButton(text:String,color:Color,onClick:()->Unit){Button(onClick=onClick,modifier=Modifier.height(40.dp),shape=RoundedCornerShape(14.dp),contentPadding=PaddingValues(horizontal=9.dp,vertical=0.dp),colors=ButtonDefaults.buttonColors(containerColor=color),elevation=ButtonDefaults.buttonElevation(defaultElevation=5.dp)){Text(text,fontSize=12.sp,fontWeight=FontWeight.ExtraBold,maxLines=1)}}
     @Composable fun EnglishCard(icon:String,title:String,arabic:String,color:Color,onClick:()->Unit){var pressed by remember{mutableStateOf(false)};val scale by animateFloatAsState(if(pressed).96f else 1f,label="scale");Card(Modifier.fillMaxWidth().padding(vertical=5.dp).scale(scale).clickable{pressed=true;onClick();pressed=false},shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=color),elevation=CardDefaults.cardElevation(10.dp)){Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){Text(icon,fontSize=38.sp);Spacer(Modifier.width(18.dp));Column{Text(title,color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Bold);Text(arabic,color=Color.White.copy(.95f),fontSize=17.sp)}}}}
 
+    /** English numbers now use exactly the same one-by-one navigation model as Arabic numbers. */
     @Composable
-    fun EnglishNumbers(onBack:()->Unit,speak:(String)->Unit,playNumber:(Int)->Unit,repo:ProgressRepository){var mode by remember{mutableStateOf("ones")};var selected by remember{mutableStateOf(1)};val nums=if(mode=="ones")(1..9).toList()else(10..100 step 10).toList();LaunchedEffect(Unit){repo.addStars(1);speak("Welcome to English numbers. Choose a number and listen!")};Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background,MaterialTheme.colorScheme.surfaceVariant))).padding(14.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Button(onClick=onBack,shape=RoundedCornerShape(18.dp)){Text("Back")};Column(horizontalAlignment=Alignment.End){Text("Numbers",fontSize=29.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6));Text("الأرقام الإنجليزية",fontSize=16.sp)}};Row(Modifier.fillMaxWidth().padding(vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){ModeButton("1–9","الآحاد",mode=="ones",Color(0xFF4C8BF5),Modifier.weight(1f)){mode="ones";selected=1;speak("One to nine")};ModeButton("10–100","العشرات",mode=="tens",Color(0xFFFF8A4C),Modifier.weight(1f)){mode="tens";selected=10;speak("Ten to one hundred")}};Card(Modifier.fillMaxWidth().padding(bottom=12.dp),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(9.dp)){Column(Modifier.padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(selected.toString(),fontSize=68.sp,fontWeight=FontWeight.Black,color=Color(0xFF2357A6));Button(onClick={playNumber(selected)},shape=RoundedCornerShape(18.dp)){Text("🔊 Listen",fontSize=18.sp)};Text(if(mode=="ones")"Choose a number from 1 to 9" else "Choose a tens number from 10 to 100",fontSize=16.sp,modifier=Modifier.padding(top=7.dp),textAlign=TextAlign.Center)}};LazyVerticalGrid(columns=GridCells.Fixed(3),modifier=Modifier.fillMaxWidth().weight(1f),contentPadding=PaddingValues(4.dp),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){items(nums){n->NumberTile(n,n==selected){selected=n;repo.recordNumberSeen(n);repo.recordLesson("English numbers",n.toString());playNumber(n)}}}}
+    fun EnglishNumbers(onBack:()->Unit,speak:(String)->Unit,playNumber:(Int)->Unit,repo:ProgressRepository){
+        var selected by remember{mutableIntStateOf(1)}
+        LaunchedEffect(Unit){repo.addStars(1)}
+        LaunchedEffect(selected){speak(numberName(selected))}
+        Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background,MaterialTheme.colorScheme.surfaceVariant))).padding(14.dp)){
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                Button(onClick=onBack,shape=RoundedCornerShape(18.dp)){Text("Back")}
+                Column(horizontalAlignment=Alignment.End){Text("Numbers",fontSize=29.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6));Text("الأرقام الإنجليزية",fontSize=16.sp)}
+            }
+            Text("Numbers 1–100",Modifier.fillMaxWidth().padding(vertical=8.dp),textAlign=TextAlign.Center,fontSize=18.sp,fontWeight=FontWeight.Bold,color=Color(0xFF2357A6))
+            Card(Modifier.fillMaxWidth().weight(1f),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(9.dp)){
+                Column(Modifier.fillMaxSize().padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+                    Text(selected.toString(),fontSize=112.sp,fontWeight=FontWeight.Black,color=Color(0xFF2357A6),textAlign=TextAlign.Center)
+                    Spacer(Modifier.height(12.dp))
+                    Text(numberName(selected),fontSize=25.sp,fontWeight=FontWeight.Bold,color=Color(0xFF155E8A),textAlign=TextAlign.Center)
+                    Spacer(Modifier.height(14.dp))
+                    Button(onClick={playNumber(selected)},shape=RoundedCornerShape(18.dp)){Text("🔊 Listen",fontSize=18.sp)}
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth().height(62.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){
+                Button(onClick={if(selected>1){selected--;repo.recordNumberSeen(selected);repo.recordLesson("English numbers",selected.toString())}},enabled=selected>1,modifier=Modifier.weight(1f),shape=RoundedCornerShape(20.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7E57C2))){Text("Previous",fontWeight=FontWeight.ExtraBold,fontSize=17.sp)}
+                Button(onClick={if(selected<100){selected++;repo.recordNumberSeen(selected);repo.recordLesson("English numbers",selected.toString())}},enabled=selected<100,modifier=Modifier.weight(1f),shape=RoundedCornerShape(20.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF039BE5))){Text("Next",fontWeight=FontWeight.ExtraBold,fontSize=17.sp)}
+            }
+        }
     }
-
-    @Composable fun ModeButton(en:String,ar:String,selected:Boolean,color:Color,modifier:Modifier,onClick:()->Unit){val bg by animateColorAsState(if(selected)color else MaterialTheme.colorScheme.surface,label="modeColor");Button(onClick=onClick,modifier=modifier.height(64.dp),shape=RoundedCornerShape(22.dp),colors=ButtonDefaults.buttonColors(containerColor=bg,contentColor=if(selected)Color.White else color),elevation=ButtonDefaults.buttonElevation(defaultElevation=7.dp)){Column(horizontalAlignment=Alignment.CenterHorizontally){Text(en,fontWeight=FontWeight.ExtraBold);Text(ar,fontSize=13.sp)}}}
-    @Composable fun NumberTile(n:Int,selected:Boolean,onClick:()->Unit){val colors=listOf(Color(0xFF4C8BF5),Color(0xFFFF8A4C),Color(0xFF6BCB77),Color(0xFF9B72E8),Color(0xFFE85D9E));val c=colors[(n-1)%colors.size];Card(Modifier.fillMaxWidth().height(82.dp).clickable{onClick()},shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=if(selected)Color(0xFFFFC857)else c),elevation=CardDefaults.cardElevation(if(selected)12.dp else 7.dp)){Box(contentAlignment=Alignment.Center){Text(n.toString(),fontSize=30.sp,fontWeight=FontWeight.ExtraBold,color=Color.White)}}}
 
     @Composable
     fun EnglishWriting(onBack:()->Unit,speak:(String)->Unit,repo:ProgressRepository){
@@ -183,5 +204,5 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun englishLetterSound(c:Char):String=when(c.lowercaseChar()){'a'->"ah";'b'->"buh";'c'->"kuh";'d'->"duh";'e'->"eh";'f'->"fff";'g'->"guh";'h'->"huh";'i'->"ih";'j'->"juh";'k'->"kuh";'l'->"lll";'m'->"mmm";'n'->"nnn";'o'->"ah";'p'->"puh";'q'->"kwuh";'r'->"rrr";'s'->"sss";'t'->"tuh";'u'->"uh";'v'->"vvv";'w'->"wuh";'x'->"ks";'y'->"yuh";'z'->"zzz";else->c.toString()}
-    private fun numberName(n:Int):String=when(n){1->"one";2->"two";3->"three";4->"four";5->"five";6->"six";7->"seven";8->"eight";9->"nine";10->"ten";20->"twenty";30->"thirty";40->"forty";50->"fifty";60->"sixty";70->"seventy";80->"eighty";90->"ninety";100->"one hundred";else->n.toString()}
+    private fun numberName(n:Int):String=when(n){1->"one";2->"two";3->"three";4->"four";5->"five";6->"six";7->"seven";8->"eight";9->"nine";10->"ten";11->"eleven";12->"twelve";13->"thirteen";14->"fourteen";15->"fifteen";16->"sixteen";17->"seventeen";18->"eighteen";19->"nineteen";20->"twenty";30->"thirty";40->"forty";50->"fifty";60->"sixty";70->"seventy";80->"eighty";90->"ninety";100->"one hundred";else->"${numberName((n/10)*10)} ${numberName(n%10)}"}
 }

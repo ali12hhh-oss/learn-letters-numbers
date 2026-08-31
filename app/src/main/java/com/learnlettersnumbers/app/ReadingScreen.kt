@@ -120,15 +120,13 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
                     ) {
                         strokes.forEach { s ->
                             if (s.points.size == 1) {
-                                // نقطة فعلية مرئية عند النقر، وليست مساراً بطول صفر.
                                 drawCircle(color = s.color, radius = 12f, center = s.points.first())
                             } else {
-                                // خط الكتابة عريض وواضح حتى يظهر أثناء الكتابة بالنقاط والمسارات.
-                                drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 22f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                                drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 36f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                             }
                         }
                         if (current.size == 1) drawCircle(color = inkColor, radius = 12f, center = current.first())
-                        if (current.size > 1) drawPath(pathOfReading(current), color = inkColor, style = Stroke(width = 22f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        if (current.size > 1) drawPath(pathOfReading(current), color = inkColor, style = Stroke(width = 36f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                     Spacer(Modifier.height(5.dp))
                     Row(Modifier.fillMaxWidth().height(38.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

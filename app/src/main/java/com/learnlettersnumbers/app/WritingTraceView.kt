@@ -10,7 +10,9 @@ import android.view.MotionEvent
 import android.view.View
 import kotlin.math.min
 
-/** Lightweight finger-writing board. The complete glyph remains visible, including dots. */
+/** Lightweight finger-writing board. Multiple strokes are preserved, so dots and
+ * separated parts of Arabic letters can be written independently without erasing
+ * the previous stroke. */
 class WritingTraceView(context: Context) : View(context) {
     private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(70, 86, 110)
@@ -24,7 +26,7 @@ class WritingTraceView(context: Context) : View(context) {
         color = Color.rgb(245, 105, 55)
         alpha = 245
         style = Paint.Style.STROKE
-        strokeWidth = 36f
+        strokeWidth = 18f
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }
@@ -64,16 +66,18 @@ class WritingTraceView(context: Context) : View(context) {
 
     private fun insideGuide(x: Float, y: Float): Boolean {
         val r = RectF(glyphBounds)
-        r.inset(-55f, -55f)
+        r.inset(-65f, -65f)
         return r.contains(x, y)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                // IMPORTANT: do not reset writingPath here. Arabic letters such as
+                // ط/ظ have separated dot strokes; each finger-down starts another
+                // sub-stroke while all earlier strokes remain visible.
                 if (!insideGuide(event.x, event.y)) return true
                 writing = true
-                writingPath.reset()
                 writingPath.moveTo(event.x, event.y)
                 invalidate()
                 return true
@@ -86,6 +90,7 @@ class WritingTraceView(context: Context) : View(context) {
                 return true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (writing) writingPath.lineTo(event.x, event.y)
                 writing = false
                 invalidate()
                 return true
@@ -100,10 +105,11 @@ class WritingTraceView(context: Context) : View(context) {
         canvas.drawColor(Color.rgb(242, 247, 255))
         rebuildGlyph()
 
-        // Draw the complete guide first so the Arabic dots are always present.
+        // Draw the complete guide first, including Arabic dots.
         canvas.drawPath(glyphPath, glyphPaint)
 
-        // Draw the child's finger stroke on top and keep it visible while dragging.
+        // Draw ALL finger strokes on top. Separate ACTION_DOWN events create
+        // separate subpaths instead of deleting the previous stroke.
         if (!writingPath.isEmpty) canvas.drawPath(writingPath, writingPaint)
     }
 }

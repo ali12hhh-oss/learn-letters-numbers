@@ -85,7 +85,8 @@ fun ProfileEditorDialogV2(onSaved:()->Unit,onCancel:()->Unit){
 }
 
 @Composable private fun StoredAvatar(value:String,modifier:Modifier){
-    val bitmap=remember(value){loadBitmap(LocalContext.current,value)}
+    val context=LocalContext.current
+    val bitmap=remember(value){loadBitmap(context,value)}
     Surface(modifier.clip(CircleShape),shape=CircleShape,color=Color.White,shadowElevation=9.dp){Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){if(bitmap!=null)Image(bitmap.asImageBitmap(),contentDescription="صورة الطفل",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Text(if(value=="girl")"👧🏻" else "👦🏻",fontSize=54.sp)}}
 }
 private fun loadBitmap(context:Context,value:String)=if(value.startsWith("content://"))try{context.contentResolver.openInputStream(Uri.parse(value)).use{BitmapFactory.decodeStream(it)}}catch(_:Exception){null}else null

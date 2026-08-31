@@ -8,15 +8,13 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.view.MotionEvent
 import android.view.View
-import kotlin.math.hypot
 import kotlin.math.min
 
 /**
- * Simple writing guide.
- * - No animated hand/pointer.
- * - A fixed start point is shown on the beginning of each character.
- * - Fixed arrows show the suggested writing direction.
- * - The child writes directly on top of the faint character with a finger.
+ * Lightweight finger-writing guide.
+ * The character/number remains visible as a faint guide and the child can
+ * write directly over it with a finger. No animated hand, start marker,
+ * directional arrow, or artificial starting-point restriction is shown.
  */
 class WritingTraceView(context: Context) : View(context) {
     private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -26,22 +24,7 @@ class WritingTraceView(context: Context) : View(context) {
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.CENTER
     }
-    private val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(38, 126, 220)
-        alpha = 210
-        style = Paint.Style.STROKE
-        strokeWidth = 8f
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
-    private val startPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(24, 180, 88)
-        style = Paint.Style.FILL
-    }
-    private val startInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        style = Paint.Style.FILL
-    }
+
     private val writingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(245, 105, 55)
         alpha = 235
@@ -55,8 +38,6 @@ class WritingTraceView(context: Context) : View(context) {
     private var lastKey = ""
     private var glyphPath = Path()
     private var glyphBounds = RectF()
-    private var startX = 0f
-    private var startY = 0f
     private val writingPath = Path()
     private var writing = false
 
@@ -84,9 +65,6 @@ class WritingTraceView(context: Context) : View(context) {
         glyphPaint.getTextPath(symbol, 0, symbol.length, width / 2f, baseline, glyphPath)
         glyphBounds = RectF()
         glyphPath.computeBounds(glyphBounds, true)
-        val start = startPointFor(symbol, glyphBounds)
-        startX = start.first
-        startY = start.second
     }
 
     private fun arabicBase(s: String): String? {
@@ -108,91 +86,16 @@ class WritingTraceView(context: Context) : View(context) {
         return forms[s]
     }
 
-    /** Start locations are deliberately different for the individual letter shapes. */
-    private fun startPointFor(s: String, b: RectF): Pair<Float, Float> {
-        val a = arabicBase(s)
-        if (a != null) {
-            return when (a) {
-                "ا" -> b.centerX() to b.top + b.height() * .05f
-                "ب", "ت", "ث", "ن", "ي" -> b.right - b.width() * .08f to b.centerY()
-                "ج", "ح", "خ" -> b.right - b.width() * .10f to b.top + b.height() * .40f
-                "د", "ذ" -> b.right - b.width() * .18f to b.top + b.height() * .12f
-                "ر", "ز" -> b.right - b.width() * .16f to b.top + b.height() * .18f
-                "س", "ش" -> b.right - b.width() * .08f to b.top + b.height() * .42f
-                "ص", "ض" -> b.right - b.width() * .10f to b.top + b.height() * .22f
-                "ط", "ظ" -> b.right - b.width() * .16f to b.top + b.height() * .08f
-                "ع", "غ" -> b.right - b.width() * .10f to b.top + b.height() * .34f
-                "ف", "ق" -> b.right - b.width() * .10f to b.top + b.height() * .30f
-                "ك" -> b.right - b.width() * .10f to b.top + b.height() * .10f
-                "ل" -> b.centerX() to b.top + b.height() * .04f
-                "م" -> b.right - b.width() * .08f to b.top + b.height() * .36f
-                "ه" -> b.right - b.width() * .08f to b.top + b.height() * .34f
-                "و" -> b.right - b.width() * .12f to b.top + b.height() * .28f
-                else -> b.centerX() to b.centerY()
-            }
-        }
-
-        return when (s.lowercase()) {
-            "a" -> b.left + b.width() * .50f to b.bottom - b.height() * .04f
-            "b" -> b.left + b.width() * .42f to b.top + b.height() * .04f
-            "c" -> b.right - b.width() * .05f to b.top + b.height() * .18f
-            "d" -> b.left + b.width() * .42f to b.top + b.height() * .04f
-            "e" -> b.left + b.width() * .08f to b.top + b.height() * .42f
-            "f" -> b.left + b.width() * .52f to b.top + b.height() * .03f
-            "g" -> b.right - b.width() * .05f to b.top + b.height() * .34f
-            "h" -> b.left + b.width() * .35f to b.top + b.height() * .05f
-            "i" -> b.left + b.width() * .50f to b.top + b.height() * .34f
-            "j" -> b.left + b.width() * .55f to b.top + b.height() * .32f
-            "k" -> b.left + b.width() * .35f to b.top + b.height() * .05f
-            "l" -> b.left + b.width() * .50f to b.top + b.height() * .04f
-            "m", "n" -> b.left + b.width() * .08f to b.top + b.height() * .08f
-            "o" -> b.centerX() to b.top + b.height() * .05f
-            "p" -> b.left + b.width() * .35f to b.top + b.height() * .05f
-            "q" -> b.centerX() to b.top + b.height() * .05f
-            "r" -> b.left + b.width() * .10f to b.top + b.height() * .10f
-            "s" -> b.right - b.width() * .08f to b.top + b.height() * .16f
-            "t" -> b.left + b.width() * .55f to b.top + b.height() * .02f
-            "u" -> b.left + b.width() * .08f to b.top + b.height() * .08f
-            "v", "w", "x", "y", "z" -> b.left + b.width() * .07f to b.top + b.height() * .06f
-            else -> b.centerX() to b.centerY()
-        }
-    }
-
-    private fun nearStart(x: Float, y: Float): Boolean = hypot(x - startX, y - startY) <= 52f
-
     private fun insideGuide(x: Float, y: Float): Boolean {
         val r = RectF(glyphBounds)
-        r.inset(-30f, -30f)
+        r.inset(-45f, -45f)
         return r.contains(x, y)
-    }
-
-    private fun drawArrow(canvas: Canvas, x1: Float, y1: Float, x2: Float, y2: Float) {
-        canvas.drawLine(x1, y1, x2, y2, guidePaint)
-        val angle = kotlin.math.atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
-        val head = 18f
-        val a1 = angle + Math.PI * .78
-        val a2 = angle - Math.PI * .78
-        canvas.drawLine(x2, y2, x2 + kotlin.math.cos(a1).toFloat() * head, y2 + kotlin.math.sin(a1).toFloat() * head, guidePaint)
-        canvas.drawLine(x2, y2, x2 + kotlin.math.cos(a2).toFloat() * head, y2 + kotlin.math.sin(a2).toFloat() * head, guidePaint)
-    }
-
-    /** Fixed arrows: no animation and no moving hand. */
-    private fun drawFixedDirection(canvas: Canvas) {
-        val a = arabicBase(symbol)
-        if (a != null) {
-            // Arabic writing generally progresses right-to-left; the arrow stays fixed beside the guide.
-            val y = startY
-            drawArrow(canvas, startX + 70f, y, startX + 12f, y)
-            return
-        }
-        val y = startY
-        drawArrow(canvas, startX - 55f, y, startX - 5f, y)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                if (!nearStart(event.x, event.y)) return true
+                if (!insideGuide(event.x, event.y)) return true
                 writing = true
                 writingPath.reset()
                 writingPath.moveTo(event.x, event.y)
@@ -221,15 +124,10 @@ class WritingTraceView(context: Context) : View(context) {
         canvas.drawColor(Color.rgb(242, 247, 255))
         rebuildGlyph()
 
-        // Large, faint character: the child writes directly on this shape with a finger.
+        // Large, faint character/number used as the writing guide.
         canvas.drawPath(glyphPath, glyphPaint)
 
-        // One fixed start point and fixed directional arrows only.
-        drawFixedDirection(canvas)
-        canvas.drawCircle(startX, startY, 21f, startPaint)
-        canvas.drawCircle(startX, startY, 8f, startInnerPaint)
-
-        // Only the child's own finger stroke is rendered. There is no hand/pointer animation.
+        // Only the child's finger stroke is rendered.
         if (!writingPath.isEmpty) canvas.drawPath(writingPath, writingPaint)
     }
 }

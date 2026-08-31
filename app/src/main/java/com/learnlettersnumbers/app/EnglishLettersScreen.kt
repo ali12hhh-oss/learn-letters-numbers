@@ -35,17 +35,24 @@ private val letterColors = listOf(
     0xFFFFA726,0xFF5C6BC0
 ).map { Color(it) }
 
+// Each image/word now matches the first letter exactly: A=Apple ... Z=Zebra.
 private val letterEmojis = listOf(
-    "🍎", "⚽", "🐱", "🐶", "🐘", "🐟", "🦒", "🍦", "🍨", "🐸", "🦁", "🌙", "🐭",
-    "🍊", "🐼", "👑", "🤖", "🌈", "☀️", "🐯", "☂️", "🚐", "🐳", "🎄", "🎁", "🦓"
+    "🍎", "⚽", "🐱", "🐶", "🐘", "🐟", "🦒", "🎩", "🍦", "🪼", "🪁", "🦁", "🌙",
+    "🪺", "🍊", "🐼", "👑", "🤖", "☀️", "🐯", "☂️", "🚐", "🐳", "🎵", "🪀", "🦓"
 )
 
 private val letterWords = listOf(
     "Apple — تفاحة", "Ball — كرة", "Cat — قطة", "Dog — كلب", "Elephant — فيل", "Fish — سمكة",
-    "Giraffe — زرافة", "Ice cream — مثلجات", "Ice cream — آيس كريم", "Jellyfish — قنديل البحر",
-    "Lion — أسد", "Moon — قمر", "Mouse — فأر", "Orange — برتقالة", "Panda — باندا", "Queen — ملكة",
-    "Robot — روبوت", "Rainbow — قوس قزح", "Sun — شمس", "Tiger — نمر", "Umbrella — مظلة",
-    "Van — حافلة صغيرة", "Whale — حوت", "Xmas tree — شجرة عيد الميلاد", "Yo-yo — يويو", "Zebra — حمار وحشي"
+    "Giraffe — زرافة", "Hat — قبعة", "Ice cream — آيس كريم", "Jellyfish — قنديل البحر", "Kite — طائرة ورقية",
+    "Lion — أسد", "Moon — قمر", "Nest — عش", "Orange — برتقالة", "Panda — باندا", "Queen — ملكة",
+    "Robot — روبوت", "Sun — شمس", "Tiger — نمر", "Umbrella — مظلة", "Van — حافلة صغيرة", "Whale — حوت",
+    "Xylophone — إكسيلوفون", "Yo-yo — يويو", "Zebra — حمار وحشي"
+)
+
+private val englishImageNames = listOf(
+    "Apple", "Ball", "Cat", "Dog", "Elephant", "Fish", "Giraffe", "Hat", "Ice cream", "Jellyfish",
+    "Kite", "Lion", "Moon", "Nest", "Orange", "Panda", "Queen", "Robot", "Sun", "Tiger",
+    "Umbrella", "Van", "Whale", "Xylophone", "Yo-yo", "Zebra"
 )
 
 @Composable
@@ -60,6 +67,7 @@ internal fun EnglishLettersScreen(
     var letterCase by remember { mutableStateOf(EnglishLettersCase.UPPER) }
     val letter = englishLetters[letterIndex]
     val shown = if (letterCase == EnglishLettersCase.UPPER) letter.toString() else letter.lowercase()
+    val imageName = englishImageNames[letterIndex]
 
     LaunchedEffect(letterIndex, letterCase) {
         if (soundsEnabled()) playEnglishLetterSound(audio, letterIndex + 1)
@@ -85,16 +93,14 @@ internal fun EnglishLettersScreen(
                     CaseButton("حروف كبيرة\nUPPERCASE", letterCase == EnglishLettersCase.UPPER, Modifier.weight(1f)) { letterCase = EnglishLettersCase.UPPER; onTap() }
                 }
                 Spacer(Modifier.height(9.dp))
-                Text("ممتاز! اضغط على الحرف واستمع إلى صوته\nGreat job! Tap the letter and listen to its sound 🌟", modifier = Modifier.background(Color(0xFFDDF6FF), RoundedCornerShape(18.dp)).padding(horizontal = 14.dp, vertical = 8.dp), color = Color(0xFF14577D), fontWeight = FontWeight.Bold, fontSize = 15.sp, textAlign = TextAlign.Center)
-                Spacer(Modifier.height(8.dp))
-                Box(Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFE7F7FF))), RoundedCornerShape(30.dp)).border(5.dp, letterColors[letterIndex], RoundedCornerShape(30.dp)).clickable { if (soundsEnabled()) playEnglishLetterSound(audio, letterIndex + 1); onTap() }, contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFE7F7FF))), RoundedCornerShape(30.dp)).border(5.dp, letterColors[letterIndex], RoundedCornerShape(30.dp)).padding(12.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(letterEmojis[letterIndex], fontSize = 58.sp)
-                        Spacer(Modifier.height(3.dp))
+                        Text(letterEmojis[letterIndex], fontSize = 58.sp, modifier = Modifier.clickable { if (soundsEnabled()) audio.speakOffline(imageName, "en"); onTap() })
                         Text(shown, fontSize = 128.sp, fontWeight = FontWeight.ExtraBold, color = letterColors[letterIndex])
                         Text("صوت الحرف  •  Letter sound", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF245B8A))
-                        Spacer(Modifier.height(3.dp))
-                        Text(letterWords[letterIndex], fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6A4A18), textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(4.dp))
+                        Text(imageName, modifier = Modifier.fillMaxWidth().clickable { if (soundsEnabled()) audio.speakOffline(imageName, "en"); onTap() }, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6A4A18), textAlign = TextAlign.Center)
+                        Text(letterWords[letterIndex].substringAfter(" — "), fontSize = 15.sp, color = Color(0xFF6A4A18), textAlign = TextAlign.Center)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
                             Small3DButton("🔊\nصوت الحرف\nLetter sound", false, Color(0xFF66BB6A), Modifier.weight(1f)) { if (soundsEnabled()) playEnglishLetterSound(audio, letterIndex + 1); onTap() }

@@ -76,7 +76,7 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.height(270.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(9.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)
             ) {
                 items(rewardItems) { item ->
@@ -111,7 +111,7 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
             Spacer(Modifier.height(6.dp))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(7.dp), horizontalArrangement = Arrangement.spacedBy(7.dp),
                 contentPadding = PaddingValues(bottom = 8.dp)
             ) {

@@ -127,7 +127,7 @@ private fun GameHubScreen(onBack: () -> Unit, onGameSelected: (LearningGame) -> 
             Spacer(Modifier.height(10.dp))
             Text("الألعاب", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyVerticalGrid(modifier = Modifier.weight(1f).fillMaxWidth(), columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(visibleGames, key = { it.id }) { game -> GameCard(game, context) { onGameSelected(game) } }
             }
         }

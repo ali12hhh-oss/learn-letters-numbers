@@ -1,16 +1,11 @@
 package com.learnlettersnumbers.app
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,13 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.CompositionLocalProvider
@@ -84,118 +77,90 @@ internal fun LettersScreen(
 ) {
     var mode by remember { mutableStateOf(LetterMode.FORMS) }
     var index by remember { mutableIntStateOf(0) }
-    var form by remember { mutableStateOf<ArabicLetterForm>(ArabicLetterForm.INITIAL) }
+    var form by remember { mutableStateOf(ArabicLetterForm.INITIAL) }
     var vowel by remember { mutableStateOf(Vowel.FATHA) }
-    var showMessage by remember { mutableStateOf(true) }
     val current = arabicLetters[index]
 
     LaunchedEffect(index, mode, form, vowel) {
-        showMessage = true
         if (soundsEnabled()) {
             if (mode == LetterMode.FORMS) playArabicLetterSound(audio, index + 1)
             else playArabicVowelSound(audio, index + 1, vowel)
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Column(Modifier.fillMaxSize().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = { onBack(); onTap() }, shape = RoundedCornerShape(18.dp)) { Text("رجوع") }
-                Spacer(Modifier.weight(1f))
-                Text("الحروف العربية", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF114B8C))
-            }
-
-            Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .85f), RoundedCornerShape(20.dp)).padding(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ModeButton("الحروف", mode == LetterMode.FORMS, Modifier.weight(1f)) { mode = LetterMode.FORMS; form = ArabicLetterForm.INITIAL; onTap() }
-                ModeButton("الحركات", mode == LetterMode.VOWELS, Modifier.weight(1f)) { mode = LetterMode.VOWELS; vowel = Vowel.FATHA; onTap() }
-            }
-
-            AnimatedVisibility(showMessage) {
+            Column(Modifier.fillMaxSize().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Button(onClick = { onBack(); onTap() }, shape = RoundedCornerShape(18.dp)) { Text("رجوع") }
+                    Spacer(Modifier.weight(1f))
+                    Text("الحروف العربية", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF114B8C))
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .85f), RoundedCornerShape(20.dp)).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ModeButton("الحروف", mode == LetterMode.FORMS, Modifier.weight(1f)) { mode = LetterMode.FORMS; form = ArabicLetterForm.INITIAL; onTap() }
+                    ModeButton("الحركات", mode == LetterMode.VOWELS, Modifier.weight(1f)) { mode = LetterMode.VOWELS; vowel = Vowel.FATHA; onTap() }
+                }
+                Spacer(Modifier.height(8.dp))
                 Text(
                     if (mode == LetterMode.FORMS) "رائع! اختر شكل الحرف وتعلّم صوته 🌟" else "أحسنت! جرّب الفتحة والضمة والكسرة 🎈",
-                    modifier = Modifier.padding(vertical = 8.dp).background(Color(0xFFFFF3B0), RoundedCornerShape(18.dp)).padding(horizontal = 18.dp, vertical = 8.dp),
-                    color = Color(0xFF7A3E00), fontWeight = FontWeight.Bold, fontSize = 17.sp
+                    modifier = Modifier.background(Color(0xFFFFF3B0), RoundedCornerShape(18.dp)).padding(horizontal = 18.dp, vertical = 8.dp),
+                    color = Color(0xFF7A3E00), fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center
                 )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                if (mode == LetterMode.FORMS) {
-                    FormButton("أولي", form == ArabicLetterForm.INITIAL) { form = ArabicLetterForm.INITIAL; onTap() }
-                    FormButton("وسطي", form == ArabicLetterForm.MEDIAL) { form = ArabicLetterForm.MEDIAL; onTap() }
-                    FormButton("أخري", form == ArabicLetterForm.FINAL) { form = ArabicLetterForm.FINAL; onTap() }
-                } else {
-                    FormButton("فتحة", vowel == Vowel.FATHA) { vowel = Vowel.FATHA; onTap() }
-                    FormButton("ضمة", vowel == Vowel.DAMMA) { vowel = Vowel.DAMMA; onTap() }
-                    FormButton("كسرة", vowel == Vowel.KASRA) { vowel = Vowel.KASRA; onTap() }
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    if (mode == LetterMode.FORMS) {
+                        FormButton("أولي", form == ArabicLetterForm.INITIAL) { form = ArabicLetterForm.INITIAL; onTap() }
+                        FormButton("وسطي", form == ArabicLetterForm.MEDIAL) { form = ArabicLetterForm.MEDIAL; onTap() }
+                        FormButton("أخري", form == ArabicLetterForm.FINAL) { form = ArabicLetterForm.FINAL; onTap() }
+                    } else {
+                        FormButton("فتحة", vowel == Vowel.FATHA) { vowel = Vowel.FATHA; onTap() }
+                        FormButton("ضمة", vowel == Vowel.DAMMA) { vowel = Vowel.DAMMA; onTap() }
+                        FormButton("كسرة", vowel == Vowel.KASRA) { vowel = Vowel.KASRA; onTap() }
+                    }
                 }
-            }
-
-            Spacer(Modifier.height(10.dp))
-            Box(
-                Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(
-                    Brush.verticalGradient(listOf(Color.White, Color(0xFFDDF5FF))), RoundedCornerShape(30.dp)
-                ).border(4.dp, current.color, RoundedCornerShape(30.dp)).clickable {
-                    if (mode == LetterMode.FORMS) playArabicLetterSound(audio, index + 1) else playArabicVowelSound(audio, index + 1, vowel)
+                Spacer(Modifier.height(10.dp))
+                Box(Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFDDF5FF))), RoundedCornerShape(30.dp)).border(4.dp, current.color, RoundedCornerShape(30.dp)).clickable {
+                    if (soundsEnabled()) {
+                        if (mode == LetterMode.FORMS) playArabicLetterSound(audio, index + 1) else playArabicVowelSound(audio, index + 1, vowel)
+                    }
                     onTap()
-                }, contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val shown = if (mode == LetterMode.FORMS) when(form) {
-                        ArabicLetterForm.INITIAL -> current.initial
-                        ArabicLetterForm.MEDIAL -> current.medial
-                        ArabicLetterForm.FINAL -> current.final
-                    } else addVowel(current.letter, vowel)
-                    Text(shown, fontSize = 108.sp, fontWeight = FontWeight.ExtraBold, color = current.color)
-                    Text(if (mode == LetterMode.FORMS) "صوت الحرف" else vowelName(vowel), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF155E8A))
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedButton(
-                        onClick = { if (soundsEnabled()) audio.playRequired("ar_letter_%02d_name".format(index + 1)); onTap() },
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
-                    ) { Text("اسم الحرف", fontWeight = FontWeight.Bold) }
+                }, contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val shown = if (mode == LetterMode.FORMS) when(form) {
+                            ArabicLetterForm.INITIAL -> current.initial
+                            ArabicLetterForm.MEDIAL -> current.medial
+                            ArabicLetterForm.FINAL -> current.final
+                        } else addVowel(current.letter, vowel)
+                        Text(shown, fontSize = 108.sp, fontWeight = FontWeight.ExtraBold, color = current.color)
+                        Text(if (mode == LetterMode.FORMS) "صوت الحرف" else vowelName(vowel), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF155E8A))
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedButton(onClick = { if (soundsEnabled()) audio.playRequired("ar_letter_%02d_name".format(index + 1)); onTap() }, shape = RoundedCornerShape(14.dp)) {
+                            Text("اسم الحرف", fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
-            }
-
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Button(
-                    onClick = { if (index > 0) { index--; onTap() } },
-                    enabled = index > 0,
-                    modifier = Modifier.weight(1f).height(58.dp),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    Text("السابق", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Button(onClick = { if (index > 0) { index--; onTap() } }, enabled = index > 0, modifier = Modifier.weight(1f).height(58.dp), shape = RoundedCornerShape(18.dp)) { Text("السابق", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold) }
+                    Button(onClick = { if (index < arabicLetters.lastIndex) { index++; onTap() } }, enabled = index < arabicLetters.lastIndex, modifier = Modifier.weight(1f).height(58.dp), shape = RoundedCornerShape(18.dp)) { Text("التالي", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold) }
                 }
-                Button(
-                    onClick = { if (index < arabicLetters.lastIndex) { index++; onTap() } },
-                    enabled = index < arabicLetters.lastIndex,
-                    modifier = Modifier.weight(1f).height(58.dp),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    Text("التالي", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth().height(110.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                IllustrationCard(current, Modifier.weight(1f)) {
-                    onTap()
-                }
-                Text(
-                    current.item,
-                    modifier = Modifier.weight(1f).clickable {
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth().height(110.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    IllustrationCard(current, Modifier.weight(1f)) {
+                        if (soundsEnabled()) audio.speakOffline(current.item, "ar")
+                        onTap()
+                    }
+                    Text(
+                        current.item,
+                        modifier = Modifier.weight(1f).clickable {
+                            if (soundsEnabled()) audio.speakOffline(current.item, "ar")
                             onTap()
-                    }.background(Color(0xFFFFF7DA), RoundedCornerShape(22.dp)).padding(12.dp),
-                    fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = Color(0xFF7A3E00)
-                )
+                        }.background(Color(0xFFFFF7DA), RoundedCornerShape(22.dp)).padding(12.dp),
+                        fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = Color(0xFF7A3E00)
+                    )
+                }
             }
-        }
         }
     }
 }
@@ -213,101 +178,23 @@ internal fun LettersScreen(
     }
 }
 
-@Composable private fun LetterDot(letter: String, selected: Boolean, color: Color, onClick: () -> Unit) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) .9f else if (selected) 1.08f else 1f, spring(), label = "letter_$letter")
-    Box(
-        Modifier.size(42.dp).scale(scale).shadow(if(selected) 7.dp else 2.dp, RoundedCornerShape(14.dp))
-            .background(if(selected) color else MaterialTheme.colorScheme.surface, RoundedCornerShape(14.dp))
-            .border(2.dp, if(selected) Color.White else color.copy(alpha=.55f), RoundedCornerShape(14.dp))
-            .clickable { pressed = true; onClick(); pressed = false },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(letter, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = if(selected) Color.White else color)
-    }
-}
-
-private fun illustrationEmoji(item: String): String = when (item) {
-    "أسد" -> "🦁"
-    "بطة" -> "🦆"
-    "تفاحة" -> "🍎"
-    "ثعلب" -> "🦊"
-    "جمل" -> "🐪"
-    "حصان" -> "🐴"
-    "خوخ" -> "🍑"
-    "دب" -> "🐻"
-    "ذئب" -> "🐺"
-    "رمان" -> "🍎"
-    "زرافة" -> "🦒"
-    "سمكة" -> "🐟"
-    "شمام" -> "🍈"
-    "صقر" -> "🦅"
-    "ضفدع" -> "🐸"
-    "طاووس" -> "🦚"
-    "ظبي" -> "🦌"
-    "عنب" -> "🍇"
-    "غزال" -> "🦌"
-    "فراولة" -> "🍓"
-    "قرد" -> "🐒"
-    "كمثرى" -> "🍐"
-    "ليمون" -> "🍋"
-    "موز" -> "🍌"
-    "نحلة" -> "🐝"
-    "هدهد" -> "🦉"
-    "وردة" -> "🌹"
-    "يد" -> "✋"
-    else -> "⭐"
-}
-
 @Composable private fun IllustrationCard(letter: ArabicLetter, modifier: Modifier, onClick: () -> Unit) {
-    Box(
-        modifier
-            .shadow(9.dp, RoundedCornerShape(24.dp))
-            .background(
-                Brush.verticalGradient(listOf(Color.White, letter.color.copy(alpha = .10f))),
-                RoundedCornerShape(24.dp)
-            )
-            .border(3.dp, letter.color.copy(alpha = .75f), RoundedCornerShape(24.dp))
-            .clickable(onClick = onClick)
-            .padding(6.dp),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier.shadow(9.dp, RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color.White, letter.color.copy(alpha = .10f))), RoundedCornerShape(24.dp)).border(3.dp, letter.color.copy(alpha = .75f), RoundedCornerShape(24.dp)).clickable(onClick = onClick).padding(6.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(
-                text = illustrationEmoji(letter.item),
-                fontSize = 58.sp,
-                textAlign = TextAlign.Center
-            )
+            Text(illustrationEmoji(letter.item), fontSize = 58.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(2.dp))
-            Text(
-                text = letter.item,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF6D3500),
-                textAlign = TextAlign.Center
-            )
+            Text(letter.item, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6D3500), textAlign = TextAlign.Center)
         }
     }
 }
 
-private fun letterName(letter: String): String = when(letter) {
-    "ا" -> "ألف"; "ب" -> "باء"; "ت" -> "تاء"; "ث" -> "ثاء"; "ج" -> "جيم"; "ح" -> "حاء"; "خ" -> "خاء"
-    "د" -> "دال"; "ذ" -> "ذال"; "ر" -> "راء"; "ز" -> "زاي"; "س" -> "سين"; "ش" -> "شين"; "ص" -> "صاد"
-    "ض" -> "ضاد"; "ط" -> "طاء"; "ظ" -> "ظاء"; "ع" -> "عين"; "غ" -> "غين"; "ف" -> "فاء"; "ق" -> "قاف"
-    "ك" -> "كاف"; "ل" -> "لام"; "م" -> "ميم"; "ن" -> "نون"; "ه" -> "هاء"; "و" -> "واو"; "ي" -> "ياء"
-    else -> letter
+private fun illustrationEmoji(item: String): String = when (item) {
+    "أسد" -> "🦁"; "بطة" -> "🦆"; "تفاحة" -> "🍎"; "ثعلب" -> "🦊"; "جمل" -> "🐪"; "حصان" -> "🐴"; "خوخ" -> "🍑"; "دب" -> "🐻"; "ذئب" -> "🐺"; "رمان" -> "🍎"; "زرافة" -> "🦒"; "سمكة" -> "🐟"; "شمام" -> "🍈"; "صقر" -> "🦅"; "ضفدع" -> "🐸"; "طاووس" -> "🦚"; "ظبي" -> "🦌"; "عنب" -> "🍇"; "غزال" -> "🦌"; "فراولة" -> "🍓"; "قرد" -> "🐒"; "كمثرى" -> "🍐"; "ليمون" -> "🍋"; "موز" -> "🍌"; "نحلة" -> "🐝"; "هدهد" -> "🦉"; "وردة" -> "🌹"; "يد" -> "✋"; else -> "⭐"
 }
 
-private fun addVowel(letter: String, vowel: Vowel): String = when(vowel) {
-    Vowel.FATHA -> "$letterَ"
-    Vowel.DAMMA -> "$letterُ"
-    Vowel.KASRA -> "$letterِ"
-}
+private fun addVowel(letter: String, vowel: Vowel): String = when(vowel) { Vowel.FATHA -> "$letterَ"; Vowel.DAMMA -> "$letterُ"; Vowel.KASRA -> "$letterِ" }
 private fun vowelName(v: Vowel) = when(v) { Vowel.FATHA -> "الفتحة"; Vowel.DAMMA -> "الضمة"; Vowel.KASRA -> "الكسرة" }
-private fun playArabicLetterSound(audio: LocalAudioManager, index: Int) {
-    audio.playRequired("ar_letter_%02d_sound".format(index))
-}
-
+private fun playArabicLetterSound(audio: LocalAudioManager, index: Int) { audio.playRequired("ar_letter_%02d_sound".format(index)) }
 private fun playArabicVowelSound(audio: LocalAudioManager, index: Int, vowel: Vowel) {
     val suffix = when (vowel) { Vowel.FATHA -> 1; Vowel.DAMMA -> 2; Vowel.KASRA -> 3 }
     audio.playRequired("ar_letter_%02d_vowel_%d".format(index, suffix))

@@ -1,0 +1,47 @@
+name: Update games and rewards store layout
+on:
+  push:
+    paths:
+      - '.github/workflows/ui-layout-update.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update layouts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt')
+          s = p.read_text()
+          old = 'LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {'
+          new = 'LazyVerticalGrid(modifier = Modifier.weight(1f).fillMaxWidth(), columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {'
+          if old not in s:
+              raise SystemExit('GamesScreen target layout not found')
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('app/src/main/java/com/learnlettersnumbers/app/RewardStoreScreen.kt')
+          s = p.read_text()
+          s = s.replace('import androidx.compose.foundation.lazy.grid.GridCells\nimport androidx.compose.foundation.lazy.grid.LazyVerticalGrid\nimport androidx.compose.foundation.lazy.grid.items\n', 'import androidx.compose.foundation.lazy.grid.GridCells\nimport androidx.compose.foundation.lazy.grid.LazyVerticalGrid\nimport androidx.compose.foundation.lazy.grid.items\n')
+          old = 'modifier = Modifier.height(270.dp),'
+          new = 'modifier = Modifier.fillMaxWidth(),'
+          if old not in s:
+              raise SystemExit('Reward items grid target not found')
+          s = s.replace(old, new, 1)
+          old = 'modifier = Modifier.fillMaxWidth().weight(1f),'
+          new = 'modifier = Modifier.fillMaxWidth(),'
+          if old not in s:
+              raise SystemExit('Titles grid target not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+      - name: Remove temporary workflow and commit
+        run: |
+          rm -f .github/workflows/ui-layout-update.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt app/src/main/java/com/learnlettersnumbers/app/RewardStoreScreen.kt .github/workflows/ui-layout-update.yml
+          git diff --cached --quiet || git commit -m 'Improve games space and store layout'
+          git push

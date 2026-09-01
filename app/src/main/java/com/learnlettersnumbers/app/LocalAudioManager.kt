@@ -7,12 +7,14 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import java.util.Locale
 
 /**
- * Offline-first audio engine.
+ * Local-only audio engine.
  *
- * The tested on-device embedded Android TTS voice is the only speech path.
- * No bundled legacy audio files and no network TTS are used.
+ * Normal app sounds remain bundled in res/raw. Stories can additionally use an
+ * Android embedded TTS voice, but only when that voice explicitly reports that
+ * it does NOT require a network connection. No network TTS is ever selected.
  */
 class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var player: MediaPlayer? = null
@@ -45,44 +47,61 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         })
     }
 
-    private fun findOfflineVoice(engine: TextToSpeech, language: String): Voice? =
-        engine.voices
+    private fun findOfflineVoice(engine: TextToSpeech, language: String): Voice? {
+        return engine.voices
             ?.asSequence()
             ?.filter { it.locale.language.equals(language, ignoreCase = true) }
             ?.filter { !it.isNetworkConnectionRequired }
             ?.sortedWith(compareByDescending<Voice> { it.quality }.thenBy { it.latency })
             ?.firstOrNull()
+    }
 
     fun setEnabled(value: Boolean) {
         enabled = value
         if (!value) stop()
     }
 
-    /**
-     * Resolves the educational resource name to text and speaks it with the
-     * tested offline Android TTS voice. Legacy bundled audio is not used.
-     */
     fun playRequired(resourceName: String): Boolean {
         if (!enabled) return false
+
+        // Bundled recordings are authoritative for educational audio.
+        // In particular, isolated English phonemes must never be synthesized
+        // from helper spellings such as "buh" or "ks".
+        if (resourceName.matches(Regex("en_letter_\\d{2}_sound")) ||
+            resourceName.matches(Regex("en_letter_\\d{2}_name")) ||
+            resourceName.matches(Regex("ar_letter_\\d{2}_(sound|name|vowel_[123])")) ||
+            resourceName.matches(Regex("(?:en|ar)_number_\\d{3}")) ||
+            resourceName.matches(Regex("(?:welcome|letters_intro|numbers_intro|writing_intro|reading_intro|stories_intro|games_intro|quiz_intro|correct|wrong|next|back)_(?:en|ar)")) ||
+            resourceName.matches(Regex("praise_(?:en|ar)_\\d{2}")) ||
+            resourceName.matches(Regex("story_\\d{2}"))
+        ) {
+            stop()
+            val id = rawId(resourceName)
+            start(id, resourceName)
+            return true
+        }
 
         if (resourceName.matches(Regex("story_\\d{2}"))) {
             val index = resourceName.removePrefix("story_").toIntOrNull()
             if (index != null && speakStoryFromScreen(index)) return true
         }
 
-        val offline = offlineTextForResource(resourceName)
-        return offline != null && speakOffline(offline.first, offline.second)
+        stop()
+        val id = rawId(resourceName)
+        start(id, resourceName)
+        return true
     }
 
     fun playSequence(resourceNames: List<String>): Boolean {
         if (!enabled || resourceNames.isEmpty()) return false
-        val parts = resourceNames.mapNotNull { offlineTextForResource(it) }
-        if (parts.isEmpty()) return false
-        val language = parts.first().second
-        return speakOffline(parts.joinToString(" ") { it.first }, language)
+        stop()
+        queue = resourceNames.map { rawId(it) }
+        queueIndex = 0
+        playQueueItem()
+        return true
     }
 
-    /** Maps common app messages to the new offline voice first. */
+    /** Maps common app messages to bundled audio; no dynamic network TTS is used. */
     fun playSemantic(text: String, language: String): Boolean {
         if (!enabled) return false
         val lower = text.lowercase()
@@ -140,7 +159,6 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         return playSequence(resources)
     }
 
-    /** Speaks arbitrary text only with an already-installed offline voice. */
     fun speakOffline(text: String, language: String): Boolean {
         if (!enabled || text.isBlank() || !ttsReady) return false
         val engine = tts ?: return false
@@ -157,103 +175,6 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
             putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
         }
         return engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId) == TextToSpeech.SUCCESS
-    }
-
-    private fun offlineTextForResource(name: String): Pair<String, String>? {
-        val enLetters = ('A'..'Z').toList()
-        val arLetters = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","و","ي")
-        val arNames = listOf("الألف","الباء","التاء","الثاء","الجيم","الحاء","الخاء","الدال","الذال","الراء","الزاي","السين","الشين","الصاد","الضاد","الطاء","الظاء","العين","الغين","الفاء","القاف","الكاف","اللام","الميم","النون","الهاء","الواو","الياء")
-
-        Regex("en_letter_(\\d{2})_sound").matchEntire(name)?.let {
-            val i = it.groupValues[1].toInt() - 1
-            if (i in enLetters.indices) {
-                val phoneme = listOf("ah","buh","kuh","duh","eh","fff","guh","huh","ih","juh","kuh","lll","mmm","nnn","ah","puh","kwuh","rrr","sss","tuh","uh","vvv","wuh","ks","yuh","zzz")[i]
-                return phoneme to "en"
-            }
-        }
-
-        Regex("en_letter_(\\d{2})_name").matchEntire(name)?.let {
-            val i = it.groupValues[1].toInt() - 1
-            if (i in enLetters.indices) return enLetters[i].toString() to "en"
-        }
-
-        Regex("ar_letter_(\\d{2})_sound").matchEntire(name)?.let {
-            val i = it.groupValues[1].toInt() - 1
-            if (i in arLetters.indices) return (if (arLetters[i] == "ا") "أَ" else arLetters[i] + "َ") to "ar"
-        }
-
-        Regex("ar_letter_(\\d{2})_name").matchEntire(name)?.let {
-            val i = it.groupValues[1].toInt() - 1
-            if (i in arNames.indices) return arNames[i] to "ar"
-        }
-
-        Regex("ar_letter_(\\d{2})_vowel_([123])").matchEntire(name)?.let {
-            val i = it.groupValues[1].toInt() - 1
-            val v = it.groupValues[2].toInt()
-            if (i in arLetters.indices) {
-                val marks = listOf("َ", "ُ", "ِ")
-                return arLetters[i] + marks[v - 1] to "ar"
-            }
-        }
-
-        Regex("(?:en|ar)_number_(\\d{3})").matchEntire(name)?.let {
-            val n = it.groupValues[1].toInt()
-            if (n in 1..100) return if (name.startsWith("en_")) englishNumberName(n) to "en" else arabicNumberName(n) to "ar"
-        }
-
-        val fixed = mapOf(
-            "welcome_en" to ("Hello! Welcome to the learning app." to "en"),
-            "welcome_ar" to ("أهلاً بك! هيا نتعلم معاً." to "ar"),
-            "letters_intro_en" to ("Let's learn the English letters." to "en"),
-            "letters_intro_ar" to ("هيا نتعلم الحروف العربية." to "ar"),
-            "numbers_intro_en" to ("Let's learn the numbers." to "en"),
-            "numbers_intro_ar" to ("هيا نتعلم الأرقام." to "ar"),
-            "writing_intro_en" to ("Let's practice writing." to "en"),
-            "writing_intro_ar" to ("هيا نتدرب على الكتابة." to "ar"),
-            "reading_intro_en" to ("Let's practice reading." to "en"),
-            "reading_intro_ar" to ("هيا نتدرب على القراءة." to "ar"),
-            "stories_intro_en" to ("Let's listen to a story." to "en"),
-            "stories_intro_ar" to ("هيا نستمع إلى قصة." to "ar"),
-            "games_intro_en" to ("Let's play and learn!" to "en"),
-            "games_intro_ar" to ("هيا نلعب ونتعلم!" to "ar"),
-            "quiz_intro_en" to ("Let's start the quiz." to "en"),
-            "quiz_intro_ar" to ("هيا نبدأ الاختبار." to "ar"),
-            "correct_en" to ("Great job!" to "en"),
-            "correct_ar" to ("أحسنت!" to "ar"),
-            "wrong_en" to ("Try again." to "en"),
-            "wrong_ar" to ("حاول مرة أخرى." to "ar"),
-            "next_en" to ("Next." to "en"),
-            "next_ar" to ("التالي." to "ar"),
-            "back_en" to ("Back." to "en"),
-            "back_ar" to ("رجوع." to "ar")
-        )
-        fixed[name]?.let { return it }
-
-        Regex("praise_(ar|en)_\\d{2}").matchEntire(name)?.let {
-            return if (it.groupValues[1] == "ar") "أحسنت! عمل رائع! استمر!" to "ar" else "Great job! Keep going!" to "en"
-        }
-        return null
-    }
-
-    private fun englishNumberName(n: Int): String {
-        val ones = arrayOf("zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen")
-        val tens = arrayOf("","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety")
-        return when {
-            n < 20 -> ones[n]
-            n % 10 == 0 -> tens[n / 10]
-            else -> "${tens[n / 10]} ${ones[n % 10]}"
-        }
-    }
-
-    private fun arabicNumberName(n: Int): String {
-        val ones = arrayOf("","واحد","اثنان","ثلاثة","أربعة","خمسة","ستة","سبعة","ثمانية","تسعة","عشرة","أحد عشر","اثنا عشر","ثلاثة عشر","أربعة عشر","خمسة عشر","ستة عشر","سبعة عشر","ثمانية عشر","تسعة عشر")
-        val tens = arrayOf("","","عشرون","ثلاثون","أربعون","خمسون","ستون","سبعون","ثمانون","تسعون")
-        return when {
-            n == 100 -> "مئة"
-            n < 20 -> ones[n]
-            n % 10 == 0 -> tens[n / 10]
-            else -> "${ones[n % 10]} و${tens[n / 10]}"
-        }
     }
 
     private fun speakStoryFromScreen(index: Int): Boolean {

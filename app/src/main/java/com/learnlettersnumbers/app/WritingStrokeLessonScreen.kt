@@ -5,9 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -75,6 +74,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
     var form by remember { mutableStateOf(ArabicForm.INITIAL) }
     var englishCase by remember { mutableStateOf(WritingEnglishCase.UPPER) }
     var replay by remember { mutableIntStateOf(0) }
+    var showIsolatedLetters by remember { mutableStateOf(false) }
     val total = if (numbers) 10 else if (arabic) arLetters.size else enLetters.size
     val current = index.coerceIn(0, total - 1)
     val symbol = when {
@@ -110,25 +110,19 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 8.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (arabic && !numbers) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        IsolatedWritingLettersButton(showIsolatedLetters, Modifier.weight(1f)) { showIsolatedLetters = !showIsolatedLetters; replay++ }
                         FormButton("أولي", form == ArabicForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { form = ArabicForm.INITIAL; replay++ }
                         FormButton("وسطي", form == ArabicForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { form = ArabicForm.MEDIAL; replay++ }
                         FormButton("أخري", form == ArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ArabicForm.FINAL; replay++ }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text("الحروف", modifier = Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        arLetters.forEachIndexed { i, letter ->
-                            Card(Modifier.size(42.dp).clickable { index = i; replay++ }, shape = RoundedCornerShape(11.dp), colors = CardDefaults.cardColors(containerColor = if (i == current) Color(0xFF4C8BF5) else Color.White), elevation = CardDefaults.cardElevation(if (i == current) 5.dp else 2.dp)) {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(letter, fontSize = 20.sp, fontWeight = FontWeight.Black, color = if (i == current) Color.White else Color(0xFF315CFF)) }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text("الحروف", modifier = Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        arLetters.forEachIndexed { i, letter ->
-                            Card(Modifier.size(42.dp).clickable { index = i; replay++ }, shape = RoundedCornerShape(11.dp), colors = CardDefaults.cardColors(containerColor = if (i == current) Color(0xFF4C8BF5) else Color.White), elevation = CardDefaults.cardElevation(if (i == current) 5.dp else 2.dp)) {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(letter, fontSize = 20.sp, fontWeight = FontWeight.Black, color = if (i == current) Color.White else Color(0xFF315CFF)) }
+                    if (showIsolatedLetters) {
+                        Spacer(Modifier.height(4.dp))
+                        Text("الحروف المنفصلة", modifier = Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)
+                        LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
+                            items(arLetters.size) { i ->
+                                Box(Modifier.size(42.dp).clickable { index = i; replay++ }, contentAlignment = Alignment.Center) {
+                                    Text(arLetters[i], fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color(0xFF315CFF))
+                                }
                             }
                         }
                     }
@@ -150,11 +144,7 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
                 }
 
                 Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF0)), elevation = CardDefaults.cardElevation(8.dp)) {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize().padding(4.dp),
-                        factory = { WritingTraceView(it) },
-                        update = { it.setLesson(symbol, replay) }
-                    )
+                    AndroidView(modifier = Modifier.fillMaxSize().padding(4.dp), factory = { WritingTraceView(it) }, update = { it.setLesson(symbol, replay) })
                 }
 
                 Spacer(Modifier.height(4.dp))
@@ -169,17 +159,20 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
 }
 
 @Composable
+private fun IsolatedWritingLettersButton(selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Card(modifier.height(56.dp).clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (selected) Color(0xFF26A69A) else Color.White), elevation = CardDefaults.cardElevation(if (selected) 7.dp else 2.dp)) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("الحروف المنفصلة", fontSize = 13.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else Color(0xFF166B61), textAlign = TextAlign.Center) }
+    }
+}
+
+@Composable
 private fun FormButton(title: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
     Card(modifier.height(56.dp).clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White), elevation = CardDefaults.cardElevation(if (selected) 7.dp else 2.dp)) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(title, fontSize = 17.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else color, textAlign = TextAlign.Center)
-        }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(title, fontSize = 17.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else color, textAlign = TextAlign.Center) }
     }
 }
 
 @Composable
 private fun LessonButton(text: String, color: Color, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled, modifier = modifier.height(58.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))) {
-        Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, textAlign = TextAlign.Center)
-    }
+    Button(onClick = onClick, enabled = enabled, modifier = modifier.height(58.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = Color(0xFFD9E0E5))) { Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, textAlign = TextAlign.Center) }
 }

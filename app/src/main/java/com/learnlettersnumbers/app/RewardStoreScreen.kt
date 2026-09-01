@@ -5,8 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -59,7 +57,7 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
     val ownedItems = remember { mutableStateListOf<String>().apply { addAll(repo.ownedRewards()) } }
     LaunchedEffect(Unit) {
         snapshot = repo.load()
-        speak("Welcome to the rewards store")
+        speak("أهلاً بك! مرحباً بك في متجر المكافآت. هيا نختار مكافآت رائعة!")
     }
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
         Column(
@@ -93,8 +91,8 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
                                     ownedItems.add(item.id)
                                     repo.addOwnedReward(item.id)
                                     snapshot = repo.load()
-                                    speak("Great! You bought ${item.title}")
-                                } else speak("You need more stars")
+                                    speak("أحسنت! لقد اشتريت ${item.title}. استمتع بمكافأتك!")
+                                } else speak("تحتاج إلى المزيد من النجوم لشراء هذه المكافأة.")
                             }
                         },
                         shape = RoundedCornerShape(20.dp),
@@ -128,8 +126,8 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
                                     repo.addStars(-40)
                                     repo.addTitle(title)
                                     snapshot = repo.load()
-                                    speak("Congratulations! You earned the title $title")
-                                } else speak("You need forty stars")
+                                    speak("مبروك! حصلت على لقب $title. أنت رائع!")
+                                } else speak("تحتاج إلى أربعين نجمة للحصول على هذا اللقب.")
                             }
                         },
                         shape = RoundedCornerShape(17.dp),

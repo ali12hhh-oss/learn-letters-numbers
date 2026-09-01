@@ -1,4 +1,4 @@
-name: Update games and store UI
+name: Restore targeted store fix
 
 on:
   push:
@@ -9,246 +9,52 @@ permissions:
   contents: write
 
 jobs:
-  update-ui:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
-      - name: Apply UI updates
-        run: python3 - <<'PY'
+          fetch-depth: 0
+      - name: Restore MainActivity and apply only the store audio route
+        run: |
+          git checkout 98074ca77a996cce986cc2c513e3a53c65326aef -- app/src/main/java/com/learnlettersnumbers/app/MainActivity.kt
+          python3 - <<'PY'
           from pathlib import Path
-          import re
-
-          root = Path('app/src/main/java/com/learnlettersnumbers/app')
-
-          # Games: compact header/notes, one horizontal category bar, and give the games grid the dominant screen area.
-          p = root / 'GamesScreen.kt'
+          p = Path('app/src/main/java/com/learnlettersnumbers/app/MainActivity.kt')
           s = p.read_text(encoding='utf-8')
-          if 'foundation.horizontalScroll' not in s:
-              s = s.replace('import androidx.compose.foundation.layout.*', 'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.horizontalScroll\nimport androidx.compose.foundation.rememberScrollState', 1)
-          start = s.index('@Composable\nprivate fun GameHubScreen')
-          end = s.index('@Composable\nprivate fun LevelSelectionScreen', start)
-          new_block = '''@Composable
-private fun GameHubScreen(onBack: () -> Unit, onGameSelected: (LearningGame) -> Unit) {
-    val context = LocalContext.current
-    var category by remember { mutableStateOf("الكل") }
-    val categories = listOf("الكل", "حروف", "أرقام", "قراءة", "ذاكرة", "استماع", "متنوع")
-    val visibleGames = if (category == "الكل") games else games.filter { it.category == category }
-
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("🎮 عالم الألعاب", fontWeight = FontWeight.ExtraBold) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "رجوع") } }
-        )
-    }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 12.dp)) {
-            Row(
-                Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                categories.forEach { c ->
-                    FilterChip(
-                        selected = category == c,
-                        onClick = { category = c },
-                        label = { Text(c, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                    )
-                }
-            }
-            Spacer(Modifier.height(7.dp))
-            Text("الألعاب", fontSize = 21.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 2.dp))
-            Spacer(Modifier.height(5.dp))
-            LazyVerticalGrid(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(top = 3.dp, bottom = 18.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(visibleGames, key = { it.id }) { game ->
-                    GameCard(game, context) { onGameSelected(game) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun GameCard(game: LearningGame, context: Context, onClick: () -> Unit) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) .96f else 1f, tween(110), label = "gameCardScale")
-    val best = gameLevels.maxOfOrNull { prefs(context).getInt(bestScoreKey(game, it.number), 0) } ?: 0
-    Card(
-        Modifier.fillMaxWidth().height(205.dp).scale(scale).clickable {
-            pressed = true
-            onClick()
-            pressed = false
-        },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = game.color),
-        elevation = CardDefaults.cardElevation(7.dp)
-    ) {
-        Column(
-            Modifier.fillMaxSize().padding(11.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(game.icon, fontSize = 49.sp)
-            Spacer(Modifier.height(3.dp))
-            Text(game.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
-            Text(game.subtitle, fontSize = 12.sp, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(5.dp))
-            Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = .45f)) {
-                Text(game.category, Modifier.padding(horizontal = 10.dp, vertical = 3.dp), fontSize = 11.sp)
-            }
-            if (best > 0) Text("⭐ أفضل نتيجة $best", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-        }
-    }
-}
-
-'''
-          s = s[:start] + new_block + s[end:]
-          p.write_text(s, encoding='utf-8')
-
-          # Store: one continuous scrollable page containing rewards first and titles immediately after them.
-          store = root / 'RewardStoreScreen.kt'
-          store.write_text(r'''package com.learnlettersnumbers.app
-
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-private data class RewardItem(val id: String, val title: String, val emoji: String, val price: Int)
-
-private val rewardItems = listOf(
-    RewardItem("star_badge", "وسام النجمة", "⭐", 10), RewardItem("rainbow", "قوس قزح", "🌈", 15),
-    RewardItem("rocket", "صاروخ التعلم", "🚀", 20), RewardItem("trophy", "كأس بطل التعلم", "🏆", 25),
-    RewardItem("medal", "ميدالية التفوق", "🏅", 30), RewardItem("crown", "تاج صغير", "👑", 35),
-    RewardItem("sun", "شمس مشرقة", "☀️", 12), RewardItem("heart", "قلب الفرح", "❤️", 12),
-    RewardItem("balloon", "بالون المرح", "🎈", 14), RewardItem("rocket2", "مركبة فضائية", "🛸", 28),
-    RewardItem("book", "كتاب المعرفة", "📚", 18), RewardItem("pencil", "قلم المبدع", "✏️", 16),
-    RewardItem("sparkles", "نجوم لامعة", "✨", 20), RewardItem("gift", "هدية مفاجأة", "🎁", 25),
-    RewardItem("butterfly", "فراشة جميلة", "🦋", 18), RewardItem("rainbow2", "ألوان الفرح", "🌈", 22)
-)
-
-private val titles = listOf(
-    "الشاطر", "العبقري", "بطل التعلم", "نجم الحروف", "نجم الأرقام", "صديق الكتاب", "المتعلم السريع", "المبدع الصغير", "بطل الكتابة", "بطل القراءة",
-    "ذكي جداً", "رائع جداً", "متميز", "متفوق", "مكتشف صغير", "عقل لامع", "نجم اليوم", "بطل التحدي", "سريع التعلم", "محب المعرفة",
-    "صاحب الهمة", "ملك الحروف", "ملك الأرقام", "سيد الكلمات", "فنان الكتابة", "بطل النجوم", "المثابر", "المجتهد", "المغامر الذكي", "أسطورة التعلم",
-    "نجم المستقبل", "قائد المعرفة", "بطل الإبداع", "فارس التعلم", "نجم التفوق"
-)
-
-@Composable
-fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (String) -> Unit) {
-    var snapshot by remember { mutableStateOf(repo.load()) }
-    val ownedItems = remember { mutableStateListOf<String>().apply { addAll(repo.ownedRewards()) } }
-    LaunchedEffect(Unit) { snapshot = repo.load() }
-
-    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
-        Column(
-            Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant)))
-        ) {
-            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onBack, shape = RoundedCornerShape(18.dp)) { Text("رجوع") }
-                Spacer(Modifier.weight(1f))
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("متجر المكافآت", fontSize = 27.sp, fontWeight = FontWeight.Black)
-                    Text("⭐ ${snapshot.stars} نجمة", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    Text("🎁 المكافآت والألقاب", fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(vertical = 4.dp))
-                    Text("اختر ما تريد شراءه، وكل العناصر تظهر في قائمة واحدة متسلسلة.", fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
-                }
-                items(rewardItems, key = { "reward_${it.id}" }) { item ->
-                    val owned = ownedItems.contains(item.id)
-                    Card(
-                        Modifier.fillMaxWidth().clickable {
-                            if (!owned) {
-                                if (snapshot.stars >= item.price) {
-                                    repo.addStars(-item.price); ownedItems.add(item.id); repo.addOwnedReward(item.id); snapshot = repo.load(); speak("Great! You bought ${item.title}")
-                                } else speak("You need more stars")
-                            }
-                        },
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = if (owned) Color(0xFFE4F5E5) else MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(5.dp)
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(item.emoji, fontSize = 34.sp)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(item.title, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                                Text(if (owned) "تم الحصول عليها ✓" else "⭐ ${item.price}", fontSize = 13.sp)
-                            }
-                        }
-                    }
-                }
-                item {
-                    Spacer(Modifier.height(8.dp))
-                    Text("🏅 الألقاب التحفيزية", fontSize = 22.sp, fontWeight = FontWeight.Black)
-                    Text("الألقاب تبقى محفوظة وتظهر مع بطاقة الطفل بعد الشراء.", fontSize = 14.sp)
-                }
-                items(titles, key = { "title_$it" }) { title ->
-                    val owned = snapshot.earnedTitles.contains(title)
-                    Card(
-                        Modifier.fillMaxWidth().clickable {
-                            if (!owned) {
-                                if (snapshot.stars >= 40) {
-                                    repo.addStars(-40); repo.addTitle(title); snapshot = repo.load(); speak("Congratulations! You earned the title $title")
-                                } else speak("You need forty stars")
-                            }
-                        },
-                        shape = RoundedCornerShape(17.dp),
-                        colors = CardDefaults.cardColors(containerColor = if (owned) Color(0xFFFFF0B8) else MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("🏅", fontSize = 28.sp)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                                Text(if (owned) "مملوك ✓" else "⭐ 40", fontSize = 13.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-''', encoding='utf-8')
+          old = '"rewards" -> RewardStoreScreen(repo=progressRepo,onBack={screen=settingsReturnScreen},speak={speakArabic(it)})'
+          new = '''"rewards" -> RewardStoreScreen(repo=progressRepo,onBack={screen=settingsReturnScreen},speak={text ->
+                      if (settingsRepo.soundsEnabled()) localAudio.speakOffline(text, "ar")
+                      if (settingsRepo.effectsEnabled()) tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 70)
+                  })'''
+          if old not in s:
+              raise SystemExit('Expected rewards route not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
           PY
-      - name: Commit changes
+      - name: Restore RewardStore and make phrases appropriate
+        run: |
+          git checkout e6007d6243b22afa8c1a1a9d8a81d8a225df76ca -- app/src/main/java/com/learnlettersnumbers/app/RewardStoreScreen.kt
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/learnlettersnumbers/app/RewardStoreScreen.kt')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('speak("أهلاً بك! مرحباً بك في متجر المكافآت. هيا نختار مكافآت رائعة!")', 'speak("أهلاً بك في متجر المكافآت! هيا نتعلم ونكافئ أنفسنا.")')
+          s = s.replace('speak("أحسنت! لقد اشتريت ${item.title}. استمتع بمكافأتك!")', 'speak("أحسنت! لقد حصلت على ${item.title}. استمتع بمكافأتك!")')
+          s = s.replace('speak("تحتاج إلى المزيد من النجوم لشراء هذه المكافأة.")', 'speak("لا توجد نجوم كافية لشراء هذه المكافأة. اجمع المزيد من النجوم وحاول مرة أخرى!")')
+          s = s.replace('speak("مبروك! حصلت على لقب $title. أنت رائع!")', 'speak("أحسنت! حصلت على لقب $title. واصل تقدمك!")')
+          s = s.replace('speak("تحتاج إلى أربعين نجمة للحصول على هذا اللقب.")', 'speak("لا توجد نجوم كافية للحصول على هذا اللقب. تحتاج إلى أربعين نجمة.")')
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit repair
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt app/src/main/java/com/learnlettersnumbers/app/RewardStoreScreen.kt
-          git commit -m "Improve games layout and unify rewards store"
+          git add app/src/main/java/com/learnlettersnumbers/app/MainActivity.kt app/src/main/java/com/learnlettersnumbers/app/RewardStoreScreen.kt
+          git commit -m "Fix rewards speech routing and restore MainActivity"
           git push
       - name: Remove one-time workflow
         run: |
           rm -f .github/workflows/update-games-store.yml
           git add -u .github/workflows/update-games-store.yml
-          git commit -m "Remove one-time games store updater"
+          git commit -m "Remove one-time repair workflow"
           git push

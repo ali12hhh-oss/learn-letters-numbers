@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -114,7 +115,7 @@ private fun GameHubScreen(onBack: () -> Unit, onGameSelected: (LearningGame) -> 
       horizontalArrangement = Arrangement.spacedBy(6.dp),
       contentPadding = PaddingValues(horizontal = 2.dp)
   ) {
-      items(categories) { c ->
+      lazyItems(categories) { c ->
           FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 12.sp) })
       }
   }

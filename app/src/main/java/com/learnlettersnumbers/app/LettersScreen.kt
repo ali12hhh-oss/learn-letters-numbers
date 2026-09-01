@@ -111,14 +111,14 @@ internal fun LettersScreen(
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     if (mode == LetterMode.FORMS) {
-                        FormButton("الحروف", showIsolatedLetters) { index = 0; showIsolatedLetters = true; onTap() }
-                        FormButton("أولي", !showIsolatedLetters && form == ArabicLetterForm.INITIAL) { showIsolatedLetters = false; form = ArabicLetterForm.INITIAL; onTap() }
-                        FormButton("وسطي", !showIsolatedLetters && form == ArabicLetterForm.MEDIAL) { showIsolatedLetters = false; form = ArabicLetterForm.MEDIAL; onTap() }
-                        FormButton("أخري", !showIsolatedLetters && form == ArabicLetterForm.FINAL) { showIsolatedLetters = false; form = ArabicLetterForm.FINAL; onTap() }
+                        FormButton("الحروف", showIsolatedLetters, Modifier.weight(1f)) { index = 0; showIsolatedLetters = true; onTap() }
+                        FormButton("أولي", !showIsolatedLetters && form == ArabicLetterForm.INITIAL, Modifier.weight(1f)) { showIsolatedLetters = false; form = ArabicLetterForm.INITIAL; onTap() }
+                        FormButton("وسطي", !showIsolatedLetters && form == ArabicLetterForm.MEDIAL, Modifier.weight(1f)) { showIsolatedLetters = false; form = ArabicLetterForm.MEDIAL; onTap() }
+                        FormButton("أخري", !showIsolatedLetters && form == ArabicLetterForm.FINAL, Modifier.weight(1f)) { showIsolatedLetters = false; form = ArabicLetterForm.FINAL; onTap() }
                     } else {
-                        FormButton("فتحة", vowel == Vowel.FATHA) { vowel = Vowel.FATHA; onTap() }
-                        FormButton("ضمة", vowel == Vowel.DAMMA) { vowel = Vowel.DAMMA; onTap() }
-                        FormButton("كسرة", vowel == Vowel.KASRA) { vowel = Vowel.KASRA; onTap() }
+                        FormButton("فتحة", vowel == Vowel.FATHA, Modifier.weight(1f)) { vowel = Vowel.FATHA; onTap() }
+                        FormButton("ضمة", vowel == Vowel.DAMMA, Modifier.weight(1f)) { vowel = Vowel.DAMMA; onTap() }
+                        FormButton("كسرة", vowel == Vowel.KASRA, Modifier.weight(1f)) { vowel = Vowel.KASRA; onTap() }
                     }
                 }
                 Spacer(Modifier.height(7.dp))
@@ -159,9 +159,9 @@ internal fun LettersScreen(
     Box(modifier.height(52.dp).shadow(if(selected) 8.dp else 3.dp, RoundedCornerShape(16.dp)).background(if(selected) Color(0xFF26A69A) else Color(0xFFEAF5FF), RoundedCornerShape(16.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) { Text(text, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = if(selected) Color.White else Color(0xFF165A7D)) }
 }
 
-@Composable private fun FormButton(text: String, selected: Boolean, onClick: () -> Unit) {
+@Composable private fun FormButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val scale by animateFloatAsState(if(selected) 1.04f else 1f, spring(), label = text)
-    Box(Modifier.weight(1f).height(50.dp).scale(scale).shadow(7.dp, RoundedCornerShape(17.dp)).background(if(selected) Color(0xFFFFA726) else MaterialTheme.colorScheme.surface, RoundedCornerShape(17.dp)).border(2.dp, Color(0xFFFFD54F), RoundedCornerShape(17.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) { Text(text, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6D3500)) }
+    Box(modifier.height(50.dp).scale(scale).shadow(7.dp, RoundedCornerShape(17.dp)).background(if(selected) Color(0xFFFFA726) else MaterialTheme.colorScheme.surface, RoundedCornerShape(17.dp)).border(2.dp, Color(0xFFFFD54F), RoundedCornerShape(17.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) { Text(text, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6D3500)) }
 }
 
 @Composable private fun IllustrationCard(letter: ArabicLetter, modifier: Modifier, onClick: () -> Unit) {

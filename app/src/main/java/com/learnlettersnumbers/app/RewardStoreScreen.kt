@@ -57,7 +57,7 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
     val ownedItems = remember { mutableStateListOf<String>().apply { addAll(repo.ownedRewards()) } }
     LaunchedEffect(Unit) {
         snapshot = repo.load()
-        speak("أهلاً بك! مرحباً بك في متجر المكافآت. هيا نختار مكافآت رائعة!")
+        speak("أهلاً بك في متجر المكافآت! هيا نتعلم ونكافئ أنفسنا.")
     }
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
         Column(
@@ -91,8 +91,8 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
                                     ownedItems.add(item.id)
                                     repo.addOwnedReward(item.id)
                                     snapshot = repo.load()
-                                    speak("أحسنت! لقد اشتريت ${item.title}. استمتع بمكافأتك!")
-                                } else speak("تحتاج إلى المزيد من النجوم لشراء هذه المكافأة.")
+                                    speak("أحسنت! لقد حصلت على ${item.title}. استمتع بمكافأتك!")
+                                } else speak("لا توجد نجوم كافية لشراء هذه المكافأة. اجمع المزيد من النجوم وحاول مرة أخرى!")
                             }
                         },
                         shape = RoundedCornerShape(20.dp),
@@ -126,8 +126,8 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
                                     repo.addStars(-40)
                                     repo.addTitle(title)
                                     snapshot = repo.load()
-                                    speak("مبروك! حصلت على لقب $title. أنت رائع!")
-                                } else speak("تحتاج إلى أربعين نجمة للحصول على هذا اللقب.")
+                                    speak("أحسنت! حصلت على لقب $title. واصل تقدمك!")
+                                } else speak("لا توجد نجوم كافية للحصول على هذا اللقب. تحتاج إلى أربعين نجمة.")
                             }
                         },
                         shape = RoundedCornerShape(17.dp),

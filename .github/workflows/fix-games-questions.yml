@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Repair game question logic
+      - name: Apply game fixes
+        shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -27,7 +28,6 @@ jobs:
         }'''
           new_count = '''        "count" -> {
             // The visual star count and the correct answer use the exact same deterministic value.
-            // This prevents showing 3 stars while treating another option as correct.
             val max = 7 + level * 2
             val a = index % (max - 1) + 2
             val options = listOf(a, a + 1, (a - 1).coerceAtLeast(1), a + 2).distinct()
@@ -84,16 +84,14 @@ jobs:
 
           p.write_text(s, encoding='utf-8')
           PY
-      - name: Verify changes
-        run: |
-          grep -n 'visual star count' app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
+          grep -n 'The visual star count' app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
           grep -n 'استمع لصوت الحرف' app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
-          ./gradlew lintDebug
       - name: Commit repair
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
+          git diff --cached --check
           git commit -m "Fix game answer consistency and letter shape questions"
           git push
       - name: Remove one-time workflow

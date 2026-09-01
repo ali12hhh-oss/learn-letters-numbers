@@ -220,9 +220,11 @@ private fun questionFor(game: LearningGame, index: Int, level: Int, seed: Int): 
             RoundQuestion("استمع ثم اختر الحرف", (listOf(answer) + List(3) { otherLetter(answer) }).distinct().shuffled(random), answer, spoken)
         }
         "count" -> {
-            val max = 7 + level * 3
-            val a = random.nextInt(2, max + 1)
-            RoundQuestion("كم نجمة؟", listOf(a, a + 1, (a - 1).coerceAtLeast(1), a + 2).distinct().map(Int::toString).shuffled(random), a.toString())
+            // The visible stars and the correct answer are generated from the SAME count.
+            // This prevents impossible questions such as 3 stars with no option 3.
+            val count = index % (7 + level * 2) + 2
+            val options = listOf(count, count + 1, (count - 1).coerceAtLeast(1), count + 2).distinct().shuffled(random)
+            RoundQuestion("كم نجمة؟", options.map(Int::toString), count.toString())
         }
         "build" -> {
             val data = listOf("ب + ا" to "با", "م + ا" to "ما", "د + ا" to "دا", "ل + ا" to "لا", "س + ا" to "سا", "ك + ا" to "كا", "ر + ا" to "را", "ن + ا" to "نا")
@@ -234,8 +236,9 @@ private fun questionFor(game: LearningGame, index: Int, level: Int, seed: Int): 
             RoundQuestion("احفظ الحرف ثم طابقه", (listOf(a) + List(3) { otherLetter(a) }).distinct().shuffled(random), a, a)
         }
         "shapes" -> {
+            // The target letter is explicit, visible, and is also the exact value used for validation/audio.
             val a = letters[(index + level + abs(seed)) % letters.size]
-            RoundQuestion("أي حرف تراه؟", (listOf(a) + List(3) { otherLetter(a) }).distinct().shuffled(random), a)
+            RoundQuestion("ما الحرف الظاهر؟", (listOf(a) + List(3) { otherLetter(a) }).distinct().shuffled(random), a, a)
         }
         else -> {
             val max = when (level) { 1 -> 10; 2 -> 30; else -> 60 }
@@ -404,6 +407,15 @@ private fun GameQuestionPanel(game: LearningGame, question: RoundQuestion, onSpe
                 Text("👀", fontSize = 48.sp)
                 Text(question.answer, fontSize = 48.sp, fontWeight = FontWeight.ExtraBold)
                 Text("احفظه جيدًا...", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            } else if (game.id == "shapes") {
+                Text(question.answer, fontSize = 64.sp, fontWeight = FontWeight.ExtraBold)
+                Text(question.prompt, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(4.dp))
+                Text("اختر الحرف المطابق", fontSize = 14.sp)
+                if (onSpeak != null) {
+                    Spacer(Modifier.height(5.dp))
+                    FilledTonalButton(onClick = { onSpeak.invoke(question.spoken, "ar") }) { Text("🔊 استمع لصوت الحرف") }
+                }
             } else {
                 Text(game.icon, fontSize = 42.sp)
                 Text(question.prompt, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
@@ -421,6 +433,8 @@ private fun GameQuestionPanel(game: LearningGame, question: RoundQuestion, onSpe
 
 @Composable
 private fun CountChallenge(round: Int, level: Int) {
+    // Must use the exact same formula as questionFor(), so the displayed stars
+    // and the correct answer can never disagree.
     val count = round % (7 + level * 2) + 2
     val rows = (0 until count).toList().chunked(7)
     Card(Modifier.fillMaxWidth().height(180.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFCAFFBF).copy(alpha = .8f))) {

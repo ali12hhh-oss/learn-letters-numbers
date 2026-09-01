@@ -51,7 +51,6 @@ jobs:
           main.write_text(m)
           PY
 
-          # The raw directory is optional after removing bundled audio.
           if [ -d app/src/main/res/raw ]; then
             find app/src/main/res/raw -type f \( -name '*.ogg' -o -name '*.mp3' -o -name '*.wav' \) -delete
           fi
@@ -61,6 +60,64 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A app/src/main/java app/src/main/res
             git commit -m "Remove legacy audio and use offline TTS everywhere"
+            git push
+          fi
+
+      - name: Apply games, rewards, and Arabic writing UI
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              if old in s:
+                  p.write_text(s.replace(old, new, 1), encoding='utf-8')
+                  return True
+              return False
+
+          # Games: compact the header and make the grid visibly dominate the screen.
+          p = 'app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt'
+          changed = False
+          changed |= replace_once(p, 'import androidx.compose.foundation.layout.*', 'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.horizontalScroll\nimport androidx.compose.foundation.rememberScrollState')
+          changed |= replace_once(p, 'Card(Modifier.fillMaxWidth().padding(top = 8.dp), shape = RoundedCornerShape(28.dp)', 'Card(Modifier.fillMaxWidth().height(96.dp).padding(top = 4.dp), shape = RoundedCornerShape(24.dp)')
+          old = '''Column(Modifier.padding(20.dp)) {\n                    Text("مستعد للتحدي؟ 🚀", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)\n                    Spacer(Modifier.height(5.dp))\n                    Text("اختر لعبتك، افتح المستويات، اجمع النجوم، وابنِ سلسلة انتصاراتك!", fontSize = 15.sp)\n                    Spacer(Modifier.height(8.dp))\n                    Text("🏅 تقدمك: $completed / ${games.size * gameLevels.size} مراحل مكتملة", fontSize = 13.sp, fontWeight = FontWeight.Bold)\n                    if (dailyScore > 0) Text("🌟 أفضل نتيجة يومية: $dailyScore", fontSize = 13.sp, fontWeight = FontWeight.Bold)\n                }'''
+          new = '''Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {\n                    Column(Modifier.weight(1f)) {\n                        Text("مستعد للتحدي؟ 🚀", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)\n                        Text("🏅 $completed / ${games.size * gameLevels.size} مراحل", fontSize = 12.sp, fontWeight = FontWeight.Bold)\n                    }\n                    if (dailyScore > 0) Text("🌟 $dailyScore", fontSize = 13.sp, fontWeight = FontWeight.Bold)\n                }'''
+          changed |= replace_once(p, old, new)
+          old = '''Text("اختر الفئة", fontSize = 17.sp, fontWeight = FontWeight.Bold)\n            Spacer(Modifier.height(6.dp))\n            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {\n                categories.take(4).forEach { c -> FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 12.sp) }) }\n            }\n            Spacer(Modifier.height(6.dp))\n            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {\n                categories.drop(4).forEach { c -> FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 12.sp) }) }\n            }'''
+          new = '''Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {\n                Text("الفئة", fontSize = 14.sp, fontWeight = FontWeight.Bold)\n                Spacer(Modifier.width(6.dp))\n                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {\n                    categories.forEach { c -> FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 11.sp) }) }\n                }\n            }'''
+          changed |= replace_once(p, old, new)
+          old = '''Spacer(Modifier.height(10.dp))\n            Text("الألعاب", fontSize = 22.sp, fontWeight = FontWeight.Bold)\n            Spacer(Modifier.height(8.dp))'''
+          new = '''Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {\n                Text("الألعاب", fontSize = 20.sp, fontWeight = FontWeight.Bold)\n                Spacer(Modifier.weight(1f))\n                Text("اختر لعبة وابدأ 🎮", fontSize = 12.sp, fontWeight = FontWeight.Bold)\n            }\n            Spacer(Modifier.height(4.dp))'''
+          changed |= replace_once(p, old, new)
+          print('games changed:', changed)
+
+          # Store: allow the entire page to scroll, including all 35 titles.
+          p = 'app/src/main/java/com/learnlettersnumbers/app/RewardStoreScreen.kt'
+          changed = False
+          changed |= replace_once(p, 'import androidx.compose.foundation.layout.*', 'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.rememberScrollState\nimport androidx.compose.foundation.verticalScroll')
+          old = '''Column(\n            Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant))).padding(14.dp)\n        ) {'''
+          new = '''Column(\n            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant))).padding(14.dp)\n        ) {'''
+          changed |= replace_once(p, old, new)
+          print('store changed:', changed)
+
+          # Arabic writing: add a keyboard-like selector for all 28 letters.
+          p = 'app/src/main/java/com/learnlettersnumbers/app/WritingStrokeLessonScreen.kt'
+          changed = False
+          changed |= replace_once(p, 'import androidx.compose.foundation.layout.*', 'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.horizontalScroll\nimport androidx.compose.foundation.rememberScrollState')
+          old = '''                    Spacer(Modifier.height(4.dp))\n                } else if (!arabic && !numbers) {'''
+          new = '''                    Spacer(Modifier.height(4.dp))\n                    Text("الحروف", modifier = Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)\n                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {\n                        arLetters.forEachIndexed { i, letter ->\n                            Card(Modifier.size(42.dp).clickable { index = i; replay++ }, shape = RoundedCornerShape(11.dp), colors = CardDefaults.cardColors(containerColor = if (i == current) Color(0xFF4C8BF5) else Color.White), elevation = CardDefaults.cardElevation(if (i == current) 5.dp else 2.dp)) {\n                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(letter, fontSize = 20.sp, fontWeight = FontWeight.Black, color = if (i == current) Color.White else Color(0xFF315CFF)) }\n                            }\n                        }\n                    }\n                    Spacer(Modifier.height(4.dp))\n                } else if (!arabic && !numbers) {'''
+          changed |= replace_once(p, old, new)
+          print('writing changed:', changed)
+
+          PY
+
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt app/src/main/java/com/learnlettersnumbers/app/RewardStoreScreen.kt app/src/main/java/com/learnlettersnumbers/app/WritingStrokeLessonScreen.kt
+            git commit -m "Improve games rewards and Arabic writing selector"
             git push
           fi
 

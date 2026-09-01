@@ -4,12 +4,9 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Bundle
-import android.os.PersistableBundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
-import android.text.SpannableString
-import android.text.style.TtsSpan
 
 /**
  * Offline-first audio engine.
@@ -73,8 +70,11 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
             if (index != null && speakStoryFromScreen(index)) return true
         }
 
-        // English letter SOUND only: use TtsSpan metadata instead of spelling
-        // helpers such as "buh"/"kuh", which make TTS speak added vowels.
+        // English letter SOUND only.
+        // Do not send the visible letter itself to TTS: Google/Android TTS
+        // interprets A, B, C... as letter names ("ay", "bee", "see").
+        // Use short phonetic cues instead so the Letter Name and Letter Sound
+        // paths can never be mixed.
         Regex("en_letter_(\\d{2})_sound").matchEntire(resourceName)?.let {
             val index = it.groupValues[1].toInt() - 1
             if (index in 0..25) return speakEnglishLetterSound(index)
@@ -170,60 +170,29 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
     }
 
     /**
-     * English A-Z letter sound only. The visible character is kept as the
-     * letter itself, while a TtsSpan TYPE_TEXT supplies the phoneme text to
-     * engines that support TtsSpan substitution. No vowel spelling is added.
+     * English A-Z Letter Sound only.
+     *
+     * This intentionally does NOT speak the letter character, because Android
+     * TTS reads a standalone character as its letter name. TtsSpan was removed
+     * here because support for phoneme substitution is engine-dependent and can
+     * result in silence or the original letter name. These short cues are the
+     * reliable offline path through the installed English voice and are kept
+     * completely separate from the Letter Name path.
      */
     private fun speakEnglishLetterSound(index: Int): Boolean {
         if (!enabled || !ttsReady || index !in 0..25) return false
-        val engine = tts ?: return false
-        val voice = ttsEnglishVoice ?: return false
-        if (voice.isNetworkConnectionRequired) return false
-
-        val letters = ('A'..'Z').toList()
-        val phonemes = listOf(
-            "æ", "b", "k", "d", "ɛ", "f", "ɡ", "h", "ɪ", "dʒ",
-            "k", "l", "m", "n", "ɑ", "p", "kw", "r", "s", "t",
-            "ʌ", "v", "w", "ks", "j", "z"
+        val phoneticCues = listOf(
+            "ah", "buh", "kuh", "duh", "eh", "fff", "guh", "huh", "ih", "juh",
+            "kuh", "lll", "mmm", "nnn", "ah", "puh", "kwuh", "rrr", "sss", "tuh",
+            "uh", "vvv", "wuh", "ks", "yuh", "zzz"
         )
-        val letter = letters[index].toString()
-        val phoneme = phonemes[index]
-
-        stopMediaOnly()
-        engine.stop()
-        engine.setVoice(voice)
-        engine.setSpeechRate(0.88f)
-        engine.setPitch(1.0f)
-
-        val spoken = SpannableString(letter)
-        val args = PersistableBundle().apply {
-            putString(TtsSpan.ARG_TEXT, phoneme)
-        }
-        spoken.setSpan(
-            TtsSpan(TtsSpan.TYPE_TEXT, args),
-            0,
-            spoken.length,
-            SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-
-        val utteranceId = "english_letter_sound_${letters[index]}_${System.nanoTime()}"
-        val params = Bundle().apply {
-            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
-        }
-        return engine.speak(spoken, TextToSpeech.QUEUE_FLUSH, params, utteranceId) == TextToSpeech.SUCCESS
+        return speakOffline(phoneticCues[index], "en")
     }
 
     private fun offlineTextForResource(name: String): Pair<String, String>? {
         val enLetters = ('A'..'Z').toList()
         val arLetters = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","و","ي")
         val arNames = listOf("الألف","الباء","التاء","الثاء","الجيم","الحاء","الخاء","الدال","الذال","الراء","الزاي","السين","الشين","الصاد","الضاد","الطاء","الظاء","العين","الغين","الفاء","القاف","الكاف","اللام","الميم","النون","الهاء","الواو","الياء")
-
-        // Kept only as a guard for callers that resolve this method directly;
-        // playRequired() handles English letter sounds through TtsSpan metadata.
-        Regex("en_letter_(\\d{2})_sound").matchEntire(name)?.let {
-            val i = it.groupValues[1].toInt() - 1
-            if (i in enLetters.indices) return enLetters[i].toString() to "en"
-        }
 
         Regex("en_letter_(\\d{2})_name").matchEntire(name)?.let {
             val i = it.groupValues[1].toInt() - 1

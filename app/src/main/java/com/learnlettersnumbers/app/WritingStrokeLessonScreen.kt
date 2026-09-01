@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -111,6 +113,15 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
                         FormButton("أولي", form == ArabicForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { form = ArabicForm.INITIAL; replay++ }
                         FormButton("وسطي", form == ArabicForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { form = ArabicForm.MEDIAL; replay++ }
                         FormButton("أخري", form == ArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ArabicForm.FINAL; replay++ }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text("الحروف", modifier = Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        arLetters.forEachIndexed { i, letter ->
+                            Card(Modifier.size(42.dp).clickable { index = i; replay++ }, shape = RoundedCornerShape(11.dp), colors = CardDefaults.cardColors(containerColor = if (i == current) Color(0xFF4C8BF5) else Color.White), elevation = CardDefaults.cardElevation(if (i == current) 5.dp else 2.dp)) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(letter, fontSize = 20.sp, fontWeight = FontWeight.Black, color = if (i == current) Color.White else Color(0xFF315CFF)) }
+                            }
+                        }
                     }
                     Spacer(Modifier.height(4.dp))
                     Text("الحروف", modifier = Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)

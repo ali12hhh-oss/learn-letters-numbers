@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -79,6 +80,7 @@ internal fun LettersScreen(
     var index by remember { mutableIntStateOf(0) }
     var form by remember { mutableStateOf(ArabicLetterForm.INITIAL) }
     var vowel by remember { mutableStateOf(Vowel.FATHA) }
+    var showIsolatedLetters by remember { mutableStateOf(false) }
     val current = arabicLetters[index]
 
     LaunchedEffect(index, mode, form, vowel) {
@@ -108,8 +110,9 @@ internal fun LettersScreen(
                     color = Color(0xFF7A3E00), fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     if (mode == LetterMode.FORMS) {
+                        IsolatedLettersButton(showIsolatedLetters) { showIsolatedLetters = !showIsolatedLetters; onTap() }
                         FormButton("أولي", form == ArabicLetterForm.INITIAL) { form = ArabicLetterForm.INITIAL; onTap() }
                         FormButton("وسطي", form == ArabicLetterForm.MEDIAL) { form = ArabicLetterForm.MEDIAL; onTap() }
                         FormButton("أخري", form == ArabicLetterForm.FINAL) { form = ArabicLetterForm.FINAL; onTap() }
@@ -119,24 +122,20 @@ internal fun LettersScreen(
                         FormButton("كسرة", vowel == Vowel.KASRA) { vowel = Vowel.KASRA; onTap() }
                     }
                 }
+                if (mode == LetterMode.FORMS && showIsolatedLetters) {
+                    Spacer(Modifier.height(7.dp))
+                    Text("الحروف المنفصلة", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                    LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
+                        items(arabicLetters.size) { i ->
+                            val item = arabicLetters[i]
+                            Box(Modifier.size(44.dp).background(item.color.copy(alpha = .16f), RoundedCornerShape(12.dp)).clickable { index = i; onTap() }, contentAlignment = Alignment.Center) {
+                                Text(item.letter, fontSize = 21.sp, fontWeight = FontWeight.Black, color = item.color)
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(7.dp))
-      Text("الحروف", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-      androidx.compose.foundation.lazy.LazyRow(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(5.dp),
-          contentPadding = PaddingValues(horizontal = 2.dp)
-      ) {
-          items(arabicLetters.size) { i ->
-              val item = arabicLetters[i]
-              Box(
-                  Modifier.size(44.dp).background(item.color.copy(alpha = .16f), RoundedCornerShape(12.dp))
-                      .clickable { index = i; onTap() },
-                  contentAlignment = Alignment.Center
-              ) { Text(item.letter, fontSize = 21.sp, fontWeight = FontWeight.Black, color = item.color) }
-          }
-      }
-      Spacer(Modifier.height(7.dp))
-      Box(Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFDDF5FF))), RoundedCornerShape(30.dp)).border(4.dp, current.color, RoundedCornerShape(30.dp)).clickable {
+                Box(Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFDDF5FF))), RoundedCornerShape(30.dp)).border(4.dp, current.color, RoundedCornerShape(30.dp)).clickable {
                     if (soundsEnabled()) {
                         if (mode == LetterMode.FORMS) playArabicLetterSound(audio, index + 1) else playArabicVowelSound(audio, index + 1, vowel)
                     }
@@ -151,9 +150,7 @@ internal fun LettersScreen(
                         Text(shown, fontSize = 108.sp, fontWeight = FontWeight.ExtraBold, color = current.color)
                         Text(if (mode == LetterMode.FORMS) "صوت الحرف" else vowelName(vowel), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF155E8A))
                         Spacer(Modifier.height(6.dp))
-                        OutlinedButton(onClick = { if (soundsEnabled()) audio.playRequired("ar_letter_%02d_name".format(index + 1)); onTap() }, shape = RoundedCornerShape(14.dp)) {
-                            Text("اسم الحرف", fontWeight = FontWeight.Bold)
-                        }
+                        OutlinedButton(onClick = { if (soundsEnabled()) audio.playRequired("ar_letter_%02d_name".format(index + 1)); onTap() }, shape = RoundedCornerShape(14.dp)) { Text("اسم الحرف", fontWeight = FontWeight.Bold) }
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -163,35 +160,27 @@ internal fun LettersScreen(
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth().height(110.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    IllustrationCard(current, Modifier.weight(1f)) {
-                        if (soundsEnabled()) audio.speakOffline(current.item, "ar")
-                        onTap()
-                    }
-                    Text(
-                        current.item,
-                        modifier = Modifier.weight(1f).clickable {
-                            if (soundsEnabled()) audio.speakOffline(current.item, "ar")
-                            onTap()
-                        }.background(Color(0xFFFFF7DA), RoundedCornerShape(22.dp)).padding(12.dp),
-                        fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = Color(0xFF7A3E00)
-                    )
+                    IllustrationCard(current, Modifier.weight(1f)) { if (soundsEnabled()) audio.speakOffline(current.item, "ar"); onTap() }
+                    Text(current.item, modifier = Modifier.weight(1f).clickable { if (soundsEnabled()) audio.speakOffline(current.item, "ar"); onTap() }.background(Color(0xFFFFF7DA), RoundedCornerShape(22.dp)).padding(12.dp), fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = Color(0xFF7A3E00))
                 }
             }
         }
     }
 }
 
-@Composable private fun ModeButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Box(modifier.height(52.dp).shadow(if(selected) 8.dp else 3.dp, RoundedCornerShape(16.dp)).background(if(selected) Color(0xFF26A69A) else Color(0xFFEAF5FF), RoundedCornerShape(16.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(text, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = if(selected) Color.White else Color(0xFF165A7D))
+@Composable private fun IsolatedLettersButton(selected: Boolean, onClick: () -> Unit) {
+    Box(Modifier.width(105.dp).height(50.dp).shadow(if (selected) 8.dp else 4.dp, RoundedCornerShape(17.dp)).background(if (selected) Color(0xFF26A69A) else Color(0xFFEAF7F5), RoundedCornerShape(17.dp)).border(2.dp, Color(0xFF26A69A), RoundedCornerShape(17.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Text("الحروف المنفصلة", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (selected) Color.White else Color(0xFF166B61), textAlign = TextAlign.Center)
     }
+}
+
+@Composable private fun ModeButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(modifier.height(52.dp).shadow(if(selected) 8.dp else 3.dp, RoundedCornerShape(16.dp)).background(if(selected) Color(0xFF26A69A) else Color(0xFFEAF5FF), RoundedCornerShape(16.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) { Text(text, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = if(selected) Color.White else Color(0xFF165A7D)) }
 }
 
 @Composable private fun FormButton(text: String, selected: Boolean, onClick: () -> Unit) {
     val scale by animateFloatAsState(if(selected) 1.04f else 1f, spring(), label = text)
-    Box(Modifier.width(105.dp).height(50.dp).scale(scale).shadow(7.dp, RoundedCornerShape(17.dp)).background(if(selected) Color(0xFFFFA726) else MaterialTheme.colorScheme.surface, RoundedCornerShape(17.dp)).border(2.dp, Color(0xFFFFD54F), RoundedCornerShape(17.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(text, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6D3500))
-    }
+    Box(Modifier.width(105.dp).height(50.dp).scale(scale).shadow(7.dp, RoundedCornerShape(17.dp)).background(if(selected) Color(0xFFFFA726) else MaterialTheme.colorScheme.surface, RoundedCornerShape(17.dp)).border(2.dp, Color(0xFFFFD54F), RoundedCornerShape(17.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) { Text(text, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6D3500)) }
 }
 
 @Composable private fun IllustrationCard(letter: ArabicLetter, modifier: Modifier, onClick: () -> Unit) {
@@ -211,7 +200,4 @@ private fun illustrationEmoji(item: String): String = when (item) {
 private fun addVowel(letter: String, vowel: Vowel): String = when(vowel) { Vowel.FATHA -> "$letterَ"; Vowel.DAMMA -> "$letterُ"; Vowel.KASRA -> "$letterِ" }
 private fun vowelName(v: Vowel) = when(v) { Vowel.FATHA -> "الفتحة"; Vowel.DAMMA -> "الضمة"; Vowel.KASRA -> "الكسرة" }
 private fun playArabicLetterSound(audio: LocalAudioManager, index: Int) { audio.playRequired("ar_letter_%02d_sound".format(index)) }
-private fun playArabicVowelSound(audio: LocalAudioManager, index: Int, vowel: Vowel) {
-    val suffix = when (vowel) { Vowel.FATHA -> 1; Vowel.DAMMA -> 2; Vowel.KASRA -> 3 }
-    audio.playRequired("ar_letter_%02d_vowel_%d".format(index, suffix))
-}
+private fun playArabicVowelSound(audio: LocalAudioManager, index: Int, vowel: Vowel) { val suffix = when (vowel) { Vowel.FATHA -> 1; Vowel.DAMMA -> 2; Vowel.KASRA -> 3 }; audio.playRequired("ar_letter_%02d_vowel_%d".format(index, suffix)) }

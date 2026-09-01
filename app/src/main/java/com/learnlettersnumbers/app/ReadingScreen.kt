@@ -68,8 +68,10 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
             ReadingMode.LETTERS -> audio.playRequired("ar_letter_%02d_sound".format(currentIndex + 1))
             ReadingMode.NUMBERS -> audio.playRequired("ar_number_%03d".format(currentIndex + 1))
             ReadingMode.WORDS -> {
-                val ids = readingWords[currentIndex].mapNotNull { ch -> readingArabicLetters.indexOf(ch.toString()).takeIf { it >= 0 }?.plus(1) }
-                if (ids.isNotEmpty()) audio.playSequence(ids.map { "ar_letter_%02d_sound".format(it) })
+                // In WORDS mode we must pronounce the two-letter combination as ONE Arabic unit.
+                // Do not concatenate isolated letter sounds (بَ + اَ), because that can turn
+                // the exercise into a letter name or an unintended word such as "ماء".
+                audio.speakOffline(readingWords[currentIndex], "ar")
             }
         }
     }
@@ -133,10 +135,7 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
                         when (mode) {
                             ReadingMode.LETTERS -> audio.playRequired("ar_letter_%02d_sound".format(currentIndex + 1))
                             ReadingMode.NUMBERS -> audio.playRequired("ar_number_%03d".format(currentIndex + 1))
-                            ReadingMode.WORDS -> {
-                                val ids = readingWords[currentIndex].mapNotNull { ch -> readingArabicLetters.indexOf(ch.toString()).takeIf { it >= 0 }?.plus(1) }
-                                if (ids.isNotEmpty()) audio.playSequence(ids.map { "ar_letter_%02d_sound".format(it) })
-                            }
+                            ReadingMode.WORDS -> audio.speakOffline(readingWords[currentIndex], "ar")
                         }
                     }
                     onTap()

@@ -3,8 +3,8 @@ name: Prepare English phonics audio
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - 'app/src/main/res/raw/english_phonics/**'
+    paths:
+      - '.github/workflows/prepare-english-phonics.yml'
   workflow_dispatch:
 
 permissions:
@@ -17,19 +17,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install audio extraction tools
         run: |
           python -m pip install --upgrade pip
           python -m pip install 'datasets[audio]' soundfile numpy
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-
       - name: Extract affected English phonemes from CC0 human speech
         shell: bash
         run: |
@@ -38,118 +35,81 @@ jobs:
           import numpy as np
           import soundfile as sf
           from pathlib import Path
-
-          out = Path('app/src/main/res/raw/english_phonics')
+          out = Path('app/src/main/res/raw')
           out.mkdir(parents=True, exist_ok=True)
-
-          # Only letters currently reported as faulty. Existing good sounds are untouched.
-          # Common Phone is CC0 and provides human English recordings with IPA time alignment.
           targets = {
-              5:  [('e', ['e', 'ɛ'])],
-              6:  [('f', ['f'])],
-              9:  [('i', ['ɪ'])],
-              12: [('l', ['l'])],
-              14: [('n', ['n'])],
-              15: [('o', ['ɒ', 'ɑː', 'ɑ'])],
-              16: [('p', ['p'])],
-              17: [('q', ['k', 'w'])],
-              18: [('r', ['r', 'ɹ'])],
-              19: [('s', ['s'])],
-              21: [('u', ['ʌ'])],
-              22: [('v', ['v'])],
-              24: [('x', ['k', 's'])],
-              26: [('z', ['z'])],
+              5: ['e', 'ɛ'], 6: ['f'], 9: ['ɪ'], 12: ['l'], 14: ['n'],
+              15: ['ɒ', 'ɑː', 'ɑ'], 16: ['p'], 17: ['k','w'], 18: ['r','ɹ'],
+              19: ['s'], 21: ['ʌ'], 22: ['v'], 24: ['k','s'], 26: ['z'],
           }
-
-          # Do not overwrite a file already produced successfully.
-          missing = {i: spec[0] for i, spec in targets.items()
-                     if not (out / f'en_letter_{i:02d}_sound.wav').exists()}
+          missing = {i for i in targets if not (out / f'en_letter_{i:02d}_sound.wav').exists()}
           if not missing:
               print('All required phonics files already exist.')
               raise SystemExit(0)
-
-          wanted = {i: phones for i, spec in targets.items() for _, phones in spec}
           ds = load_dataset('pklumpp/CommonPhoneDataset', split='train', streaming=True)
           ds = ds.cast_column('audio', Audio(sampling_rate=16000, mono=True))
-
           found = {}
           for row in ds:
               if row.get('language') != 'en':
                   continue
               accent = (row.get('accent') or '').lower()
-              # Prefer US English; fall back to other English accents only if needed.
-              accent_score = 0 if accent in ('us', 'usa', 'american') else 1
+              accent_score = 0 if accent in ('us','usa','american') else 1
               labels = row.get('labels') or []
               symbols = [x.get('symbol') for x in labels]
               audio = row['audio']
               arr = np.asarray(audio['array'], dtype=np.float32)
               sr = int(audio['sampling_rate'])
-
               for idx in list(missing):
                   if idx in found:
                       continue
-                  seq = wanted[idx]
+                  seq = targets[idx]
+                  start = end = None
                   if len(seq) == 1:
-                      candidates = [i for i, s in enumerate(symbols) if s in seq]
-                      if not candidates:
-                          continue
-                      j = candidates[0]
-                      start = float(labels[j]['start'])
-                      end = float(labels[j]['end'])
+                      for j, symbol in enumerate(symbols):
+                          if symbol == seq[0]:
+                              start = float(labels[j]['start'])
+                              end = float(labels[j]['end'])
+                              break
                   else:
-                      # Q=/kw/ and X=/ks/: require adjacent aligned phones.
-                      start = end = None
-                      for j in range(len(symbols) - 1):
+                      for j in range(len(symbols)-1):
                           if symbols[j] == seq[0] and symbols[j+1] == seq[1]:
                               start = float(labels[j]['start'])
                               end = float(labels[j+1]['end'])
                               break
-                      if start is None:
-                          continue
-
-                  # Small context padding keeps stop/fricative releases natural without
-                  # importing neighboring letters.
-                  pad = 0.018
-                  a = max(0, int((start - pad) * sr))
-                  b = min(len(arr), int((end + pad) * sr))
-                  clip = arr[a:b]
-                  if len(clip) < int(0.025 * sr):
+                  if start is None:
                       continue
-                  peak = float(np.max(np.abs(clip))) if len(clip) else 0
+                  pad = 0.018
+                  a = max(0, int((start-pad)*sr))
+                  b = min(len(arr), int((end+pad)*sr))
+                  clip = arr[a:b]
+                  if len(clip) < int(0.025*sr):
+                      continue
+                  peak = float(np.max(np.abs(clip)))
                   if peak > 0.98:
                       clip = clip / peak * 0.96
-
-                  # Score US speakers first, then longer clean segments.
                   score = (accent_score, -len(clip))
-                  found[idx] = (score, clip, sr, row.get('speaker', 'unknown'), row.get('text', ''))
-
+                  found[idx] = (score, clip, sr, row.get('speaker','unknown'), row.get('text',''))
               if len(found) == len(missing):
                   break
-
           missing_after = [i for i in missing if i not in found]
           if missing_after:
               raise RuntimeError(f'Could not extract phonemes for letters: {missing_after}')
-
           manifest = []
           for idx in sorted(found):
               _, clip, sr, speaker, text = found[idx]
-              path = out / f'en_letter_{idx:02d}_sound.wav'
-              sf.write(path, clip, sr, subtype='PCM_16')
+              sf.write(out / f'en_letter_{idx:02d}_sound.wav', clip, sr, subtype='PCM_16')
               manifest.append(f'{idx:02d}: speaker={speaker} source_text={text}')
-
-          (out / 'SOURCE.txt').write_text(
+          (out / 'ENGLISH_PHONICS_SOURCE.txt').write_text(
               'English phonics audio extracted from pklumpp/CommonPhoneDataset.\n'
               'License: CC0-1.0 Universal.\n'
-              'Source: https://huggingface.co/datasets/pklumpp/CommonPhoneDataset\n'
-              'Only the currently faulty English Letter Sound entries are replaced.\n\n'
+              'Source: https://huggingface.co/datasets/pklumpp/CommonPhoneDataset\n\n'
               + '\n'.join(manifest) + '\n', encoding='utf-8')
           PY
-
       - name: Commit extracted phonics files
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/res/raw/english_phonics
+          git add app/src/main/res/raw/en_letter_*_sound.wav app/src/main/res/raw/ENGLISH_PHONICS_SOURCE.txt
           if git diff --cached --quiet; then
             echo 'No new audio files to commit.'
           else

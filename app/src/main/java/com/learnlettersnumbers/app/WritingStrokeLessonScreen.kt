@@ -3,10 +3,7 @@ package com.learnlettersnumbers.app
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -79,21 +76,21 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
     val current = index.coerceIn(0, total - 1)
     val symbol = when {
         numbers -> if (arabic) (current + 1).toString().map { ch -> "٠١٢٣٤٥٦٧٨٩"[ch - '0'] }.joinToString("") else (current + 1).toString()
-        arabic -> arabicFormSymbol(current, form)
+        arabic -> if (showIsolatedLetters) arLetters[current] else arabicFormSymbol(current, form)
         englishCase == WritingEnglishCase.UPPER -> enLetters[current].toString()
         else -> enLetters[current].lowercase()
     }
     val title = when {
         numbers -> "${if (arabic) "الرقم" else "Number"} $symbol"
-        arabic -> "${arNames[current]} — ${arabicFormName(form)}"
+        arabic -> if (showIsolatedLetters) "${arNames[current]} — الحرف" else "${arNames[current]} — ${arabicFormName(form)}"
         englishCase == WritingEnglishCase.UPPER -> "${enLetters[current]} — حروف كبيرة"
         else -> "${enLetters[current].lowercase()} — حروف صغيرة"
     }
 
-    LaunchedEffect(current, form, englishCase, replay) {
+    LaunchedEffect(current, form, englishCase, replay, showIsolatedLetters) {
         val message = when {
             numbers -> if (arabic) "تعلم كتابة الرقم $symbol" else "Learn to write number $symbol"
-            arabic -> "تعلم كتابة ${arNames[current]}، الشكل ${arabicFormName(form)}"
+            arabic -> if (showIsolatedLetters) "تعلم كتابة ${arNames[current]}، الحرف" else "تعلم كتابة ${arNames[current]}، الشكل ${arabicFormName(form)}"
             englishCase == WritingEnglishCase.UPPER -> "Learn to write capital letter ${enLetters[current]}"
             else -> "Learn to write lowercase letter ${enLetters[current].lowercase()}"
         }
@@ -110,21 +107,10 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 8.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (arabic && !numbers) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        IsolatedWritingLettersButton(showIsolatedLetters, Modifier.weight(1f)) { showIsolatedLetters = !showIsolatedLetters; replay++ }
-                        FormButton("أولي", form == ArabicForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { form = ArabicForm.INITIAL; replay++ }
-                        FormButton("وسطي", form == ArabicForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { form = ArabicForm.MEDIAL; replay++ }
-                        FormButton("أخري", form == ArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ArabicForm.FINAL; replay++ }
-                    }
-                    if (showIsolatedLetters) {
-                        Spacer(Modifier.height(4.dp))
-                        Text("الحروف المنفصلة", modifier = Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)
-                        LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
-                            items(arLetters.size) { i ->
-                                Box(Modifier.size(42.dp).clickable { index = i; replay++ }, contentAlignment = Alignment.Center) {
-                                    Text(arLetters[i], fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color(0xFF315CFF))
-                                }
-                            }
-                        }
+                        FormButton("الحروف", showIsolatedLetters, Color(0xFF26A69A), Modifier.weight(1f)) { index = 0; showIsolatedLetters = true; replay++ }
+                        FormButton("أولي", !showIsolatedLetters && form == ArabicForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { showIsolatedLetters = false; form = ArabicForm.INITIAL; replay++ }
+                        FormButton("وسطي", !showIsolatedLetters && form == ArabicForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { showIsolatedLetters = false; form = ArabicForm.MEDIAL; replay++ }
+                        FormButton("أخري", !showIsolatedLetters && form == ArabicForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { showIsolatedLetters = false; form = ArabicForm.FINAL; replay++ }
                     }
                     Spacer(Modifier.height(4.dp))
                 } else if (!arabic && !numbers) {
@@ -155,13 +141,6 @@ fun WritingStrokeLessonScreen(language: String, numbers: Boolean, onBack: () -> 
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun IsolatedWritingLettersButton(selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Card(modifier.height(56.dp).clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (selected) Color(0xFF26A69A) else Color.White), elevation = CardDefaults.cardElevation(if (selected) 7.dp else 2.dp)) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("الحروف المنفصلة", fontSize = 13.sp, fontWeight = FontWeight.Black, color = if (selected) Color.White else Color(0xFF166B61), textAlign = TextAlign.Center) }
     }
 }
 

@@ -53,12 +53,16 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
     val total = when (mode) { ReadingMode.LETTERS -> 28; ReadingMode.NUMBERS -> 100; ReadingMode.WORDS -> readingWords.size }
     val currentIndex = index.coerceIn(0, total - 1)
     val target = when (mode) {
-        ReadingMode.LETTERS -> when (form) { ReadingLetterForm.INITIAL -> readingInitial[currentIndex]; ReadingLetterForm.MEDIAL -> readingMedial[currentIndex]; ReadingLetterForm.FINAL -> readingFinal[currentIndex] }
+        ReadingMode.LETTERS -> if (showIsolatedLetters) readingArabicLetters[currentIndex] else when (form) {
+            ReadingLetterForm.INITIAL -> readingInitial[currentIndex]
+            ReadingLetterForm.MEDIAL -> readingMedial[currentIndex]
+            ReadingLetterForm.FINAL -> readingFinal[currentIndex]
+        }
         ReadingMode.NUMBERS -> readingArabicDigits(currentIndex + 1)
         ReadingMode.WORDS -> readingWords[currentIndex]
     }
 
-    LaunchedEffect(mode, currentIndex, form) {
+    LaunchedEffect(mode, currentIndex, form, showIsolatedLetters) {
         if (!soundsEnabled()) return@LaunchedEffect
         when (mode) {
             ReadingMode.LETTERS -> audio.playRequired("ar_letter_%02d_sound".format(currentIndex + 1))
@@ -89,19 +93,10 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
             if (mode == ReadingMode.LETTERS) {
                 Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth().height(50.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    ReadingIsolatedLettersButton(showIsolatedLetters, Modifier.weight(1f)) { showIsolatedLetters = !showIsolatedLetters; onTap() }
-                    ReadingFormButton("أولي", form == ReadingLetterForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { form = ReadingLetterForm.INITIAL; onTap() }
-                    ReadingFormButton("وسطي", form == ReadingLetterForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { form = ReadingLetterForm.MEDIAL; onTap() }
-                    ReadingFormButton("أخري", form == ReadingLetterForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ReadingLetterForm.FINAL; onTap() }
-                }
-                if (showIsolatedLetters) {
-                    Spacer(Modifier.height(4.dp))
-                    Text("الحروف المنفصلة", Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)
-                    Row(Modifier.fillMaxWidth().height(42.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        readingArabicLetters.forEachIndexed { i, letter ->
-                            OutlinedButton(onClick = { index = i; clear(); onTap() }, modifier = Modifier.weight(1f).height(42.dp), contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(10.dp)) { Text(letter, fontSize = 18.sp, fontWeight = FontWeight.Black) }
-                        }
-                    }
+                    ReadingFormButton("الحروف", showIsolatedLetters, Color(0xFF26A69A), Modifier.weight(1f)) { index = 0; showIsolatedLetters = true; onTap() }
+                    ReadingFormButton("أولي", !showIsolatedLetters && form == ReadingLetterForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { showIsolatedLetters = false; form = ReadingLetterForm.INITIAL; onTap() }
+                    ReadingFormButton("وسطي", !showIsolatedLetters && form == ReadingLetterForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { showIsolatedLetters = false; form = ReadingLetterForm.MEDIAL; onTap() }
+                    ReadingFormButton("أخري", !showIsolatedLetters && form == ReadingLetterForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { showIsolatedLetters = false; form = ReadingLetterForm.FINAL; onTap() }
                 }
             }
             Row(Modifier.fillMaxWidth().height(50.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -154,8 +149,6 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
 private fun pathOfReading(points: List<Offset>): Path = Path().apply { if (points.isEmpty()) return@apply; moveTo(points.first().x, points.first().y); for (i in 1 until points.size) lineTo(points[i].x, points[i].y) }
 
 @Composable private fun ReadingModeButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) { Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) Color(0xFF4C8BF5) else Color.White, contentColor = if (selected) Color.White else Color(0xFF315CFF))) { Text(text, fontWeight = FontWeight.ExtraBold) } }
-
-@Composable private fun ReadingIsolatedLettersButton(selected: Boolean, modifier: Modifier, onClick: () -> Unit) { Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) Color(0xFF26A69A) else Color.White, contentColor = if (selected) Color.White else Color(0xFF166B61))) { Text("الحروف المنفصلة", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center) } }
 
 @Composable private fun ReadingFormButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) { Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else Color.White, contentColor = if (selected) Color.White else color)) { Text(text, fontWeight = FontWeight.ExtraBold) } }
 

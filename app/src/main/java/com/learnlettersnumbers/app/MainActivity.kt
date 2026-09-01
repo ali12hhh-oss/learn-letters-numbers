@@ -88,7 +88,8 @@ class MainActivity : ComponentActivity() {
                 "numbers" -> EnglishNumbers(onBack={screen="english"},speak={speak(it)},playNumber={n->localAudio.playRequired("en_number_%03d".format(n))},repo=progressRepo)
                 "writing" -> EnglishWriting(onBack={screen="english"},speak={speak(it)},repo=progressRepo)
                 "progress" -> ParentProgressScreen(repo=progressRepo,onBack={screen=settingsReturnScreen},speak={speak(it)})
-                "rewards" -> RewardStoreScreen(repo=progressRepo,onBack={screen=settingsReturnScreen},speak={speak(it)})
+                // The rewards screen is Arabic, so it must use the Arabic voice explicitly.
+                "rewards" -> RewardStoreScreen(repo=progressRepo,onBack={screen=settingsReturnScreen},speak={speakArabic(it)})
                 "tests" -> TestsScreen(repo=progressRepo,audio=localAudio,onBack={screen=settingsReturnScreen})
                 "stories" -> StoriesScreen(audio=localAudio,onBack={screen=settingsReturnScreen})
                 "stages" -> StagesScreen(repo=progressRepo,onBack={screen=settingsReturnScreen},onStageOpen={stage->screen=when(stage){1->"arabic";2->"arabic_tutorial";3->"tests";else->"writing"}},speakArabic={speakArabic(it)})
@@ -139,7 +140,6 @@ class MainActivity : ComponentActivity() {
     @Composable fun EnglishTopButton(text:String,color:Color,onClick:()->Unit){Button(onClick=onClick,modifier=Modifier.height(40.dp),shape=RoundedCornerShape(14.dp),contentPadding=PaddingValues(horizontal=9.dp,vertical=0.dp),colors=ButtonDefaults.buttonColors(containerColor=color),elevation=ButtonDefaults.buttonElevation(defaultElevation=5.dp)){Text(text,fontSize=12.sp,fontWeight=FontWeight.ExtraBold,maxLines=1)}}
     @Composable fun EnglishCard(icon:String,title:String,arabic:String,color:Color,onClick:()->Unit){var pressed by remember{mutableStateOf(false)};val scale by animateFloatAsState(if(pressed).96f else 1f,label="scale");Card(Modifier.fillMaxWidth().padding(vertical=5.dp).scale(scale).clickable{pressed=true;onClick();pressed=false},shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=color),elevation=CardDefaults.cardElevation(10.dp)){Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){Text(icon,fontSize=38.sp);Spacer(Modifier.width(18.dp));Column{Text(title,color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Bold);Text(arabic,color=Color.White.copy(.95f),fontSize=17.sp)}}}}
 
-    /** English numbers now use exactly the same one-by-one navigation model as Arabic numbers. */
     @Composable
     fun EnglishNumbers(onBack:()->Unit,speak:(String)->Unit,playNumber:(Int)->Unit,repo:ProgressRepository){
         var selected by remember{mutableIntStateOf(1)}
@@ -215,6 +215,8 @@ class MainActivity : ComponentActivity() {
     @Composable private fun LetterCaseChoice(letter:String,title:String,arabic:String,selected:Boolean,color:Color,modifier:Modifier,onClick:()->Unit){val scale by animateFloatAsState(if(selected)1.04f else 1f,label="caseChoice_$title");Card(modifier.scale(scale).clickable{onClick()},shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=if(selected)color else MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(if(selected)9.dp else 3.dp)){Column(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(letter,fontSize=34.sp,fontWeight=FontWeight.Black,color=if(selected)Color.White else color);Text(title,fontSize=14.sp,fontWeight=FontWeight.ExtraBold,color=if(selected)Color.White else Color(0xFF245B8A));Text(arabic,fontSize=12.sp,color=if(selected)Color.White else Color(0xFF666666))}}
     }
 
-    private fun englishLetterSound(c:Char):String=when(c.lowercaseChar()){'a'->"ah";'b'->"buh";'c'->"kuh";'d'->"duh";'e'->"eh";'f'->"fff";'g'->"guh";'h'->"huh";'i'->"ih";'j'->"juh";'k'->"kuh";'l'->"lll";'m'->"mmm";'n'->"nnn";'o'->"ah";'p'->"puh";'q'->"kwuh";'r'->"rrr";'s'->"sss";'t'->"tuh";'u'->"uh";'v'->"vvv";'w'->"wuh";'x'->"ks";'y'->"yuh";'z'->"zzz";else->c.toString()}
+    // Kept separate from Letter Name. These are short pronunciation cues for the
+    // English speech engine, never the visible letter name.
+    private fun englishLetterSound(c:Char):String=when(c.lowercaseChar()){'a'->"apple";'b'->"bat";'c'->"cat";'d'->"dog";'e'->"egg";'f'->"fish";'g'->"go";'h'->"hat";'i'->"igloo";'j'->"jam";'k'->"kite";'l'->"lamp";'m'->"moon";'n'->"nose";'o'->"octopus";'p'->"pig";'q'->"queen";'r'->"red";'s'->"sun";'t'->"top";'u'->"up";'v'->"van";'w'->"web";'x'->"box";'y'->"yellow";'z'->"zoo";else->c.toString()}
     private fun numberName(n:Int):String=when(n){1->"one";2->"two";3->"three";4->"four";5->"five";6->"six";7->"seven";8->"eight";9->"nine";10->"ten";11->"eleven";12->"twelve";13->"thirteen";14->"fourteen";15->"fifteen";16->"sixteen";17->"seventeen";18->"eighteen";19->"nineteen";20->"twenty";30->"thirty";40->"forty";50->"fifty";60->"sixty";70->"seventy";80->"eighty";90->"ninety";100->"one hundred";else->"${numberName((n/10)*10)} ${numberName(n%10)}"}
 }

@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import android.text.SpannableString
+import android.text.style.TtsSpan
 
 /**
  * Offline-first audio engine.
@@ -68,6 +70,13 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         if (resourceName.matches(Regex("story_\\d{2}"))) {
             val index = resourceName.removePrefix("story_").toIntOrNull()
             if (index != null && speakStoryFromScreen(index)) return true
+        }
+
+        // English letter SOUND only: use phoneme metadata instead of spelling
+        // helpers such as "buh"/"kuh", which make TTS speak added vowels.
+        Regex("en_letter_(\\d{2})_sound").matchEntire(resourceName)?.let {
+            val index = it.groupValues[1].toInt() - 1
+            if (index in 0..25) return speakEnglishLetterSound(index)
         }
 
         val offline = offlineTextForResource(resourceName)
@@ -159,17 +168,59 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         return engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId) == TextToSpeech.SUCCESS
     }
 
+    /**
+     * English A-Z letter sound only. The visible character is kept as the
+     * letter itself, while a TTS span supplies a phoneme hint to engines that
+     * understand Android TtsSpan metadata. No vowel spelling is appended.
+     */
+    private fun speakEnglishLetterSound(index: Int): Boolean {
+        if (!enabled || !ttsReady || index !in 0..25) return false
+        val engine = tts ?: return false
+        val voice = ttsEnglishVoice ?: return false
+        if (voice.isNetworkConnectionRequired) return false
+
+        val letters = ('A'..'Z').toList()
+        val phonemes = listOf(
+            "æ", "b", "k", "d", "ɛ", "f", "ɡ", "h", "ɪ", "dʒ",
+            "k", "l", "m", "n", "ɑ", "p", "kw", "r", "s", "t",
+            "ʌ", "v", "w", "ks", "j", "z"
+        )
+        val letter = letters[index].toString()
+        val phoneme = phonemes[index]
+
+        stopMediaOnly()
+        engine.stop()
+        engine.setVoice(voice)
+        engine.setSpeechRate(0.88f)
+        engine.setPitch(1.0f)
+
+        val spoken = SpannableString(letter)
+        spoken.setSpan(
+            TtsSpan.Builder("android.type.phoneme")
+                .setStringArgument("android.arg.phoneme", phoneme)
+                .build(),
+            0,
+            spoken.length,
+            SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+
+        val utteranceId = "english_letter_sound_${letters[index]}_${System.nanoTime()}"
+        val params = Bundle().apply {
+            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
+        }
+        return engine.speak(spoken, TextToSpeech.QUEUE_FLUSH, params, utteranceId) == TextToSpeech.SUCCESS
+    }
+
     private fun offlineTextForResource(name: String): Pair<String, String>? {
         val enLetters = ('A'..'Z').toList()
         val arLetters = listOf("ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ك","ل","م","ن","ه","و","ي")
         val arNames = listOf("الألف","الباء","التاء","الثاء","الجيم","الحاء","الخاء","الدال","الذال","الراء","الزاي","السين","الشين","الصاد","الضاد","الطاء","الظاء","العين","الغين","الفاء","القاف","الكاف","اللام","الميم","النون","الهاء","الواو","الياء")
 
+        // Kept only as a guard for callers that resolve this method directly;
+        // playRequired() handles English letter sounds through phoneme metadata.
         Regex("en_letter_(\\d{2})_sound").matchEntire(name)?.let {
             val i = it.groupValues[1].toInt() - 1
-            if (i in enLetters.indices) {
-                val phoneme = listOf("ah","buh","kuh","duh","eh","fff","guh","huh","ih","juh","kuh","lll","mmm","nnn","ah","puh","kwuh","rrr","sss","tuh","uh","vvv","wuh","ks","yuh","zzz")[i]
-                return phoneme to "en"
-            }
+            if (i in enLetters.indices) return enLetters[i].toString() to "en"
         }
 
         Regex("en_letter_(\\d{2})_name").matchEntire(name)?.let {

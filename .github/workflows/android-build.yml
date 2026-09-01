@@ -20,41 +20,22 @@ jobs:
           fetch-depth: 0
 
       - name: Restore original local audio assets and audio routing
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !hashFiles('app/src/main/res/raw/en_letter_01_sound.ogg')
         shell: bash
         run: |
           set -e
-          git checkout 443d126f7e3025f647b5664e04b15db74ca376c9 -- app/src/main/res/raw
-          python3 - <<'PY'
+          if [ ! -f app/src/main/res/raw/en_letter_01_sound.ogg ]; then
+            git checkout 443d126f7e3025f647b5664e04b15db74ca376c9 -- app/src/main/res/raw
+            python3 - <<'PY'
           from pathlib import Path
           import re
           p = Path('app/src/main/java/com/learnlettersnumbers/app/LocalAudioManager.kt')
           s = p.read_text()
-          old = '''    fun playRequired(resourceName: String): Boolean {
+          pattern = re.compile(r'    fun playRequired\(resourceName: String\): Boolean \{.*?\n    \}\n\n    fun playSequence\(resourceNames: List<String>\): Boolean \{.*?\n    \}', re.S)
+          replacement = '''    fun playRequired(resourceName: String): Boolean {
           if (!enabled) return false
 
-          if (resourceName.matches(Regex("story_\\\\d{2}"))) {
-              val index = resourceName.removePrefix("story_").toIntOrNull()
-              if (index != null && speakStoryFromScreen(index)) return true
-          }
-
-          val offline = offlineTextForResource(resourceName)
-          return offline != null && speakOffline(offline.first, offline.second)
-      }
-
-      fun playSequence(resourceNames: List<String>): Boolean {
-          if (!enabled || resourceNames.isEmpty()) return false
-          val parts = resourceNames.mapNotNull { offlineTextForResource(it) }
-          if (parts.isEmpty()) return false
-          val language = parts.first().second
-          return speakOffline(parts.joinToString(" ") { it.first }, language)
-      }'''
-          new = '''    fun playRequired(resourceName: String): Boolean {
-          if (!enabled) return false
-
-          // Educational letter/name/number audio must use the original bundled
-          // recordings whenever present. TTS is only a fallback for resources
-          // that genuinely have no local recording.
+          // Prefer the original bundled recording. This is critical for isolated
+          // English phonemes: Android TTS cannot reliably synthesize them.
           rawIdOrNull(resourceName)?.let { id ->
               stop()
               start(id, resourceName)
@@ -85,24 +66,26 @@ jobs:
           val language = parts.first().second
           return speakOffline(parts.joinToString(" ") { it.first }, language)
       }'''
-          if old not in s:
-              raise SystemExit('Expected audio functions were not found; aborting without changes.')
-          s = s.replace(old, new, 1)
-          marker = '''    private fun rawId(name: String): Int {
-'''
+          if not pattern.search(s):
+              raise SystemExit('Audio functions pattern not found; refusing to modify source.')
+          s = pattern.sub(replacement, s, count=1)
+          marker = '    private fun rawId(name: String): Int {'
           helper = '''    private fun rawIdOrNull(name: String): Int? =
         context.resources.getIdentifier(name, "raw", context.packageName).takeIf { it != 0 }
 
 '''
-          if helper not in s:
+          if 'private fun rawIdOrNull' not in s:
               s = s.replace(marker, helper + marker, 1)
           p.write_text(s)
           PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/res/raw app/src/main/java/com/learnlettersnumbers/app/LocalAudioManager.kt
-          git commit -m "Restore original local letter audio and prefer recordings"
-          git push
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/src/main/res/raw app/src/main/java/com/learnlettersnumbers/app/LocalAudioManager.kt
+            git commit -m "Restore original local letter audio and prefer recordings"
+            git push
+          else
+            echo "Local audio assets already restored; no migration needed."
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

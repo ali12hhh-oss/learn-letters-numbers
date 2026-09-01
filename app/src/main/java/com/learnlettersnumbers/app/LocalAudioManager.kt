@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.os.PersistableBundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
@@ -72,7 +73,7 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
             if (index != null && speakStoryFromScreen(index)) return true
         }
 
-        // English letter SOUND only: use phoneme metadata instead of spelling
+        // English letter SOUND only: use TtsSpan metadata instead of spelling
         // helpers such as "buh"/"kuh", which make TTS speak added vowels.
         Regex("en_letter_(\\d{2})_sound").matchEntire(resourceName)?.let {
             val index = it.groupValues[1].toInt() - 1
@@ -170,8 +171,8 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
 
     /**
      * English A-Z letter sound only. The visible character is kept as the
-     * letter itself, while a TTS span supplies a phoneme hint to engines that
-     * understand Android TtsSpan metadata. No vowel spelling is appended.
+     * letter itself, while a TtsSpan TYPE_TEXT supplies the phoneme text to
+     * engines that support TtsSpan substitution. No vowel spelling is added.
      */
     private fun speakEnglishLetterSound(index: Int): Boolean {
         if (!enabled || !ttsReady || index !in 0..25) return false
@@ -195,10 +196,11 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         engine.setPitch(1.0f)
 
         val spoken = SpannableString(letter)
+        val args = PersistableBundle().apply {
+            putString(TtsSpan.ARG_TEXT, phoneme)
+        }
         spoken.setSpan(
-            TtsSpan.Builder("android.type.phoneme")
-                .setStringArgument("android.arg.phoneme", phoneme)
-                .build(),
+            TtsSpan(TtsSpan.TYPE_TEXT, args),
             0,
             spoken.length,
             SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -217,7 +219,7 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         val arNames = listOf("الألف","الباء","التاء","الثاء","الجيم","الحاء","الخاء","الدال","الذال","الراء","الزاي","السين","الشين","الصاد","الضاد","الطاء","الظاء","العين","الغين","الفاء","القاف","الكاف","اللام","الميم","النون","الهاء","الواو","الياء")
 
         // Kept only as a guard for callers that resolve this method directly;
-        // playRequired() handles English letter sounds through phoneme metadata.
+        // playRequired() handles English letter sounds through TtsSpan metadata.
         Regex("en_letter_(\\d{2})_sound").matchEntire(name)?.let {
             val i = it.groupValues[1].toInt() - 1
             if (i in enLetters.indices) return enLetters[i].toString() to "en"

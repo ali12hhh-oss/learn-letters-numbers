@@ -119,8 +119,24 @@ internal fun LettersScreen(
                         FormButton("كسرة", vowel == Vowel.KASRA) { vowel = Vowel.KASRA; onTap() }
                     }
                 }
-                Spacer(Modifier.height(10.dp))
-                Box(Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFDDF5FF))), RoundedCornerShape(30.dp)).border(4.dp, current.color, RoundedCornerShape(30.dp)).clickable {
+                Spacer(Modifier.height(7.dp))
+      Text("الحروف", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+      androidx.compose.foundation.lazy.LazyRow(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(5.dp),
+          contentPadding = PaddingValues(horizontal = 2.dp)
+      ) {
+          items(arabicLetters.size) { i ->
+              val item = arabicLetters[i]
+              Box(
+                  Modifier.size(44.dp).background(item.color.copy(alpha = .16f), RoundedCornerShape(12.dp))
+                      .clickable { index = i; onTap() },
+                  contentAlignment = Alignment.Center
+              ) { Text(item.letter, fontSize = 21.sp, fontWeight = FontWeight.Black, color = item.color) }
+          }
+      }
+      Spacer(Modifier.height(7.dp))
+      Box(Modifier.fillMaxWidth().weight(1f).shadow(12.dp, RoundedCornerShape(30.dp)).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFDDF5FF))), RoundedCornerShape(30.dp)).border(4.dp, current.color, RoundedCornerShape(30.dp)).clickable {
                     if (soundsEnabled()) {
                         if (mode == LetterMode.FORMS) playArabicLetterSound(audio, index + 1) else playArabicVowelSound(audio, index + 1, vowel)
                     }

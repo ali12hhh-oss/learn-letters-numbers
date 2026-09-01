@@ -104,28 +104,18 @@ private fun GameHubScreen(onBack: () -> Unit, onGameSelected: (LearningGame) -> 
         })
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 14.dp)) {
-            Card(Modifier.fillMaxWidth().padding(top = 8.dp), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                Column(Modifier.padding(20.dp)) {
-                    Text("مستعد للتحدي؟ 🚀", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.height(5.dp))
-                    Text("اختر لعبتك، افتح المستويات، اجمع النجوم، وابنِ سلسلة انتصاراتك!", fontSize = 15.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Text("🏅 تقدمك: $completed / ${games.size * gameLevels.size} مراحل مكتملة", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    if (dailyScore > 0) Text("🌟 أفضل نتيجة يومية: $dailyScore", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text("اختر الفئة", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                categories.take(4).forEach { c -> FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 12.sp) }) }
-            }
-            Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                categories.drop(4).forEach { c -> FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 12.sp) }) }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text("الألعاب", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+  androidx.compose.foundation.lazy.LazyRow(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(6.dp),
+      contentPadding = PaddingValues(horizontal = 2.dp)
+  ) {
+      items(categories) { c ->
+          FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c, fontSize = 12.sp) })
+      }
+  }
+  Spacer(Modifier.height(5.dp))
+  Text("الألعاب", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(modifier = Modifier.weight(1f).fillMaxWidth(), columns = GridCells.Fixed(2), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(visibleGames, key = { it.id }) { game -> GameCard(game, context) { onGameSelected(game) } }
@@ -139,7 +129,7 @@ private fun GameCard(game: LearningGame, context: Context, onClick: () -> Unit) 
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) .94f else 1f, tween(110), label = "gameCardScale")
     val best = gameLevels.maxOfOrNull { prefs(context).getInt(bestScoreKey(game, it.number), 0) } ?: 0
-    Card(Modifier.fillMaxWidth().height(180.dp).scale(scale).clickable { pressed = true; onClick(); pressed = false }, shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = game.color), elevation = CardDefaults.cardElevation(7.dp)) {
+    Card(Modifier.fillMaxWidth().height(205.dp).scale(scale).clickable { pressed = true; onClick(); pressed = false }, shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = game.color), elevation = CardDefaults.cardElevation(7.dp)) {
         Column(Modifier.fillMaxSize().padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(game.icon, fontSize = 45.sp)
             Spacer(Modifier.height(4.dp))

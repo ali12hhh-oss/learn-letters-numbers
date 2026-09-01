@@ -72,11 +72,11 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
             Spacer(Modifier.height(10.dp))
             Text("اجمع النجوم من التعلم والكتابة، ثم اختر مكافآتك وألقابك.", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 16.sp)
             Spacer(Modifier.height(12.dp))
-            Text("🎁 المكافآت", fontSize = 23.sp, fontWeight = FontWeight.Black)
+            Text("🎁 المكافآت والألقاب", fontSize = 23.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(330.dp),
                 verticalArrangement = Arrangement.spacedBy(9.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)
             ) {
                 items(rewardItems) { item ->
@@ -111,7 +111,7 @@ fun RewardStoreScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (Stri
             Spacer(Modifier.height(6.dp))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(620.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp), horizontalArrangement = Arrangement.spacedBy(7.dp),
                 contentPadding = PaddingValues(bottom = 8.dp)
             ) {

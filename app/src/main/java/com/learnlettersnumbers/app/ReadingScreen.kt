@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -47,6 +46,7 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
     var inkColor by remember { mutableStateOf(Color(0xFF3F51B5)) }
     var strokes by remember { mutableStateOf(emptyList<ReadingStroke>()) }
     var current by remember { mutableStateOf(emptyList<Offset>()) }
+    var showIsolatedLetters by remember { mutableStateOf(false) }
 
     val total = when (mode) { ReadingMode.LETTERS -> 28; ReadingMode.NUMBERS -> 100; ReadingMode.WORDS -> readingWords.size }
     val currentIndex = index.coerceIn(0, total - 1)
@@ -80,16 +80,26 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
                 Text("القراءة والكتابة", fontSize = 26.sp, fontWeight = FontWeight.Black, color = Color(0xFF155B83))
             }
             Row(Modifier.fillMaxWidth().height(54.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                ReadingModeButton("الحروف", mode == ReadingMode.LETTERS, Modifier.weight(1f)) { mode = ReadingMode.LETTERS; index = 0; clear(); onTap() }
-                ReadingModeButton("الأرقام", mode == ReadingMode.NUMBERS, Modifier.weight(1f)) { mode = ReadingMode.NUMBERS; index = 0; clear(); onTap() }
-                ReadingModeButton("كلمات", mode == ReadingMode.WORDS, Modifier.weight(1f)) { mode = ReadingMode.WORDS; index = 0; clear(); onTap() }
+                ReadingModeButton("الحروف", mode == ReadingMode.LETTERS, Modifier.weight(1f)) { mode = ReadingMode.LETTERS; index = 0; clear(); showIsolatedLetters = false; onTap() }
+                ReadingModeButton("الأرقام", mode == ReadingMode.NUMBERS, Modifier.weight(1f)) { mode = ReadingMode.NUMBERS; index = 0; clear(); showIsolatedLetters = false; onTap() }
+                ReadingModeButton("كلمات", mode == ReadingMode.WORDS, Modifier.weight(1f)) { mode = ReadingMode.WORDS; index = 0; clear(); showIsolatedLetters = false; onTap() }
             }
             if (mode == ReadingMode.LETTERS) {
                 Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth().height(50.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    ReadingIsolatedLettersButton(showIsolatedLetters, Modifier.weight(1f)) { showIsolatedLetters = !showIsolatedLetters; onTap() }
                     ReadingFormButton("أولي", form == ReadingLetterForm.INITIAL, Color(0xFF4C8BF5), Modifier.weight(1f)) { form = ReadingLetterForm.INITIAL; onTap() }
                     ReadingFormButton("وسطي", form == ReadingLetterForm.MEDIAL, Color(0xFFFFA726), Modifier.weight(1f)) { form = ReadingLetterForm.MEDIAL; onTap() }
                     ReadingFormButton("أخري", form == ReadingLetterForm.FINAL, Color(0xFF43A047), Modifier.weight(1f)) { form = ReadingLetterForm.FINAL; onTap() }
+                }
+                if (showIsolatedLetters) {
+                    Spacer(Modifier.height(4.dp))
+                    Text("الحروف المنفصلة", Modifier.fillMaxWidth(), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End)
+                    Row(Modifier.fillMaxWidth().height(42.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        readingArabicLetters.forEachIndexed { i, letter ->
+                            OutlinedButton(onClick = { index = i; clear(); onTap() }, modifier = Modifier.weight(1f).height(42.dp), contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(10.dp)) { Text(letter, fontSize = 18.sp, fontWeight = FontWeight.Black) }
+                        }
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth().height(50.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -99,32 +109,12 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
             }
             Card(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(25.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF7FBFF)), elevation = CardDefaults.cardElevation(9.dp)) {
                 Column(Modifier.fillMaxSize().padding(6.dp)) {
-                    Canvas(
-                        Modifier.fillMaxWidth().weight(1f)
-                            .background(Color.White, RoundedCornerShape(20.dp))
-                            .border(2.dp, Color(0xFFD9E8F0), RoundedCornerShape(20.dp))
-                            .pointerInput(inkColor) {
-                                detectTapGestures(onTap = { point ->
-                                    strokes = strokes + ReadingStroke(listOf(point), inkColor)
-                                    onTap()
-                                })
-                            }
-                            .pointerInput(inkColor) {
-                                detectDragGestures(
-                                    onDragStart = { point -> current = listOf(point) },
-                                    onDrag = { change, _ -> change.consumePositionChange(); current = current + change.position },
-                                    onDragEnd = { if (current.isNotEmpty()) strokes = strokes + ReadingStroke(current, inkColor); current = emptyList() },
-                                    onDragCancel = { current = emptyList() }
-                                )
-                            }
-                    ) {
-                        strokes.forEach { s ->
-                            if (s.points.size == 1) {
-                                drawCircle(color = s.color, radius = 12f, center = s.points.first())
-                            } else {
-                                drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 36f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                            }
-                        }
+                    Canvas(Modifier.fillMaxWidth().weight(1f).background(Color.White, RoundedCornerShape(20.dp)).border(2.dp, Color(0xFFD9E8F0), RoundedCornerShape(20.dp)).pointerInput(inkColor) {
+                        detectTapGestures(onTap = { point -> strokes = strokes + ReadingStroke(listOf(point), inkColor); onTap() })
+                    }.pointerInput(inkColor) {
+                        detectDragGestures(onDragStart = { point -> current = listOf(point) }, onDrag = { change, _ -> change.consumePositionChange(); current = current + change.position }, onDragEnd = { if (current.isNotEmpty()) strokes = strokes + ReadingStroke(current, inkColor); current = emptyList() }, onDragCancel = { current = emptyList() })
+                    }) {
+                        strokes.forEach { s -> if (s.points.size == 1) drawCircle(color = s.color, radius = 12f, center = s.points.first()) else drawPath(pathOfReading(s.points), color = s.color, style = Stroke(width = 36f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
                         if (current.size == 1) drawCircle(color = inkColor, radius = 12f, center = current.first())
                         if (current.size > 1) drawPath(pathOfReading(current), color = inkColor, style = Stroke(width = 36f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
@@ -159,28 +149,14 @@ internal fun ReadingScreen(audio: LocalAudioManager, onTap: () -> Unit, onBack: 
     }
 }
 
-private fun pathOfReading(points: List<Offset>): Path = Path().apply {
-    if (points.isEmpty()) return@apply
-    moveTo(points.first().x, points.first().y)
-    for (i in 1 until points.size) lineTo(points[i].x, points[i].y)
-}
+private fun pathOfReading(points: List<Offset>): Path = Path().apply { if (points.isEmpty()) return@apply; moveTo(points.first().x, points.first().y); for (i in 1 until points.size) lineTo(points[i].x, points[i].y) }
 
-@Composable
-private fun ReadingModeButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) Color(0xFF4C8BF5) else Color.White, contentColor = if (selected) Color.White else Color(0xFF315CFF))) { Text(text, fontWeight = FontWeight.ExtraBold) }
-}
+@Composable private fun ReadingModeButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) { Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) Color(0xFF4C8BF5) else Color.White, contentColor = if (selected) Color.White else Color(0xFF315CFF))) { Text(text, fontWeight = FontWeight.ExtraBold) } }
 
-@Composable
-private fun ReadingFormButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else Color.White, contentColor = if (selected) Color.White else color)) { Text(text, fontWeight = FontWeight.ExtraBold) }
-}
+@Composable private fun ReadingIsolatedLettersButton(selected: Boolean, modifier: Modifier, onClick: () -> Unit) { Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) Color(0xFF26A69A) else Color.White, contentColor = if (selected) Color.White else Color(0xFF166B61))) { Text("الحروف المنفصلة", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center) } }
 
-@Composable
-private fun ReadingColorButton(text: String, color: Color, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else Color.White, contentColor = if (selected) Color.White else color)) { Text(text, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-}
+@Composable private fun ReadingFormButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) { Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else Color.White, contentColor = if (selected) Color.White else color)) { Text(text, fontWeight = FontWeight.ExtraBold) } }
 
-@Composable
-private fun ReadingNavButton(text: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = color)) { Text(text, fontWeight = FontWeight.ExtraBold) }
-}
+@Composable private fun ReadingColorButton(text: String, color: Color, selected: Boolean, modifier: Modifier, onClick: () -> Unit) { Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else Color.White, contentColor = if (selected) Color.White else color)) { Text(text, fontSize = 11.sp, fontWeight = FontWeight.Bold) } }
+
+@Composable private fun ReadingNavButton(text: String, color: Color, modifier: Modifier, onClick: () -> Unit) { Button(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = color)) { Text(text, fontWeight = FontWeight.ExtraBold) } }

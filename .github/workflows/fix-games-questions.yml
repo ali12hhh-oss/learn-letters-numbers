@@ -1,0 +1,103 @@
+name: Repair games questions
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repair game question logic
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt')
+          s = p.read_text(encoding='utf-8')
+
+          old_count = '''        "count" -> {
+            val max = 7 + level * 3
+            val a = random.nextInt(2, max + 1)
+            RoundQuestion("كم نجمة؟", listOf(a, a + 1, (a - 1).coerceAtLeast(1), a + 2).distinct().map(Int::toString).shuffled(random), a.toString())
+        }'''
+          new_count = '''        "count" -> {
+            // The visual star count and the correct answer use the exact same deterministic value.
+            // This prevents showing 3 stars while treating another option as correct.
+            val max = 7 + level * 2
+            val a = index % (max - 1) + 2
+            val options = listOf(a, a + 1, (a - 1).coerceAtLeast(1), a + 2).distinct()
+            RoundQuestion("كم نجمة؟", options.map(Int::toString).shuffled(random), a.toString())
+        }'''
+          if old_count not in s:
+              raise SystemExit('count block not found')
+          s = s.replace(old_count, new_count, 1)
+
+          old_shapes = '''        "shapes" -> {
+            val a = letters[(index + level + abs(seed)) % letters.size]
+            RoundQuestion("أي حرف تراه؟", (listOf(a) + List(3) { otherLetter(a) }).distinct().shuffled(random), a)
+        }'''
+          new_shapes = '''        "shapes" -> {
+            val a = letters[(index + level + abs(seed)) % letters.size]
+            // The target letter itself is displayed prominently in the question panel.
+            RoundQuestion("اختر الحرف الظاهر", (listOf(a) + List(3) { otherLetter(a) }).distinct().shuffled(random), a, a)
+        }'''
+          if old_shapes not in s:
+              raise SystemExit('shapes block not found')
+          s = s.replace(old_shapes, new_shapes, 1)
+
+          old_panel = '''                Text(game.icon, fontSize = 42.sp)
+                Text(question.prompt, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                if (game.id == "listen") {
+                    Spacer(Modifier.height(5.dp))
+                    FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Text("🔊 استمع") }
+                } else if (onSpeak != null) {
+                    Spacer(Modifier.height(5.dp))
+                    FilledTonalButton(onClick = { onSpeak.invoke(question.spoken, "ar") }) { Text("🔊 اسمع السؤال") }
+                }'''
+          new_panel = '''                if (game.id == "shapes") {
+                    Text(question.answer, fontSize = 72.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(4.dp))
+                    Text(question.prompt, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                    if (onSpeak != null) {
+                        Spacer(Modifier.height(5.dp))
+                        FilledTonalButton(onClick = { onSpeak.invoke(question.spoken, "ar") }) { Text("🔊 استمع لصوت الحرف") }
+                    }
+                } else {
+                    Text(game.icon, fontSize = 42.sp)
+                    Text(question.prompt, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                    if (game.id == "listen") {
+                        Spacer(Modifier.height(5.dp))
+                        FilledTonalButton(onClick = { onSpeak?.invoke(question.spoken, "ar") }) { Text("🔊 استمع") }
+                    } else if (onSpeak != null) {
+                        Spacer(Modifier.height(5.dp))
+                        FilledTonalButton(onClick = { onSpeak.invoke(question.spoken, "ar") }) { Text("🔊 اسمع السؤال") }
+                    }
+                }'''
+          if old_panel not in s:
+              raise SystemExit('question panel block not found')
+          s = s.replace(old_panel, new_panel, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Verify changes
+        run: |
+          grep -n 'visual star count' app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
+          grep -n 'استمع لصوت الحرف' app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
+          ./gradlew lintDebug
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/learnlettersnumbers/app/GamesScreen.kt
+          git commit -m "Fix game answer consistency and letter shape questions"
+          git push
+      - name: Remove one-time workflow
+        run: |
+          git rm .github/workflows/fix-games-questions.yml
+          git commit -m "Remove one-time games repair workflow"
+          git push

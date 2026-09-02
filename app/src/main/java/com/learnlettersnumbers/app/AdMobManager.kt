@@ -3,6 +3,7 @@ package com.learnlettersnumbers.app
 import android.app.Activity
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
@@ -37,7 +38,10 @@ class AdMobManager(private val context: Context) {
             .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G)
             .build()
         MobileAds.setRequestConfiguration(configuration)
-        MobileAds.initialize(context.applicationContext)
+        MobileAds.initialize(context.applicationContext) {
+            preloadInterstitial()
+            preloadRewarded()
+        }
     }
 
     private fun interstitialUnitId(): String =
@@ -45,9 +49,6 @@ class AdMobManager(private val context: Context) {
 
     private fun rewardedUnitId(): String =
         if (BuildConfig.DEBUG) AdMobConfig.TEST_REWARDED_UNIT_ID else AdMobConfig.REWARDED_UNIT_ID
-
-    private fun bannerUnitId(): String =
-        if (BuildConfig.DEBUG) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
 
     fun preloadInterstitial() {
         if (interstitial != null) return
@@ -102,6 +103,10 @@ fun AdMobBanner(modifier: Modifier = Modifier) {
                 adUnitId = if (BuildConfig.DEBUG) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
                 loadAd(AdRequest.Builder().build())
             }
-        }
+        },
+        update = { it.resume() }
     )
+    DisposableEffect(Unit) {
+        onDispose { }
+    }
 }

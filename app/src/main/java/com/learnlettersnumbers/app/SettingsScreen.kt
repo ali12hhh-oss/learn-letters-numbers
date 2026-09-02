@@ -36,6 +36,8 @@ fun SettingsScreen(
     var showAudioTest by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val audio = remember { LocalAudioManager(context.applicationContext) }
+    val appPrefs = remember { context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE) }
+    var rating by remember { mutableIntStateOf(appPrefs.getInt("app_rating", 0)) }
 
     DisposableEffect(Unit) {
         onDispose { audio.releaseAll() }
@@ -79,9 +81,9 @@ fun SettingsScreen(
             AudioTestCard(audio, showAudioTest) { showAudioTest = !showAudioTest }
 
             InfoButton("📘 تعليم استخدام التطبيق", "شرح الأقسام والأزرار وطريقة التعلم") { showUsage = true }
-            InfoButton("🔐 الخصوصية", "البيانات المحلية وسياسة الخصوصية") { showPrivacy = true }
+            InfoButton("🔐 الخصوصية", "كيف تُحفظ بياناتك وما الذي يخص التطبيق المستخدم") { showPrivacy = true }
             InfoButton("📜 شروط الاستخدام", "قواعد استخدام التطبيق") { showTerms = true }
-            InfoButton("⭐ حول البرنامج وقيمه", "الفكرة التعليمية والأهداف والقيم") { showAbout = true }
+            InfoButton("⭐ حول البرنامج وقيمه", "الفكرة التعليمية والأهداف والقيم والتقييم") { showAbout = true }
             InfoButton("🗑️ حذف بيانات الطفل", "حذف الاسم والصورة والتقدم والنجوم والألقاب المحلية") { showDelete = true }
 
             Text("التطبيق مصمم لتعمل الميزات التعليمية الأساسية دون اتصال بالإنترنت.", fontSize = 13.sp)
@@ -98,9 +100,17 @@ English: Letters، Numbers، Learn to Write، وWriting.
 """.trimIndent()) { showUsage = false }
 
     if (showPrivacy) DetailDialog("الخصوصية", """
-يحفظ التطبيق ملف الطفل والتقدم والنجوم والألقاب محلياً على الجهاز بحسب الوظائف الموجودة.
-الميزات التعليمية الأساسية لا تتطلب اتصالاً بالإنترنت.
-قبل النشر على Google Play يجب أن تكون هناك سياسة خصوصية عامة على رابط HTTPS، وأن تطابق سياسة الخصوصية وData Safety البيانات الفعلية التي يجمعها التطبيق وأي مكتبات خارجية.
+خصوصيتك مهمة لنا، وهذه المعلومات موجهة إليك كمستخدم وولي أمر.
+
+• ملف الطفل: يحفظ التطبيق اسم الطفل وصورته المختارة داخل التطبيق محلياً على الجهاز.
+• التعلم والتقدم: يحفظ التطبيق بيانات التقدم والنجوم والإنجازات والألقاب محلياً حتى تستطيع متابعة التعلم داخل التطبيق.
+• التقييم والإعدادات: يحفظ التطبيق اختيارك للتقييم وإعدادات مثل الأصوات والمؤثرات والوضع الليلي محلياً على الجهاز.
+• لا يطلب التطبيق في أذوناته الحالية صلاحية الوصول إلى الموقع أو جهات الاتصال أو الرسائل أو الكاميرا.
+• الميزات التعليمية الأساسية تعمل دون الحاجة إلى اتصال بالإنترنت.
+• لا تضع في ملف الطفل معلومات حساسة أو معلومات لا يحتاجها التطبيق.
+• يمكنك حذف بيانات الطفل المحلية من خيار «حذف بيانات الطفل» في الإعدادات.
+
+إذا تغيرت طريقة جمع البيانات أو أضيفت خدمات خارجية في المستقبل، يجب تحديث هذه المعلومات بما يطابق ما يحدث فعلياً داخل التطبيق.
 """.trimIndent()) { showPrivacy = false }
 
     if (showTerms) DetailDialog("شروط الاستخدام", """
@@ -111,10 +121,14 @@ English: Letters، Numbers، Learn to Write، وWriting.
 يمكن حذف البيانات المحلية من زر حذف بيانات الطفل.
 """.trimIndent()) { showTerms = false }
 
-    if (showAbout) DetailDialog("حول البرنامج وقيمه", """
-تعلم الحروف والأرقام تطبيق تعليمي يركز على التعلم بالممارسة والصوت والتفاعل.
-قيمه: التعلم المرح، التدرج، التشجيع، احترام خصوصية الطفل، وتقليل الاعتماد على الإنترنت، مع إعطاء ولي الأمر صورة واضحة عن التقدم.
-""".trimIndent()) { showAbout = false }
+    if (showAbout) AboutAndRatingDialog(
+        rating = rating,
+        onRatingSelected = {
+            rating = it
+            appPrefs.edit().putInt("app_rating", it).apply()
+        },
+        onClose = { showAbout = false }
+    )
 
     if (showDelete) AlertDialog(
         onDismissRequest = { showDelete = false },
@@ -124,6 +138,50 @@ English: Letters، Numbers، Learn to Write، وWriting.
             Button(onClick = { repo.clearChildData(); showDelete = false }) { Text("حذف") }
         },
         dismissButton = { TextButton(onClick = { showDelete = false }) { Text("إلغاء") } }
+    )
+}
+
+@Composable
+private fun AboutAndRatingDialog(
+    rating: Int,
+    onRatingSelected: (Int) -> Unit,
+    onClose: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("حول البرنامج وقيمه") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(
+                    "تعلم الحروف والأرقام تطبيق تعليمي يركز على التعلم بالممارسة والصوت والتفاعل.\n\nقيمه: التعلم المرح، التدرج، التشجيع، احترام خصوصية الطفل، وتقليل الاعتماد على الإنترنت، مع إعطاء ولي الأمر صورة واضحة عن التقدم.",
+                    lineHeight = 21.sp
+                )
+                HorizontalDivider()
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("⭐ قيّم تجربتك مع التطبيق", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.Center) {
+                        (1..5).forEach { star ->
+                            TextButton(onClick = { onRatingSelected(star) }) {
+                                Text(
+                                    if (star <= rating) "★" else "☆",
+                                    fontSize = 32.sp,
+                                    color = if (star <= rating) Color(0xFFFFB300) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        if (rating == 0) "اختر من نجمة إلى خمس نجوم" else "تقييمك الحالي: $rating من 5",
+                        fontSize = 13.sp
+                    )
+                    if (rating > 0) {
+                        Text("شكراً لك على تقييمك! 💛", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        },
+        confirmButton = { Button(onClick = onClose) { Text("حسناً") } }
     )
 }
 

@@ -2,6 +2,7 @@
 
 package com.learnlettersnumbers.app
 
+import android.app.Activity
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -269,6 +270,9 @@ private fun ProfessionalGameScreen(game: LearningGame, level: Int, onBack: () ->
     var sessionCompleted by remember { mutableStateOf(false) }
     val seed = remember { Random.nextInt() }
     val context = LocalContext.current
+    val activity = context as? Activity
+    val adManager = remember(context) { AdMobManager(context.applicationContext) }
+    val adFrequency = remember(context) { AdFrequencyController(context.applicationContext) }
     val total = TOTAL_ROUNDS
     val question = remember(game.id, level, round, seed) { questionFor(game, round, level, seed) }
     val progress = ((round + if (answered) 1 else 0).toFloat() / total.toFloat()).coerceIn(0f, 1f)
@@ -324,7 +328,12 @@ private fun ProfessionalGameScreen(game: LearningGame, level: Int, onBack: () ->
                 p.edit().putString(DAILY_KEY, today).putInt(DAILY_SCORE_KEY, maxOf(p.getInt(DAILY_SCORE_KEY, 0), finalScore)).apply()
             }
         }
-        GameResultScreen(game, level, finalScore, correctCount, accuracy, bestStreak, completionBonus, maxOf(oldBest, finalScore), sessionCompleted, onBack) {
+        GameResultScreen(game, level, finalScore, correctCount, accuracy, bestStreak, completionBonus, maxOf(oldBest, finalScore), sessionCompleted, onBack = {
+            if (sessionCompleted && activity != null) {
+                adFrequency.showAfterCompletion(activity, adManager, AdFrequencyController.CompletionType.GAME)
+            }
+            onBack()
+        }) {
             round = 0; score = 0; correctCount = 0; streak = 0; bestStreak = 0; lives = 3; timeLeft = timeLimit; answered = false; selected = null; timedOut = false; lastGained = 0; finished = false; sessionCompleted = false; paused = false
         }
         return

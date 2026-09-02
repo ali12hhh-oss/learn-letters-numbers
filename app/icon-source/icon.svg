@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+ <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BDEBFA"/><stop offset="1" stop-color="#73CDE6"/></linearGradient>
+ <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#9AD85B"/><stop offset="1" stop-color="#55AE49"/></linearGradient>
+ <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#42A9E8"/><stop offset="1" stop-color="#2673C9"/></linearGradient>
+ <linearGradient id="pink" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FF76A9"/><stop offset="1" stop-color="#E94E87"/></linearGradient>
+ <linearGradient id="yellow" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFD85A"/><stop offset="1" stop-color="#F2AE27"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="14" stdDeviation="12" flood-opacity=".22"/></filter>
+</defs>
+<rect width="1024" height="1024" rx="150" fill="#FFF3D1"/>
+<rect x="42" y="42" width="940" height="940" rx="125" fill="url(#sky)"/>
+<circle cx="150" cy="150" r="75" fill="#FFEBA6" opacity=".9"/>
+<g fill="#fff" opacity=".9"><circle cx="840" cy="155" r="42"/><circle cx="880" cy="160" r="52"/><circle cx="910" cy="145" r="32"/><rect x="795" y="155" width="150" height="55" rx="28"/></g>
+<path d="M42 760 Q250 640 470 750 T982 720 V982 H42Z" fill="url(#green)"/>
+<g fill="#fff"><path d="M155 185 l12 25 28 3-21 18 6 28-25-14-25 14 6-28-21-18 28-3z"/><path d="M770 300 l10 20 23 3-17 15 5 23-21-12-21 12 5-23-17-15 23-3z"/><path d="M650 150 l8 16 18 2-13 12 4 18-17-9-17 9 4-18-13-12 18-2z"/></g>
+<g filter="url(#shadow)" font-family="Noto Sans Arabic, DejaVu Sans, sans-serif" font-weight="900" text-anchor="middle">
+ <text x="510" y="360" font-size="250" fill="url(#blue)" stroke="#FFF3D1" stroke-width="18" paint-order="stroke">أ</text>
+ <text x="330" y="515" font-size="230" fill="url(#pink)" stroke="#FFF3D1" stroke-width="18" paint-order="stroke">ب</text>
+ <text x="690" y="520" font-size="230" fill="url(#green)" stroke="#FFF3D1" stroke-width="18" paint-order="stroke">ت</text>
+</g>
+<g filter="url(#shadow)" font-family="DejaVu Sans, sans-serif" font-weight="900" text-anchor="middle">
+ <text x="340" y="805" font-size="250" fill="url(#yellow)" stroke="#FFF3D1" stroke-width="18" paint-order="stroke">1</text>
+ <text x="515" y="835" font-size="270" fill="url(#blue)" stroke="#FFF3D1" stroke-width="18" paint-order="stroke">2</text>
+ <text x="700" y="805" font-size="250" fill="#9D6FE8" stroke="#FFF3D1" stroke-width="18" paint-order="stroke">3</text>
+</g>
+<g filter="url(#shadow)"><path d="M175 825 Q350 765 512 850 Q675 765 849 825 L825 900 Q670 840 512 915 Q354 840 199 900Z" fill="#FFFDF2" stroke="#D6C9A7" stroke-width="8"/><path d="M185 900 Q350 840 512 915 Q675 840 839 900 L825 935 Q670 875 512 950 Q354 875 199 935Z" fill="#4B93D5"/></g>
+<g filter="url(#shadow)"><circle cx="150" cy="420" r="66" fill="#FF756F"/><path d="M120 420 h55 l-12-18 v65 l12-18 h-55Z" fill="white"/><path d="M181 397 q34 23 0 46 M195 382 q58 38 0 76" fill="none" stroke="white" stroke-width="12" stroke-linecap="round"/></g>
+<g filter="url(#shadow)"><circle cx="870" cy="420" r="66" fill="#5AC6B1"/><path d="M838 456 l19-53 46-18-19 46z" fill="#FFF3D1"/><path d="M840 458 l-14 22 26-12" fill="#FFF3D1"/></g>
+<g filter="url(#shadow)"><rect x="180" y="885" width="664" height="82" rx="40" fill="#2E9DA6"/><text x="512" y="940" font-family="Noto Sans Arabic, DejaVu Sans, sans-serif" font-size="42" font-weight="700" text-anchor="middle" fill="white">تعلم الحروف والأرقام</text></g>
+</svg>

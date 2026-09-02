@@ -5,6 +5,9 @@
         android:theme="@style/Theme.LearnLettersNumbers"
         android:label="تعلم الحروف والأرقام"
         android:supportsRtl="true">
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-8995513369904529~3340659334" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

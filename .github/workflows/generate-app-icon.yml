@@ -1,0 +1,46 @@
+name: Generate Android launcher PNGs
+
+on:
+  push:
+    paths:
+      - 'app/icon-source/icon.svg'
+      - '.github/workflows/generate-app-icon.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate PNG launcher assets
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick librsvg2-bin
+          mkdir -p app/src/main/res/mipmap-mdpi
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/mipmap-xhdpi
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+          mkdir -p app/src/main/res/drawable-nodpi
+          rsvg-convert -w 48 -h 48 app/icon-source/icon.svg -o app/src/main/res/mipmap-mdpi/ic_launcher.png
+          rsvg-convert -w 72 -h 72 app/icon-source/icon.svg -o app/src/main/res/mipmap-hdpi/ic_launcher.png
+          rsvg-convert -w 96 -h 96 app/icon-source/icon.svg -o app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          rsvg-convert -w 144 -h 144 app/icon-source/icon.svg -o app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          rsvg-convert -w 192 -h 192 app/icon-source/icon.svg -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          rsvg-convert -w 512 -h 512 app/icon-source/icon.svg -o app/src/main/res/drawable-nodpi/ic_launcher_512.png
+
+      - name: Commit generated assets
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/res/mipmap-* app/src/main/res/drawable-nodpi/ic_launcher_512.png
+          if git diff --cached --quiet; then
+            echo 'No icon changes to commit.'
+          else
+            git commit -m 'Add new educational launcher icon PNG assets'
+            git push
+          fi

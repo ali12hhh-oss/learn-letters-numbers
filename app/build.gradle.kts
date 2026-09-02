@@ -1,4 +1,5 @@
 plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
+
 android {
     namespace = "com.learnlettersnumbers.app"
     compileSdk = 36
@@ -11,6 +12,27 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    // Release signing is enabled only when the keystore and credentials are
+    // supplied through environment variables / local properties. Private
+    // signing material is intentionally never stored in Git.
+    val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
+    val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
+    val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
+    val releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+
+    if (!releaseKeystorePath.isNullOrBlank() && !releaseStorePassword.isNullOrBlank() &&
+        !releaseKeyAlias.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()) {
+        signingConfigs.create("release") {
+            storeFile = file(releaseKeystorePath)
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+        }
+        buildTypes.getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 }
 

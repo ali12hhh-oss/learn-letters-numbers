@@ -27,10 +27,6 @@ object AdMobConfig {
     const val TEST_REWARDED_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
 }
 
-private object AdMobBuildMode {
-    const val USE_TEST_ADS = true
-}
-
 class AdMobManager(private val context: Context) {
     private var interstitial: InterstitialAd? = null
     private var rewarded: RewardedAd? = null
@@ -44,8 +40,14 @@ class AdMobManager(private val context: Context) {
         MobileAds.initialize(context.applicationContext)
     }
 
-    private fun interstitialUnitId() = if (AdMobBuildMode.USE_TEST_ADS) AdMobConfig.TEST_INTERSTITIAL_UNIT_ID else AdMobConfig.INTERSTITIAL_UNIT_ID
-    private fun rewardedUnitId() = if (AdMobBuildMode.USE_TEST_ADS) AdMobConfig.TEST_REWARDED_UNIT_ID else AdMobConfig.REWARDED_UNIT_ID
+    private fun interstitialUnitId(): String =
+        if (BuildConfig.DEBUG) AdMobConfig.TEST_INTERSTITIAL_UNIT_ID else AdMobConfig.INTERSTITIAL_UNIT_ID
+
+    private fun rewardedUnitId(): String =
+        if (BuildConfig.DEBUG) AdMobConfig.TEST_REWARDED_UNIT_ID else AdMobConfig.REWARDED_UNIT_ID
+
+    private fun bannerUnitId(): String =
+        if (BuildConfig.DEBUG) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
 
     fun preloadInterstitial() {
         if (interstitial != null) return
@@ -97,7 +99,7 @@ fun AdMobBanner(modifier: Modifier = Modifier) {
         factory = { context ->
             AdView(context).apply {
                 setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, 360))
-                adUnitId = if (AdMobBuildMode.USE_TEST_ADS) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
+                adUnitId = if (BuildConfig.DEBUG) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
                 loadAd(AdRequest.Builder().build())
             }
         }

@@ -18,10 +18,10 @@ class AdFrequencyController(context: Context) {
 
     enum class CompletionType { STORY, GAME, TEST, MAIN_SECTION }
 
-    fun recordStoryCompleted(): Boolean = recordAndCheck(STORY_COUNT, 3)
-    fun recordGameCompleted(): Boolean = recordAndCheck(GAME_COUNT, 3)
-    fun recordTestCompleted(): Boolean = recordAndCheck(TEST_COUNT, 2)
-    fun recordMainSectionTransition(): Boolean = recordAndCheck(SECTION_TRANSITIONS, 4)
+    fun recordStoryCompleted(): Boolean = recordCompletion(STORY_COUNT, 3)
+    fun recordGameCompleted(): Boolean = recordCompletion(GAME_COUNT, 3)
+    fun recordTestCompleted(): Boolean = recordCompletion(TEST_COUNT, 2)
+    fun recordMainSectionTransition(): Boolean = recordCompletion(SECTION_TRANSITIONS, 4)
 
     fun canShowInterstitial(now: Long = System.currentTimeMillis()): Boolean =
         now - prefs.getLong(LAST_INTERSTITIAL_AT, 0L) >= MIN_GAP_MS
@@ -41,19 +41,28 @@ class AdFrequencyController(context: Context) {
             CompletionType.TEST -> recordTestCompleted()
             CompletionType.MAIN_SECTION -> recordMainSectionTransition()
         }
+
         if (!thresholdReached || !canShowInterstitial()) return false
         if (!ads.showInterstitial(activity)) return false
+
+        resetCount(completionType)
         markInterstitialShown()
         return true
     }
 
-    private fun recordAndCheck(key: String, threshold: Int): Boolean {
-        val count = prefs.getInt(key, 0) + 1
-        if (count < threshold) {
-            prefs.edit().putInt(key, count).apply()
-            return false
+    private fun recordCompletion(key: String, threshold: Int): Boolean {
+        val count = (prefs.getInt(key, 0) + 1).coerceAtMost(threshold)
+        prefs.edit().putInt(key, count).apply()
+        return count >= threshold
+    }
+
+    private fun resetCount(type: CompletionType) {
+        val key = when (type) {
+            CompletionType.STORY -> STORY_COUNT
+            CompletionType.GAME -> GAME_COUNT
+            CompletionType.TEST -> TEST_COUNT
+            CompletionType.MAIN_SECTION -> SECTION_TRANSITIONS
         }
         prefs.edit().putInt(key, 0).apply()
-        return canShowInterstitial()
     }
 }

@@ -1,11 +1,9 @@
 package com.learnlettersnumbers.app
 
+import android.app.Activity
 import android.content.Context
 
-/**
- * Central frequency rules for non-intrusive interstitial ads.
- * Learning screens never call this controller directly.
- */
+/** Central frequency rules for non-intrusive interstitial ads. */
 class AdFrequencyController(context: Context) {
     private val prefs = context.getSharedPreferences("ad_frequency", Context.MODE_PRIVATE)
 
@@ -18,10 +16,11 @@ class AdFrequencyController(context: Context) {
         private const val MIN_GAP_MS = 5 * 60 * 1000L
     }
 
+    enum class CompletionType { STORY, GAME, TEST, MAIN_SECTION }
+
     fun recordStoryCompleted(): Boolean = recordAndCheck(STORY_COUNT, 3)
     fun recordGameCompleted(): Boolean = recordAndCheck(GAME_COUNT, 3)
     fun recordTestCompleted(): Boolean = recordAndCheck(TEST_COUNT, 2)
-
     fun recordMainSectionTransition(): Boolean = recordAndCheck(SECTION_TRANSITIONS, 4)
 
     fun canShowInterstitial(now: Long = System.currentTimeMillis()): Boolean =
@@ -29,6 +28,23 @@ class AdFrequencyController(context: Context) {
 
     fun markInterstitialShown(now: Long = System.currentTimeMillis()) {
         prefs.edit().putLong(LAST_INTERSTITIAL_AT, now).apply()
+    }
+
+    fun showAfterCompletion(
+        activity: Activity,
+        ads: AdMobManager,
+        completionType: CompletionType
+    ): Boolean {
+        val thresholdReached = when (completionType) {
+            CompletionType.STORY -> recordStoryCompleted()
+            CompletionType.GAME -> recordGameCompleted()
+            CompletionType.TEST -> recordTestCompleted()
+            CompletionType.MAIN_SECTION -> recordMainSectionTransition()
+        }
+        if (!thresholdReached || !canShowInterstitial()) return false
+        if (!ads.showInterstitial(activity)) return false
+        markInterstitialShown()
+        return true
     }
 
     private fun recordAndCheck(key: String, threshold: Int): Boolean {

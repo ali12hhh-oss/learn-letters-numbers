@@ -3,7 +3,6 @@ package com.learnlettersnumbers.app
 import android.app.Activity
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
@@ -12,7 +11,6 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.RewardItem
 import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
@@ -24,12 +22,14 @@ object AdMobConfig {
     const val BANNER_UNIT_ID = "ca-app-pub-8995513369904529/8602443507"
     const val INTERSTITIAL_UNIT_ID = "ca-app-pub-8995513369904529/6306462974"
     const val REWARDED_UNIT_ID = "ca-app-pub-8995513369904529/1054136299"
-
-    // Debug builds use Google's official test units. Release builds use the
-    // AdMob units belonging to this application.
     const val TEST_BANNER_UNIT_ID = "ca-app-pub-3940256099942544/9214589741"
     const val TEST_INTERSTITIAL_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
     const val TEST_REWARDED_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+}
+
+private object AdMobBuildMode {
+    // Keep test ads enabled until the first verified release build.
+    const val USE_TEST_ADS = true
 }
 
 class AdMobManager(private val context: Context) {
@@ -37,48 +37,33 @@ class AdMobManager(private val context: Context) {
     private var rewarded: RewardedAd? = null
 
     init {
-        val requestConfiguration = RequestConfiguration.Builder()
+        val configuration = RequestConfiguration.Builder()
             .setTagForChildDirectedTreatment(RequestConfiguration.TAG_FOR_CHILD_DIRECTED_TREATMENT_TRUE)
             .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G)
             .build()
-        MobileAds.setRequestConfiguration(requestConfiguration)
+        MobileAds.setRequestConfiguration(configuration)
         MobileAds.initialize(context.applicationContext)
     }
 
-    private fun interstitialUnitId(): String =
-        if (BuildConfig.DEBUG) AdMobConfig.TEST_INTERSTITIAL_UNIT_ID else AdMobConfig.INTERSTITIAL_UNIT_ID
-
-    private fun rewardedUnitId(): String =
-        if (BuildConfig.DEBUG) AdMobConfig.TEST_REWARDED_UNIT_ID else AdMobConfig.REWARDED_UNIT_ID
+    private fun interstitialUnitId() = if (AdMobBuildMode.USE_TEST_ADS) AdMobConfig.TEST_INTERSTITIAL_UNIT_ID else AdMobConfig.INTERSTITIAL_UNIT_ID
+    private fun rewardedUnitId() = if (AdMobBuildMode.USE_TEST_ADS) AdMobConfig.TEST_REWARDED_UNIT_ID else AdMobConfig.REWARDED_UNIT_ID
 
     fun preloadInterstitial() {
         if (interstitial != null) return
-        InterstitialAd.load(context, interstitialUnitId(), AdRequest.Builder().build(),
-            object : InterstitialAdLoadCallback() {
-                override fun onAdLoaded(ad: InterstitialAd) {
-                    interstitial = ad
-                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                        override fun onAdDismissedFullScreenContent() {
-                            interstitial = null
-                            preloadInterstitial()
-                        }
-                        override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
-                            interstitial = null
-                            preloadInterstitial()
-                        }
-                    }
+        InterstitialAd.load(context, interstitialUnitId(), AdRequest.Builder().build(), object : InterstitialAdLoadCallback() {
+            override fun onAdLoaded(ad: InterstitialAd) {
+                interstitial = ad
+                ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                    override fun onAdDismissedFullScreenContent() { interstitial = null; preloadInterstitial() }
+                    override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) { interstitial = null; preloadInterstitial() }
                 }
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    interstitial = null
-                }
-            })
+            }
+            override fun onAdFailedToLoad(error: LoadAdError) { interstitial = null }
+        })
     }
 
     fun showInterstitial(activity: Activity): Boolean {
-        val ad = interstitial ?: run {
-            preloadInterstitial()
-            return false
-        }
+        val ad = interstitial ?: run { preloadInterstitial(); return false }
         interstitial = null
         ad.show(activity)
         return true
@@ -86,40 +71,23 @@ class AdMobManager(private val context: Context) {
 
     fun preloadRewarded() {
         if (rewarded != null) return
-        RewardedAd.load(context, rewardedUnitId(), AdRequest.Builder().build(),
-            object : RewardedAdLoadCallback() {
-                override fun onAdLoaded(ad: RewardedAd) {
-                    rewarded = ad
-                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                        override fun onAdDismissedFullScreenContent() {
-                            rewarded = null
-                            preloadRewarded()
-                        }
-                        override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
-                            rewarded = null
-                            preloadRewarded()
-                        }
-                    }
+        RewardedAd.load(context, rewardedUnitId(), AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
+            override fun onAdLoaded(ad: RewardedAd) {
+                rewarded = ad
+                ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                    override fun onAdDismissedFullScreenContent() { rewarded = null; preloadRewarded() }
+                    override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) { rewarded = null; preloadRewarded() }
                 }
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    rewarded = null
-                }
-            })
+            }
+            override fun onAdFailedToLoad(error: LoadAdError) { rewarded = null }
+        })
     }
 
-    fun showRewarded(activity: Activity, onReward: (RewardItem) -> Unit): Boolean {
-        val ad = rewarded ?: run {
-            preloadRewarded()
-            return false
-        }
+    fun showRewarded(activity: Activity, onReward: () -> Unit): Boolean {
+        val ad = rewarded ?: run { preloadRewarded(); return false }
         rewarded = null
-        ad.show(activity) { reward -> onReward(reward) }
+        ad.show(activity) { onReward() }
         return true
-    }
-
-    fun destroy() {
-        interstitial = null
-        rewarded = null
     }
 }
 
@@ -130,7 +98,7 @@ fun AdMobBanner(modifier: Modifier = Modifier) {
         factory = { context ->
             AdView(context).apply {
                 setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, 360))
-                adUnitId = if (BuildConfig.DEBUG) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
+                adUnitId = if (AdMobBuildMode.USE_TEST_ADS) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
                 loadAd(AdRequest.Builder().build())
             }
         }

@@ -2,9 +2,8 @@ package com.learnlettersnumbers.app
 
 import android.app.Activity
 import android.content.Context
-import android.view.ViewGroup
-import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
@@ -13,9 +12,10 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RewardItem
+import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 
@@ -25,7 +25,7 @@ object AdMobConfig {
     const val INTERSTITIAL_UNIT_ID = "ca-app-pub-8995513369904529/6306462974"
     const val REWARDED_UNIT_ID = "ca-app-pub-8995513369904529/1054136299"
 
-    // Debug builds use Google's official test units; release builds use the
+    // Debug builds use Google's official test units. Release builds use the
     // AdMob units belonging to this application.
     const val TEST_BANNER_UNIT_ID = "ca-app-pub-3940256099942544/9214589741"
     const val TEST_INTERSTITIAL_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
@@ -37,11 +37,9 @@ class AdMobManager(private val context: Context) {
     private var rewarded: RewardedAd? = null
 
     init {
-        val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
-            .setTagForChildDirectedTreatment(
-                com.google.android.gms.ads.RequestConfiguration.TAG_FOR_CHILD_DIRECTED_TREATMENT_TRUE
-            )
-            .setMaxAdContentRating(com.google.android.gms.ads.RequestConfiguration.MAX_AD_CONTENT_RATING_G)
+        val requestConfiguration = RequestConfiguration.Builder()
+            .setTagForChildDirectedTreatment(RequestConfiguration.TAG_FOR_CHILD_DIRECTED_TREATMENT_TRUE)
+            .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G)
             .build()
         MobileAds.setRequestConfiguration(requestConfiguration)
         MobileAds.initialize(context.applicationContext)
@@ -55,10 +53,7 @@ class AdMobManager(private val context: Context) {
 
     fun preloadInterstitial() {
         if (interstitial != null) return
-        InterstitialAd.load(
-            context,
-            interstitialUnitId(),
-            AdRequest.Builder().build(),
+        InterstitialAd.load(context, interstitialUnitId(), AdRequest.Builder().build(),
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
                     interstitial = ad
@@ -76,8 +71,7 @@ class AdMobManager(private val context: Context) {
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     interstitial = null
                 }
-            }
-        )
+            })
     }
 
     fun showInterstitial(activity: Activity): Boolean {
@@ -92,10 +86,7 @@ class AdMobManager(private val context: Context) {
 
     fun preloadRewarded() {
         if (rewarded != null) return
-        RewardedAd.load(
-            context,
-            rewardedUnitId(),
-            AdRequest.Builder().build(),
+        RewardedAd.load(context, rewardedUnitId(), AdRequest.Builder().build(),
             object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedAd) {
                     rewarded = ad
@@ -113,8 +104,7 @@ class AdMobManager(private val context: Context) {
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     rewarded = null
                 }
-            }
-        )
+            })
     }
 
     fun showRewarded(activity: Activity, onReward: (RewardItem) -> Unit): Boolean {
@@ -142,12 +132,7 @@ fun AdMobBanner(modifier: Modifier = Modifier) {
                 setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, 360))
                 adUnitId = if (BuildConfig.DEBUG) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
                 loadAd(AdRequest.Builder().build())
-                layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
             }
-        },
-        update = { view -> if (!view.isLoading) view.loadAd(AdRequest.Builder().build()) }
+        }
     )
 }

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
@@ -52,7 +53,7 @@ class AdMobManager(private val context: Context) {
 
     fun preloadInterstitial() {
         if (interstitial != null) return
-        InterstitialAd.load(context, interstitialUnitId(), AdRequest.Builder().build(), object : InterstitialAdLoadCallback() {
+        InterstitialAd.load(context.applicationContext, interstitialUnitId(), AdRequest.Builder().build(), object : InterstitialAdLoadCallback() {
             override fun onAdLoaded(ad: InterstitialAd) {
                 interstitial = ad
                 ad.fullScreenContentCallback = object : FullScreenContentCallback() {
@@ -73,7 +74,7 @@ class AdMobManager(private val context: Context) {
 
     fun preloadRewarded() {
         if (rewarded != null) return
-        RewardedAd.load(context, rewardedUnitId(), AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
+        RewardedAd.load(context.applicationContext, rewardedUnitId(), AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
             override fun onAdLoaded(ad: RewardedAd) {
                 rewarded = ad
                 ad.fullScreenContentCallback = object : FullScreenContentCallback() {
@@ -95,18 +96,23 @@ class AdMobManager(private val context: Context) {
 
 @Composable
 fun AdMobBanner(modifier: Modifier = Modifier) {
+    val adView = remember { arrayOfNulls<AdView>(1) }
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            AdView(context).apply {
-                setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, 360))
-                adUnitId = if (BuildConfig.DEBUG) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
-                loadAd(AdRequest.Builder().build())
+            AdView(context).also { view ->
+                adView[0] = view
+                view.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, 360))
+                view.adUnitId = if (BuildConfig.DEBUG) AdMobConfig.TEST_BANNER_UNIT_ID else AdMobConfig.BANNER_UNIT_ID
+                view.loadAd(AdRequest.Builder().build())
             }
         },
         update = { it.resume() }
     )
     DisposableEffect(Unit) {
-        onDispose { }
+        onDispose {
+            adView[0]?.destroy()
+            adView[0] = null
+        }
     }
 }

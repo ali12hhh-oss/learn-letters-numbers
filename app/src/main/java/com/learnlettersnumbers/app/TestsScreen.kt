@@ -1,5 +1,6 @@
 package com.learnlettersnumbers.app
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -23,29 +25,86 @@ import kotlinx.coroutines.delay
 private enum class TestMode { ARABIC, ENGLISH }
 private enum class TestKind { LETTERS, NUMBERS }
 private data class TestQuestion(val prompt:String,val spokenPrompt:String,val answer:String,val options:List<String>,val kind:TestKind)
+private const val TEST_ROUNDS = 10
 
 @Composable
 fun TestsScreen(repo:ProgressRepository,audio:LocalAudioManager,onBack:()->Unit){
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val ads = remember(context) { AdMobManager(context.applicationContext) }
+    val frequency = remember(context) { AdFrequencyController(context.applicationContext) }
     var language by remember{mutableStateOf(TestMode.ARABIC)}
     var kind by remember{mutableStateOf(TestKind.LETTERS)}
     var questionIndex by remember{mutableStateOf(0)}
     var score by remember{mutableStateOf(0)}
     var answered by remember{mutableStateOf(false)}
     var selected by remember{mutableStateOf<String?>(null)}
+    var finished by remember{mutableStateOf(false)}
+    var adShown by remember{mutableStateOf(false)}
     var question by remember{mutableStateOf(makeQuestion(language,kind,0))}
-    fun nextQuestion(){val i=questionIndex+1;questionIndex=i;selected=null;answered=false;question=makeQuestion(language,kind,i)}
-    LaunchedEffect(language,kind){questionIndex=0;score=0;selected=null;answered=false;question=makeQuestion(language,kind,0)}
-    LaunchedEffect(questionIndex,language,kind){delay(120);playTestAudio(audio,language,kind,question.answer)}
+
+    fun restart(){
+        questionIndex=0
+        score=0
+        selected=null
+        answered=false
+        finished=false
+        adShown=false
+        question=makeQuestion(language,kind,0)
+    }
+    fun nextQuestion(){
+        val i=questionIndex+1
+        if(i>=TEST_ROUNDS){
+            finished=true
+            answered=false
+            return
+        }
+        questionIndex=i
+        selected=null
+        answered=false
+        question=makeQuestion(language,kind,i)
+    }
+
+    LaunchedEffect(language,kind){restart()}
+    LaunchedEffect(questionIndex,language,kind,finished){
+        if(!finished){delay(120);playTestAudio(audio,language,kind,question.answer)}
+    }
+    LaunchedEffect(finished){
+        if(finished && !adShown && activity != null){
+            adShown = true
+            frequency.showAfterCompletion(activity,ads,AdFrequencyController.CompletionType.TEST)
+        }
+    }
+
+    if(finished){
+        val percent=(score*100/TEST_ROUNDS)
+        Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFE8F9FF),Color(0xFFFFF1D7)))).padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+            Text("🎉 انتهى الاختبار!",fontSize=32.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6),textAlign=TextAlign.Center)
+            Spacer(Modifier.height(18.dp))
+            Text("نتيجتك",fontSize=20.sp,fontWeight=FontWeight.Bold)
+            Text("$score / $TEST_ROUNDS",fontSize=42.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF00A9A5))
+            Text("الدقة: $percent%",fontSize=20.sp,fontWeight=FontWeight.Bold)
+            Spacer(Modifier.height(24.dp))
+            if(percent>=70) Text("⭐ رائع! أكملت الاختبار بنجاح ⭐",fontSize=19.sp,fontWeight=FontWeight.Bold,color=Color(0xFF238636),textAlign=TextAlign.Center)
+            else Text("💪 أحسنت المحاولة! أعد الاختبار وتقدم أكثر",fontSize=18.sp,fontWeight=FontWeight.Bold,color=Color(0xFFB45309),textAlign=TextAlign.Center)
+            Spacer(Modifier.height(22.dp))
+            Button(onClick={restart()},modifier=Modifier.fillMaxWidth().height(56.dp),shape=RoundedCornerShape(20.dp)){Text("إعادة الاختبار",fontSize=18.sp,fontWeight=FontWeight.Bold)}
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick=onBack,modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(20.dp)){Text("العودة",fontSize=17.sp,fontWeight=FontWeight.Bold)}
+        }
+        return
+    }
+
     Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFE8F9FF),Color(0xFFFFF1D7)))).padding(14.dp)){
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Button(onClick=onBack,shape=RoundedCornerShape(18.dp)){Text("رجوع")};Column(horizontalAlignment=Alignment.End){Text("الاختبارات",fontSize=29.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6));Text("اختبر مهاراتك وتعلم من أخطائك",fontSize=15.sp)}}
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Button(onClick=onBack,shape=RoundedCornerShape(18.dp)){Text("رجوع")};Column(horizontalAlignment=Alignment.End){Text("الاختبارات",fontSize=29.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6));Text("اختبار من $TEST_ROUNDS أسئلة",fontSize=15.sp)}}
         Row(Modifier.fillMaxWidth().padding(vertical=10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){TestModeButton("العربي",language==TestMode.ARABIC,Color(0xFF4C8BF5),Modifier.weight(1f)){language=TestMode.ARABIC};TestModeButton("English",language==TestMode.ENGLISH,Color(0xFF6BCB77),Modifier.weight(1f)){language=TestMode.ENGLISH}}
         Row(Modifier.fillMaxWidth().padding(bottom=10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){TestModeButton(if(language==TestMode.ARABIC)"الحروف" else "Letters",kind==TestKind.LETTERS,Color(0xFF9B72E8),Modifier.weight(1f)){kind=TestKind.LETTERS};TestModeButton(if(language==TestMode.ARABIC)"الأرقام" else "Numbers",kind==TestKind.NUMBERS,Color(0xFFFF8A4C),Modifier.weight(1f)){kind=TestKind.NUMBERS}}
-        Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(9.dp)){Column(Modifier.padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally){Text("السؤال ${questionIndex+1}",color=Color(0xFF6B7280),fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(question.prompt,fontSize=29.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6),textAlign=TextAlign.Center);Spacer(Modifier.height(8.dp));Button(onClick={playTestAudio(audio,language,kind,question.answer)},shape=RoundedCornerShape(18.dp)){Text("🔊 اسمع السؤال")};Spacer(Modifier.height(8.dp));Text("⭐ نتيجتك: $score",fontSize=17.sp,fontWeight=FontWeight.Bold)}}
+        Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(9.dp)){Column(Modifier.padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally){Text("السؤال ${questionIndex+1} من $TEST_ROUNDS",color=Color(0xFF6B7280),fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(question.prompt,fontSize=29.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2357A6),textAlign=TextAlign.Center);Spacer(Modifier.height(8.dp));Button(onClick={playTestAudio(audio,language,kind,question.answer)},shape=RoundedCornerShape(18.dp)){Text("🔊 اسمع السؤال")};Spacer(Modifier.height(8.dp));Text("⭐ نتيجتك: $score",fontSize=17.sp,fontWeight=FontWeight.Bold)}}
         Spacer(Modifier.height(12.dp))
         LazyVerticalGrid(columns=GridCells.Fixed(2),modifier=Modifier.weight(1f),contentPadding=PaddingValues(4.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             items(items=question.options,key={it}){option->val color=when{selected==option&&option==question.answer->Color(0xFF55C878);selected==option&&option!=question.answer->Color(0xFFE96B6B);answered&&option==question.answer->Color(0xFF55C878);else->optionColor(option,question.options)};Card(Modifier.fillMaxWidth().height(100.dp).clickable(enabled=!answered){val correct=option==question.answer;selected=option;answered=true;repo.recordAnswer(correct);if(correct){score+=1;repo.addStars(1)};audio.playRequired(if(language==TestMode.ARABIC){if(correct)"correct_ar" else "wrong_ar"}else{if(correct)"correct_en" else "wrong_en"})},shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=color),elevation=CardDefaults.cardElevation(8.dp)){Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text(option,Modifier.fillMaxWidth(),color=Color.White,fontSize=if(kind==TestKind.LETTERS)38.sp else 30.sp,fontWeight=FontWeight.ExtraBold,textAlign=TextAlign.Center)}}}
         }
-        if(answered){val correct=selected==question.answer;Text(if(correct)"🎉 رائع! أحسنت! إجابتك صحيحة ⭐" else "💪 أحسنت المحاولة! لا بأس، حاول مرة أخرى ⭐",Modifier.fillMaxWidth().padding(vertical=8.dp),textAlign=TextAlign.Center,fontSize=18.sp,fontWeight=FontWeight.Bold,color=if(correct)Color(0xFF238636) else Color(0xFFB45309));Button(onClick={nextQuestion()},modifier=Modifier.fillMaxWidth().height(56.dp),shape=RoundedCornerShape(20.dp)){Text("السؤال التالي ➜",fontSize=19.sp,fontWeight=FontWeight.Bold)}}
+        if(answered){val correct=selected==question.answer;Text(if(correct)"🎉 رائع! أحسنت! إجابتك صحيحة ⭐" else "💪 أحسنت المحاولة! لا بأس، حاول مرة أخرى ⭐",Modifier.fillMaxWidth().padding(vertical=8.dp),textAlign=TextAlign.Center,fontSize=18.sp,fontWeight=FontWeight.Bold,color=if(correct)Color(0xFF238636) else Color(0xFFB45309));Button(onClick={nextQuestion()},modifier=Modifier.fillMaxWidth().height(56.dp),shape=RoundedCornerShape(20.dp)){Text(if(questionIndex+1>=TEST_ROUNDS)"إنهاء الاختبار" else "السؤال التالي ➜",fontSize=19.sp,fontWeight=FontWeight.Bold)}}
     }
 }
 

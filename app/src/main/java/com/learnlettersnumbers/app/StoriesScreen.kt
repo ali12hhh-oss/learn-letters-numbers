@@ -1,5 +1,6 @@
 package com.learnlettersnumbers.app
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,13 +44,17 @@ private val englishStories = listOf(
     Story("The Lost Pencil", "✏️", "Nora: Excuse me, did you see my blue pencil?\nJack: I saw a pencil near the window. Is this yours?\nNora: Yes! Thank you so much.\nJack: You are welcome.\nNora: I was worried because I need it for my writing lesson.\nJack: No problem. We can look for things together.\nNora smiled and returned to her desk. She learned that asking politely is helpful when something is lost. Jack learned that a small act of kindness can make someone feel better. Before the lesson ended, they practiced the words 'Excuse me', 'Thank you', and 'You are welcome' together.", "Useful phrases: Excuse me. Did you see...? Is this yours? Thank you so much. You are welcome."),
     Story("The Little Robot", "🤖", "Maya: Look! I made a little robot.\nEvan: Wow! What can it do?\nMaya: It can move forward and turn left.\nEvan: Can it say hello?\nMaya: Yes. Hello, Evan!\nEvan: That is amazing. Can we teach it a new word?\nMaya: Sure. Let's teach it 'Good job!'\nThey repeated the phrase several times while programming the robot. When it finally said the words correctly, both children laughed. They discovered that learning English and learning technology could happen together. They also learned that mistakes are normal when we are building something new.", "Useful phrases: What can it do? Can it...? Let's teach it... Good job!"),
     Story("A Visit to the Library", "📚", "David: Hello. Where can I find books about animals?\nLibrarian: They are on the second shelf.\nDavid: Thank you. Can I borrow this book?\nLibrarian: Yes. Please bring it back next week.\nDavid: Okay. Thank you very much.\nDavid found a quiet place and began reading. He wrote three new English words in his notebook: animal, forest, and river. Before leaving, he asked the librarian about another book. He felt proud because he could use English to ask questions and understand simple instructions. He decided to visit the library every week.", "Useful phrases: Where can I find...? Can I...? Please. Thank you very much. Bring it back."),
-    Story("The Kind Team", "🤝", "Teacher: Today we will work in teams.\nAva: What should we do first?\nTeacher: First, choose a leader. Then share the jobs.\nAva: I can draw the picture.\nMax: I can write the words.\nLily: I can check the numbers.\nTeacher: Excellent. Remember to help each other.\nThe children worked together. When one answer was wrong, nobody laughed. They said, 'Let's try again.' At the end, their poster was colorful and clear. The teacher congratulated them because they used English, shared ideas, and treated each other kindly. They learned that teamwork is not only about finishing a task; it is also about listening, helping, and encouraging others.", "Useful phrases: What should we do first? I can... Let's try again. Help each other. Excellent!"),
+    Story("The Kind Team", "🤝", "Teacher: Today we will work in teams.\nAva: What should we do first?\nTeacher: First, choose a leader. Then share the jobs.\nAva: I can draw the picture.\nMax: I can write the words.\nLily: I can check the numbers.\nTeacher: Excellent. Remember to help each other.\nThe children worked together. When one answer was wrong, nobody laughed. They said, 'Let's try again.' At the end, their poster was colorful and clear. The teacher congratulated them because they used English, shared ideas, and treated each other kindly. They learned that teamwork is not only about finishing a task; it is also about listening, helping, and encouraging others.", "Useful phrases: What should we do first? I can... Let's try again. Help each other. Excellent!")
 )
 
 @Composable
 fun StoriesScreen(audio: LocalAudioManager, onBack: () -> Unit) {
     var language by remember { mutableStateOf(0) }
     var index by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val adManager = remember(context) { AdMobManager(context.applicationContext) }
+    val adFrequency = remember(context) { AdFrequencyController(context.applicationContext) }
     val stories = if (language == 0) arabicStories else englishStories
     val story = stories[index]
     LaunchedEffect(language, index) {
@@ -84,7 +90,12 @@ fun StoriesScreen(audio: LocalAudioManager, onBack: () -> Unit) {
         }
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = { if (index > 0) index-- }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp)) { Text("السابق") }
-            Button(onClick = { index = (index + 1) % stories.size }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp)) { Text("القصة التالية ➜") }
+            Button(onClick = {
+                index = (index + 1) % stories.size
+                if (activity != null) {
+                    adFrequency.showAfterCompletion(activity, adManager, AdFrequencyController.CompletionType.STORY)
+                }
+            }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp)) { Text("القصة التالية ➜") }
         }
     }
 }

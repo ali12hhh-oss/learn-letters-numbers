@@ -41,6 +41,7 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = Unit
             override fun onDone(utteranceId: String?) = Unit
+            @Deprecated("Required for Android TTS API compatibility.")
             override fun onError(utteranceId: String?) = Unit
         })
     }

@@ -1,14 +1,23 @@
 package com.learnlettersnumbers.app
 
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -17,7 +26,15 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ParentProgressScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (String) -> Unit) {
     var snapshot by remember { mutableStateOf(repo.load()) }
-    LaunchedEffect(Unit) { snapshot = repo.load(); speak("Parent progress report") }
+    var profileName by remember { mutableStateOf(ChildProfileRepository.loadName()) }
+    var profileAvatar by remember { mutableStateOf(ChildProfileRepository.loadAvatar()) }
+    LaunchedEffect(Unit) {
+        snapshot = repo.load()
+        profileName = ChildProfileRepository.loadName()
+        profileAvatar = ChildProfileRepository.loadAvatar()
+        speak("Parent progress report")
+    }
+    val displayName = profileName.ifBlank { snapshot.childName }
 
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
         Column(
@@ -29,8 +46,10 @@ fun ParentProgressScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (S
                 Spacer(Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.End) {
                     Text("متابعة الوالدين", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color(0xFF245B8A))
-                    Text(if (snapshot.childName.isBlank()) "ملف الطفل غير مسجل" else snapshot.childName, fontSize = 15.sp)
+                    Text(if (displayName.isBlank()) "ملف الطفل غير مسجل" else displayName, fontSize = 15.sp)
                 }
+                Spacer(Modifier.width(10.dp))
+                ProgressProfileAvatar(profileAvatar, Modifier.size(58.dp))
             }
             Spacer(Modifier.height(14.dp))
             Text("تقرير محفوظ محلياً داخل الجهاز", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF356070))
@@ -46,7 +65,32 @@ fun ParentProgressScreen(repo: ProgressRepository, onBack: () -> Unit, speak: (S
             Spacer(Modifier.height(10.dp))
             Text("الإجابات الصحيحة والخاطئة لا تُحتسب إلا عندما يكون النشاط مزوداً بتصحيح فعلي؛ لن نعرض أرقاماً وهمية.", fontSize = 13.sp, color = Color(0xFF6A5A45), textAlign = TextAlign.Center)
             Spacer(Modifier.weight(1f))
-            Button(onClick = { snapshot = repo.load(); speak("Progress updated") }, shape = RoundedCornerShape(18.dp)) { Text("تحديث التقرير") }
+            Button(onClick = {
+                snapshot = repo.load()
+                profileName = ChildProfileRepository.loadName()
+                profileAvatar = ChildProfileRepository.loadAvatar()
+                speak("Progress updated")
+            }, shape = RoundedCornerShape(18.dp)) { Text("تحديث التقرير") }
+        }
+    }
+}
+
+@Composable
+private fun ProgressProfileAvatar(value: String, modifier: Modifier) {
+    val context = LocalContext.current
+    val bitmap = remember(value) {
+        if (value.startsWith("content://")) {
+            try { context.contentResolver.openInputStream(Uri.parse(value)).use { BitmapFactory.decodeStream(it) } }
+            catch (_: Exception) { null }
+        } else null
+    }
+    Surface(modifier.clip(CircleShape), shape = CircleShape, color = Color.White, shadowElevation = 8.dp) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (bitmap != null) {
+                Image(bitmap.asImageBitmap(), contentDescription = "صورة الطفل", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            } else {
+                Text(if (value == "girl") "👧🏻" else "👦🏻", fontSize = 34.sp)
+            }
         }
     }
 }

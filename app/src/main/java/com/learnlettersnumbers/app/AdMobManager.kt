@@ -28,7 +28,6 @@ object AdMobConfig {
 }
 
 private object AdMobBuildMode {
-    // Keep test ads enabled until the first verified release build.
     const val USE_TEST_ADS = true
 }
 

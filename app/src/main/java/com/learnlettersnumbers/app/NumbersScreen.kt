@@ -174,7 +174,7 @@ private fun OperationCard(example: OperationExample, onTap: () -> Unit, speak: (
 
 @Composable
 private fun PictureGroup(count: Int, kind: PictureKind, accent: Color, modifier: Modifier = Modifier) {
-    val iconSize = when { count >= 5 -> 20.dp; count == 4 -> 24.dp; else -> 28.dp }
+    val iconSize = 24.dp
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
         repeat(count) { PictureIcon(kind, accent, Modifier.size(iconSize)) }
     }

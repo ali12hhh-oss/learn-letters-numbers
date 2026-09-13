@@ -127,7 +127,10 @@ private fun LearnLettersNumbersSplash(onFinished: () -> Unit) {
 
         SplashSparkles(Modifier.fillMaxSize())
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
             balloons.forEach { balloon ->
                 SplashBalloonView(balloon, widthPx, heightPx, density)
             }
@@ -222,7 +225,6 @@ private fun SplashBalloonView(
 
     Box(
         modifier = Modifier
-            .align(Alignment.Center)
             .offset(x = targetX, y = targetY)
             .size(size)
             .graphicsLayer {

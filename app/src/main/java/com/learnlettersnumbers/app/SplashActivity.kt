@@ -4,24 +4,32 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -30,8 +38,8 @@ import kotlin.math.roundToInt
 class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color(0xFF0875D8).toArgbCompat()
-        window.navigationBarColor = Color(0xFF4EAF58).toArgbCompat()
+        window.statusBarColor = android.graphics.Color.rgb(19, 112, 203)
+        window.navigationBarColor = android.graphics.Color.rgb(22, 105, 137)
         setContent {
             LearnLettersNumbersSplash {
                 startActivity(Intent(this, MainActivity::class.java))
@@ -41,200 +49,340 @@ class SplashActivity : ComponentActivity() {
     }
 }
 
-private fun Color.toArgbCompat(): Int = android.graphics.Color.argb(
-    (alpha * 255).roundToInt(),
-    (red * 255).roundToInt(),
-    (green * 255).roundToInt(),
-    (blue * 255).roundToInt()
-)
-
 private data class SplashBalloon(
     val word: String,
-    val color: Color,
     val startX: Float,
     val startY: Float,
-    val size: Float,
-    val delay: Int
+    val targetX: Float,
+    val targetY: Float,
+    val sizeFraction: Float,
+    val delayMs: Int,
+    val colors: List<Color>
 )
 
 @Composable
 private fun LearnLettersNumbersSplash(onFinished: () -> Unit) {
     val balloons = remember {
         listOf(
-            SplashBalloon("تعلم", Color(0xFFFFB52E), -0.10f, -0.95f, 0.29f, 80),
-            SplashBalloon("الحروف", Color(0xFFEC3DAF), 0.08f, 1.05f, 0.31f, 360),
-            SplashBalloon("والأرقام", Color(0xFF1599F2), 0.12f, -0.80f, 0.30f, 640)
+            SplashBalloon(
+                word = "تعلم",
+                startX = -0.35f,
+                startY = -1.15f,
+                targetX = 0.16f,
+                targetY = -0.20f,
+                sizeFraction = 0.39f,
+                delayMs = 120,
+                colors = listOf(Color(0xFFFFD84D), Color(0xFFFF9E1B), Color(0xFFE87800))
+            ),
+            SplashBalloon(
+                word = "والأرقام",
+                startX = 0.42f,
+                startY = -1.25f,
+                targetX = -0.18f,
+                targetY = 0.02f,
+                sizeFraction = 0.43f,
+                delayMs = 330,
+                colors = listOf(Color(0xFF55C8FF), Color(0xFF1688F2), Color(0xFF0B5DCA))
+            ),
+            SplashBalloon(
+                word = "الحروف",
+                startX = -0.35f,
+                startY = 1.20f,
+                targetX = 0.04f,
+                targetY = 0.30f,
+                sizeFraction = 0.41f,
+                delayMs = 540,
+                colors = listOf(Color(0xFFFF73C5), Color(0xFFEF2998), Color(0xFFC51576))
+            )
         )
     }
 
     LaunchedEffect(Unit) {
-        delay(3000)
+        delay(3900)
         onFinished()
     }
 
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize().background(
-            Brush.verticalGradient(
-                listOf(Color(0xFF43B9F5), Color(0xFFB8ECFF), Color(0xFFFFD7A8))
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    0f to Color(0xFF087BD7),
+                    0.48f to Color(0xFF39B9F2),
+                    0.78f to Color(0xFFA7E6F3),
+                    1f to Color(0xFFFFD8A7)
+                )
             )
-        )
     ) {
-        val widthPx = constraints.maxWidth.toFloat()
-        val heightPx = constraints.maxHeight.toFloat()
+        val density = LocalDensity.current
+        val widthPx = with(density) { maxWidth.toPx() }
+        val heightPx = with(density) { maxHeight.toPx() }
+        val infinite = rememberInfiniteTransition(label = "splash_background")
+        val glow by infinite.animateFloat(
+            initialValue = 0.92f,
+            targetValue = 1.08f,
+            animationSpec = infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "glow"
+        )
+        val cloudShift by infinite.animateFloat(
+            initialValue = -14f,
+            targetValue = 14f,
+            animationSpec = infiniteRepeatable(tween(5000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "cloud_shift"
+        )
 
-        SplashLandscape(Modifier.fillMaxSize())
-
+        // Soft cinematic light behind the characters.
         Box(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-            contentAlignment = Alignment.Center
-        ) {
+            modifier = Modifier
+                .size(300.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = (-86).dp)
+                .graphicsLayer { scaleX = glow; scaleY = glow }
+                .background(Color.White.copy(alpha = 0.10f), CircleShape)
+        )
+
+        SplashCloud(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = (-24 + cloudShift / 4).dp, y = 92.dp),
+            scale = 0.72f
+        )
+        SplashCloud(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = (28 + cloudShift / 5).dp, y = 178.dp),
+            scale = 0.92f
+        )
+
+        // Subtle floating sparkles keep the background alive without competing with the balloons.
+        SplashSparkles(Modifier.fillMaxSize())
+
+        Box(modifier = Modifier.fillMaxSize()) {
             balloons.forEach { balloon ->
-                SplashBalloonView(balloon, widthPx, heightPx)
+                SplashBalloonView(
+                    balloon = balloon,
+                    widthPx = widthPx,
+                    heightPx = heightPx,
+                    density = density
+                )
             }
         }
 
-        Text(
-            "عالم صغير... وتعلّم كبير ✨",
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 34.dp),
-            color = Color.White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Color(0xFF164E69).copy(alpha = 0.30f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .border(
+                        1.dp,
+                        Color.White.copy(alpha = 0.20f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "عالم صغير... وتعلّم كبير",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.72f)
+                            .height(5.dp)
+                            .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
+                    ) {
+                        val progress by rememberInfiniteTransition(label = "loading").animateFloat(
+                            initialValue = 0.12f,
+                            targetValue = 0.88f,
+                            animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                            label = "loading_progress"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress)
+                                .fillMaxHeight()
+                                .background(Color(0xFFFFD34E), RoundedCornerShape(50))
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun SplashBalloonView(balloon: SplashBalloon, widthPx: Float, heightPx: Float) {
-    val progress by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(
-            durationMillis = 1050,
-            delayMillis = balloon.delay,
-            easing = FastOutSlowInEasing
+private fun SplashBalloonView(
+    balloon: SplashBalloon,
+    widthPx: Float,
+    heightPx: Float,
+    density: androidx.compose.ui.unit.Density
+) {
+    val entry = remember { Animatable(0f) }
+    val infinite = rememberInfiniteTransition(label = "balloon_${balloon.word}")
+    val floatY by infinite.animateFloat(
+        initialValue = -8f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            tween(2200 + balloon.delayMs, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
         ),
-        label = "balloon_${balloon.word}"
+        label = "float_y_${balloon.word}"
     )
-    val scale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(900, balloon.delay, easing = FastOutSlowInEasing),
-        label = "scale_${balloon.word}"
+    val rotation by infinite.animateFloat(
+        initialValue = -1.8f,
+        targetValue = 1.8f,
+        animationSpec = infiniteRepeatable(
+            tween(2600 + balloon.delayMs, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "rotation_${balloon.word}"
     )
 
-    val targetX = when (balloon.word) {
-        "تعلم" -> -0.18f
-        "الحروف" -> 0.20f
-        else -> 0f
-    }
-    val targetY = when (balloon.word) {
-        "تعلم" -> -0.16f
-        "الحروف" -> 0.20f
-        else -> -0.04f
+    LaunchedEffect(Unit) {
+        delay(balloon.delayMs.toLong())
+        entry.animateTo(
+            1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        )
     }
 
-    val x = ((balloon.startX * widthPx) * (1f - progress) + targetX * widthPx * progress).roundToInt()
-    val y = ((balloon.startY * heightPx) * (1f - progress) + targetY * heightPx * progress).roundToInt()
+    val startTranslationX = balloon.startX * widthPx
+    val startTranslationY = balloon.startY * heightPx
+    val targetTranslationX = balloon.targetX * widthPx
+    val targetTranslationY = balloon.targetY * heightPx
+    val size = with(density) { (widthPx / density.density * balloon.sizeFraction).dp.coerceIn(128.dp, 164.dp) }
 
     Box(
         modifier = Modifier
-            .offset { IntOffset(x, y) }
-            .size((balloon.size * 360).dp)
+            .align(Alignment.Center)
+            .offset(
+                x = (balloon.targetX * 100).roundToInt().dp,
+                y = (balloon.targetY * 100).roundToInt().dp
+            )
+            .size(size)
             .graphicsLayer {
-                alpha = (0.25f + 0.75f * progress).coerceIn(0f, 1f)
-                scaleX = 0.86f + 0.14f * scale
-                scaleY = 0.86f + 0.14f * scale
+                translationX = startTranslationX * (1f - entry.value) + targetTranslationX * 0f
+                translationY = startTranslationY * (1f - entry.value) + floatY * density.density
+                rotationZ = rotation * entry.value
+                alpha = entry.value.coerceIn(0f, 1f)
+                scaleX = 0.72f + 0.28f * entry.value
+                scaleY = 0.72f + 0.28f * entry.value
+                shadowElevation = 18.dp.toPx()
             },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val radius = size.minDimension * 0.43f
-            val center = Offset(size.width / 2f, size.height / 2.05f)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    0f to Color.White.copy(alpha = .42f),
-                    .20f to balloon.color,
-                    .72f to balloon.color,
-                    1f to balloon.color.copy(
-                        red = balloon.color.red * .68f,
-                        green = balloon.color.green * .68f,
-                        blue = balloon.color.blue * .68f
-                    )
-                ),
-                radius = radius,
-                center = center
-            )
-            drawCircle(
-                color = Color.White.copy(alpha = .42f),
-                radius = radius * .12f,
-                center = Offset(center.x - radius * .28f, center.y - radius * .42f)
-            )
-            drawCircle(
-                color = Color.White.copy(alpha = .17f),
-                radius = radius * .065f,
-                center = Offset(center.x - radius * .08f, center.y - radius * .53f)
-            )
-            drawLine(
-                color = balloon.color.copy(alpha = .75f),
-                start = Offset(center.x, center.y + radius * .98f),
-                end = Offset(center.x, size.height),
-                strokeWidth = 3.dp.toPx()
-            )
-        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .shadow(12.dp, CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.62f),
+                            balloon.colors[0].copy(alpha = 0.98f),
+                            balloon.colors[1],
+                            balloon.colors[2]
+                        ),
+                        radius = 260f
+                    ),
+                    CircleShape
+                )
+                .border(1.5.dp, Color.White.copy(alpha = 0.48f), CircleShape)
+        )
+
+        // Gloss highlights make the balloons read as glossy 3D objects rather than flat circles.
+        Box(
+            modifier = Modifier
+                .size(size * 0.20f)
+                .offset(x = -(size.value * 0.13f).dp, y = -(size.value * 0.18f).dp)
+                .background(Color.White.copy(alpha = 0.46f), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .size(size * 0.09f)
+                .offset(x = (size.value * 0.03f).dp, y = -(size.value * 0.25f).dp)
+                .background(Color.White.copy(alpha = 0.28f), CircleShape)
+        )
+
         Text(
             text = balloon.word,
             color = Color.White,
-            fontSize = 19.sp,
+            fontSize = if (balloon.word == "والأرقام") 17.sp else 20.sp,
             fontWeight = FontWeight.Black,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .graphicsLayer { shadowElevation = 4.dp.toPx() }
+        )
+
+        // String + knot, intentionally made from ordinary Compose shapes (no SVG/vector asset).
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (size.value * 0.42f).dp)
+                .width(3.dp)
+                .height(30.dp)
+                .background(balloon.colors[2].copy(alpha = 0.88f), RoundedCornerShape(50))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (size.value * 0.38f).dp)
+                .size(7.dp)
+                .graphicsLayer { rotationZ = 45f }
+                .background(balloon.colors[2], RoundedCornerShape(2.dp))
         )
     }
 }
 
 @Composable
-private fun SplashLandscape(modifier: Modifier) {
-    Canvas(modifier) {
-        val w = size.width
-        val h = size.height
+private fun SplashCloud(modifier: Modifier, scale: Float) {
+    Row(modifier = modifier, verticalAlignment = Alignment.Bottom) {
+        Box(Modifier.size((42 * scale).dp).background(Color.White.copy(alpha = 0.64f), CircleShape))
+        Box(
+            Modifier
+                .size((60 * scale).dp)
+                .offset(x = (-10 * scale).dp)
+                .background(Color.White.copy(alpha = 0.72f), CircleShape)
+        )
+        Box(
+            Modifier
+                .size((40 * scale).dp)
+                .offset(x = (-18 * scale).dp)
+                .background(Color.White.copy(alpha = 0.60f), CircleShape)
+        )
+    }
+}
 
-        fun cloud(cx: Float, cy: Float, scale: Float) {
-            val c = Color.White.copy(alpha = .72f)
-            drawCircle(c, 52f * scale, Offset(cx, cy))
-            drawCircle(c, 68f * scale, Offset(cx + 55f * scale, cy + 8f * scale))
-            drawCircle(c, 42f * scale, Offset(cx + 105f * scale, cy + 20f * scale))
-            drawOval(c, Offset(cx - 28f * scale, cy + 18f * scale), Size(160f * scale, 62f * scale))
-        }
-        cloud(w * .08f, h * .16f, .55f)
-        cloud(w * .78f, h * .20f, .72f)
-        cloud(w * .72f, h * .54f, .38f)
-
-        drawOval(Color(0xFF8DD99A), Offset(-w * .20f, h * .70f), Size(w * .78f, h * .34f))
-        drawOval(Color(0xFF70C986), Offset(w * .40f, h * .67f), Size(w * .92f, h * .37f))
-        drawOval(Color(0xFF55B874), Offset(-w * .08f, h * .80f), Size(w * 1.18f, h * .34f))
-
-        val pathTop = h * .69f
-        drawOval(Color(0xFFFFD18F), Offset(w * .43f, pathTop), Size(w * .16f, h * .44f))
-        drawOval(Color(0xFFFFC77D), Offset(w * .33f, h * .82f), Size(w * .36f, h * .28f))
-
-        fun tree(x: Float, y: Float, s: Float) {
-            drawRect(Color(0xFF8B5A3C), Offset(x - 9f * s, y), Size(18f * s, 70f * s))
-            drawCircle(Color(0xFF3EAA67), 42f * s, Offset(x - 30f * s, y))
-            drawCircle(Color(0xFF56BE76), 48f * s, Offset(x + 20f * s, y - 12f * s))
-            drawCircle(Color(0xFF79CF82), 35f * s, Offset(x, y - 42f * s))
-        }
-        tree(w * .10f, h * .78f, .72f)
-        tree(w * .88f, h * .79f, .78f)
-        tree(w * .22f, h * .88f, .48f)
-        tree(w * .77f, h * .87f, .50f)
-
-        listOf(
-            Offset(w * .08f, h * .91f),
-            Offset(w * .17f, h * .94f),
-            Offset(w * .83f, h * .93f),
-            Offset(w * .92f, h * .90f)
-        ).forEach {
-            drawCircle(Color(0xFFFF80B8), 7f, it)
-            drawCircle(Color(0xFFFFD54F), 3f, it)
-        }
+@Composable
+private fun SplashSparkles(modifier: Modifier) {
+    val infinite = rememberInfiniteTransition(label = "sparkles")
+    val alpha by infinite.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.80f,
+        animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
+        label = "sparkle_alpha"
+    )
+    Box(modifier = modifier) {
+        Text("✦", modifier = Modifier.align(Alignment.TopStart).offset(70.dp, 250.dp), color = Color.White.copy(alpha = alpha), fontSize = 18.sp)
+        Text("✦", modifier = Modifier.align(Alignment.TopEnd).offset((-58).dp, 310.dp), color = Color.White.copy(alpha = alpha * 0.8f), fontSize = 14.sp)
+        Text("·", modifier = Modifier.align(Alignment.CenterStart).offset(42.dp, 100.dp), color = Color.White.copy(alpha = alpha), fontSize = 24.sp)
+        Text("·", modifier = Modifier.align(Alignment.CenterEnd).offset((-50).dp, 30.dp), color = Color.White.copy(alpha = alpha * 0.7f), fontSize = 24.sp)
     }
 }

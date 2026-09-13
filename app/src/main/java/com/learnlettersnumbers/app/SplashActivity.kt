@@ -7,11 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,14 +61,15 @@ private data class SplashBalloon(
 private fun LearnLettersNumbersSplash(onFinished: () -> Unit) {
     val balloons = remember {
         listOf(
-            SplashBalloon("تعلم", -0.35f, -1.15f, 0.16f, -0.20f, 0.39f, 120, listOf(Color(0xFFFFD84D), Color(0xFFFF9E1B), Color(0xFFE87800))),
-            SplashBalloon("والأرقام", 0.42f, -1.25f, -0.18f, 0.02f, 0.43f, 330, listOf(Color(0xFF55C8FF), Color(0xFF1688F2), Color(0xFF0B5DCA))),
-            SplashBalloon("الحروف", -0.35f, 1.20f, 0.04f, 0.30f, 0.41f, 540, listOf(Color(0xFFFF73C5), Color(0xFFEF2998), Color(0xFFC51576)))
+            // Arabic reading order: right -> center -> left.
+            SplashBalloon("تعلم", 0.85f, -1.20f, 0.25f, -0.02f, 0.31f, 150, listOf(Color(0xFFFFD84D), Color(0xFFFF9E1B), Color(0xFFE87800))),
+            SplashBalloon("الحروف", -0.80f, 1.20f, 0.00f, -0.02f, 0.31f, 700, listOf(Color(0xFFFF73C5), Color(0xFFEF2998), Color(0xFFC51576))),
+            SplashBalloon("والأرقام", 0.80f, -1.25f, -0.25f, -0.02f, 0.32f, 1250, listOf(Color(0xFF55C8FF), Color(0xFF1688F2), Color(0xFF0B5DCA)))
         )
     }
 
     LaunchedEffect(Unit) {
-        delay(3900)
+        delay(4500)
         onFinished()
     }
 
@@ -194,25 +193,27 @@ private fun SplashBalloonView(
     val entry = remember { Animatable(0f) }
     val infinite = rememberInfiniteTransition(label = "balloon_${balloon.word}")
     val floatY by infinite.animateFloat(
-        initialValue = -8f,
-        targetValue = 8f,
-        animationSpec = infiniteRepeatable(tween(2200 + balloon.delayMs, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(tween(3600 + balloon.delayMs, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "float_y_${balloon.word}"
     )
     val rotation by infinite.animateFloat(
-        initialValue = -1.8f,
-        targetValue = 1.8f,
-        animationSpec = infiniteRepeatable(tween(2600 + balloon.delayMs, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        initialValue = -1.0f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(tween(4200 + balloon.delayMs, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "rotation_${balloon.word}"
     )
 
     LaunchedEffect(Unit) {
         delay(balloon.delayMs.toLong())
+        // A deliberately long, gentle entrance: the balloons should feel like
+        // they are floating into place rather than being launched at the user.
         entry.animateTo(
             1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
+            animationSpec = tween(
+                durationMillis = 1500,
+                easing = FastOutSlowInEasing
             )
         )
     }
@@ -221,7 +222,7 @@ private fun SplashBalloonView(
     val startTranslationY = balloon.startY * heightPx
     val targetX = with(density) { (balloon.targetX * widthPx / density.density).dp }
     val targetY = with(density) { (balloon.targetY * heightPx / density.density).dp }
-    val size = with(density) { (widthPx / density.density * balloon.sizeFraction).dp.coerceIn(128.dp, 164.dp) }
+    val size = with(density) { (widthPx / density.density * balloon.sizeFraction).dp.coerceIn(106.dp, 132.dp) }
 
     Box(
         modifier = Modifier
@@ -232,8 +233,8 @@ private fun SplashBalloonView(
                 translationY = startTranslationY * (1f - entry.value) + floatY * density.density
                 rotationZ = rotation * entry.value
                 alpha = entry.value.coerceIn(0f, 1f)
-                scaleX = 0.72f + 0.28f * entry.value
-                scaleY = 0.72f + 0.28f * entry.value
+                scaleX = 0.82f + 0.18f * entry.value
+                scaleY = 0.82f + 0.18f * entry.value
                 shadowElevation = 18.dp.toPx()
             },
         contentAlignment = Alignment.Center
@@ -273,12 +274,12 @@ private fun SplashBalloonView(
         Text(
             text = balloon.word,
             color = Color.White,
-            fontSize = if (balloon.word == "والأرقام") 17.sp else 20.sp,
+            fontSize = if (balloon.word == "والأرقام") 15.sp else 17.sp,
             fontWeight = FontWeight.Black,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 6.dp)
                 .graphicsLayer { shadowElevation = 4.dp.toPx() }
         )
 

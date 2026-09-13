@@ -10,13 +10,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.graphicsLayer
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -63,7 +61,7 @@ private data class SplashBalloon(
 private fun LearnLettersNumbersSplash(onFinished: () -> Unit) {
     val balloons = remember {
         listOf(
-            SplashBalloon("تعلّم", Color(0xFFFFB52E), -0.10f, -0.95f, 0.29f, 80),
+            SplashBalloon("تعلم", Color(0xFFFFB52E), -0.10f, -0.95f, 0.29f, 80),
             SplashBalloon("الحروف", Color(0xFFEC3DAF), 0.08f, 1.05f, 0.31f, 360),
             SplashBalloon("والأرقام", Color(0xFF1599F2), 0.12f, -0.80f, 0.30f, 640)
         )
@@ -95,18 +93,14 @@ private fun LearnLettersNumbersSplash(onFinished: () -> Unit) {
             }
         }
 
-        Column(
+        Text(
+            "عالم صغير... وتعلّم كبير ✨",
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 34.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "عالم صغير... وتعلّم كبير ✨",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-        }
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -128,12 +122,12 @@ private fun SplashBalloonView(balloon: SplashBalloon, widthPx: Float, heightPx: 
     )
 
     val targetX = when (balloon.word) {
-        "تعلّم" -> -0.18f
+        "تعلم" -> -0.18f
         "الحروف" -> 0.20f
         else -> 0f
     }
     val targetY = when (balloon.word) {
-        "تعلّم" -> -0.16f
+        "تعلم" -> -0.16f
         "الحروف" -> 0.20f
         else -> -0.04f
     }
@@ -144,7 +138,7 @@ private fun SplashBalloonView(balloon: SplashBalloon, widthPx: Float, heightPx: 
     Box(
         modifier = Modifier
             .offset { IntOffset(x, y) }
-            .size((balloon.size * 100).dp)
+            .size((balloon.size * 360).dp)
             .graphicsLayer {
                 alpha = (0.25f + 0.75f * progress).coerceIn(0f, 1f)
                 scaleX = 0.86f + 0.14f * scale
@@ -158,9 +152,13 @@ private fun SplashBalloonView(balloon: SplashBalloon, widthPx: Float, heightPx: 
             drawCircle(
                 brush = Brush.radialGradient(
                     0f to Color.White.copy(alpha = .42f),
-                    .20f to balloon.color.copy(alpha = 1f),
+                    .20f to balloon.color,
                     .72f to balloon.color,
-                    1f to balloon.color.copy(red = balloon.color.red * .68f, green = balloon.color.green * .68f, blue = balloon.color.blue * .68f)
+                    1f to balloon.color.copy(
+                        red = balloon.color.red * .68f,
+                        green = balloon.color.green * .68f,
+                        blue = balloon.color.blue * .68f
+                    )
                 ),
                 radius = radius,
                 center = center
@@ -199,7 +197,6 @@ private fun SplashLandscape(modifier: Modifier) {
         val w = size.width
         val h = size.height
 
-        // Soft cinematic clouds.
         fun cloud(cx: Float, cy: Float, scale: Float) {
             val c = Color.White.copy(alpha = .72f)
             drawCircle(c, 52f * scale, Offset(cx, cy))
@@ -211,17 +208,14 @@ private fun SplashLandscape(modifier: Modifier) {
         cloud(w * .78f, h * .20f, .72f)
         cloud(w * .72f, h * .54f, .38f)
 
-        // Distant hills.
         drawOval(Color(0xFF8DD99A), Offset(-w * .20f, h * .70f), Size(w * .78f, h * .34f))
         drawOval(Color(0xFF70C986), Offset(w * .40f, h * .67f), Size(w * .92f, h * .37f))
         drawOval(Color(0xFF55B874), Offset(-w * .08f, h * .80f), Size(w * 1.18f, h * .34f))
 
-        // Warm winding path.
         val pathTop = h * .69f
         drawOval(Color(0xFFFFD18F), Offset(w * .43f, pathTop), Size(w * .16f, h * .44f))
         drawOval(Color(0xFFFFC77D), Offset(w * .33f, h * .82f), Size(w * .36f, h * .28f))
 
-        // Rounded trees, intentionally vector-drawn so no low-quality bitmap is used.
         fun tree(x: Float, y: Float, s: Float) {
             drawRect(Color(0xFF8B5A3C), Offset(x - 9f * s, y), Size(18f * s, 70f * s))
             drawCircle(Color(0xFF3EAA67), 42f * s, Offset(x - 30f * s, y))
@@ -233,8 +227,12 @@ private fun SplashLandscape(modifier: Modifier) {
         tree(w * .22f, h * .88f, .48f)
         tree(w * .77f, h * .87f, .50f)
 
-        // Small foreground flowers for depth.
-        listOf(Offset(w*.08f,h*.91f),Offset(w*.17f,h*.94f),Offset(w*.83f,h*.93f),Offset(w*.92f,h*.90f)).forEach {
+        listOf(
+            Offset(w * .08f, h * .91f),
+            Offset(w * .17f, h * .94f),
+            Offset(w * .83f, h * .93f),
+            Offset(w * .92f, h * .90f)
+        ).forEach {
             drawCircle(Color(0xFFFF80B8), 7f, it)
             drawCircle(Color(0xFFFFD54F), 3f, it)
         }

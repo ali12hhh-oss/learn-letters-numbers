@@ -74,10 +74,23 @@ jobs:
             echo "Release AAB built without release signing because signing secrets are not configured yet."
           fi
 
-      - name: Upload Android artifacts
+      - name: Prepare separate downloadable artifact folders
+        run: |
+          rm -rf android-artifacts
+          mkdir -p android-artifacts/APK android-artifacts/Google-Play-AAB
+          cp app/build/outputs/apk/debug/*.apk android-artifacts/APK/learn-letters-numbers-debug.apk
+          cp app/build/outputs/bundle/release/*.aab android-artifacts/Google-Play-AAB/learn-letters-numbers-release.aab
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: android-build-artifacts
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/bundle/release/*.aab
+          name: android-apk
+          path: android-artifacts/APK/learn-letters-numbers-debug.apk
+          if-no-files-found: error
+
+      - name: Upload Google Play AAB artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: google-play-aab
+          path: android-artifacts/Google-Play-AAB/learn-letters-numbers-release.aab
+          if-no-files-found: error

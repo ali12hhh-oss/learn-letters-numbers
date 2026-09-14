@@ -8,12 +8,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
 
-/**
- * Offline-first audio engine.
- *
- * The tested on-device embedded Android TTS voice is the only speech path.
- * No bundled legacy audio files and no network TTS are used.
- */
+/** Offline-first audio engine. */
 class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var player: MediaPlayer? = null
     private var queue: List<Int> = emptyList()
@@ -26,9 +21,7 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
     var enabled: Boolean = true
         private set
 
-    init {
-        tts = TextToSpeech(context.applicationContext, this)
-    }
+    init { tts = TextToSpeech(context.applicationContext, this) }
 
     override fun onInit(status: Int) {
         if (status != TextToSpeech.SUCCESS) return
@@ -47,8 +40,7 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
     }
 
     private fun findOfflineVoice(engine: TextToSpeech, language: String): Voice? =
-        engine.voices
-            ?.asSequence()
+        engine.voices?.asSequence()
             ?.filter { it.locale.language.equals(language, ignoreCase = true) }
             ?.filter { !it.isNetworkConnectionRequired }
             ?.sortedWith(compareByDescending<Voice> { it.quality }.thenBy { it.latency })
@@ -59,10 +51,6 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         if (!value) stop()
     }
 
-    /**
-     * Resolves the educational resource name to text and speaks it with the
-     * tested offline Android TTS voice. Legacy bundled audio is not used.
-     */
     fun playRequired(resourceName: String): Boolean {
         if (!enabled) return false
 
@@ -71,11 +59,6 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
             if (index != null && speakStoryFromScreen(index)) return true
         }
 
-        // English letter SOUND only.
-        // Do not send the visible letter itself to TTS: Google/Android TTS
-        // interprets A, B, C... as letter names ("ay", "bee", "see").
-        // Use short phonetic cues instead so the Letter Name and Letter Sound
-        // paths can never be mixed.
         Regex("en_letter_(\\d{2})_sound").matchEntire(resourceName)?.let {
             val index = it.groupValues[1].toInt() - 1
             if (index in 0..25) return speakEnglishLetterSound(index)
@@ -89,11 +72,9 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         if (!enabled || resourceNames.isEmpty()) return false
         val parts = resourceNames.mapNotNull { offlineTextForResource(it) }
         if (parts.isEmpty()) return false
-        val language = parts.first().second
-        return speakOffline(parts.joinToString(" ") { it.first }, language)
+        return speakOffline(parts.joinToString(" ") { it.first }, parts.first().second)
     }
 
-    /** Maps common app messages to the new offline voice first. */
     fun playSemantic(text: String, language: String): Boolean {
         if (!enabled) return false
         val lower = text.lowercase()
@@ -142,46 +123,46 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         return false
     }
 
-    fun playOperationExample(example: NumbersExampleAudio): Boolean {
-        val resources = listOf(
-            "ar_number_%03d".format(example.a),
-            "ar_number_%03d".format(example.b),
-            "ar_number_%03d".format(example.result)
-        )
-        return playSequence(resources)
-    }
+    fun playOperationExample(example: NumbersExampleAudio): Boolean = playSequence(
+        listOf("ar_number_%03d".format(example.a), "ar_number_%03d".format(example.b), "ar_number_%03d".format(example.result))
+    )
 
-    /** Speaks arbitrary text only with an already-installed offline voice. */
     fun speakOffline(text: String, language: String): Boolean {
         if (!enabled || text.isBlank() || !ttsReady) return false
         val engine = tts ?: return false
         val voice = if (language == "ar") ttsArabicVoice else ttsEnglishVoice
         if (voice == null || voice.isNetworkConnectionRequired) return false
-
         stopMediaOnly()
         engine.stop()
         engine.setVoice(voice)
         engine.setSpeechRate(if (language == "ar") 0.84f else 0.88f)
         engine.setPitch(1.0f)
         val utteranceId = "offline_${System.nanoTime()}"
-        val params = Bundle().apply {
-            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
-        }
+        val params = Bundle().apply { putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId) }
         return engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId) == TextToSpeech.SUCCESS
     }
 
     /**
-     * English A-Z Letter Sound only.
-     *
-     * This intentionally does NOT speak the letter character, because Android
-     * TTS reads a standalone character as its letter name. TtsSpan was removed
-     * here because support for phoneme substitution is engine-dependent and can
-     * result in silence or the original letter name. These short cues are the
-     * reliable offline path through the installed English voice and are kept
-     * completely separate from the Letter Name path.
+     * Plays the bundled phonics_english A-Z recording. If the generated raw
+     * resource is unavailable, the previous offline TTS phonetic cue remains
+     * as a safe fallback.
      */
     private fun speakEnglishLetterSound(index: Int): Boolean {
-        if (!enabled || !ttsReady || index !in 0..25) return false
+        if (!enabled || index !in 0..25) return false
+        val letter = ('a'..'z').elementAt(index)
+        val resourceName = "phonics_$letter"
+        val id = context.resources.getIdentifier(resourceName, "raw", context.packageName)
+        if (id != 0) {
+            try {
+                tts?.stop()
+                start(id, resourceName)
+                return true
+            } catch (_: Throwable) {
+                releasePlayer()
+            }
+        }
+
+        if (!ttsReady) return false
         val phoneticCues = listOf(
             "ah", "buh", "kuh", "duh", "eh", "fff", "guh", "huh", "ih", "juh",
             "kuh", "lll", "mmm", "nnn", "ah", "puh", "kwuh", "rrr", "sss", "tuh",
@@ -199,31 +180,23 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
             val i = it.groupValues[1].toInt() - 1
             if (i in enLetters.indices) return enLetters[i].toString() to "en"
         }
-
         Regex("ar_letter_(\\d{2})_sound").matchEntire(name)?.let {
             val i = it.groupValues[1].toInt() - 1
             if (i in arLetters.indices) return (if (arLetters[i] == "ا") "أَ" else arLetters[i] + "َ") to "ar"
         }
-
         Regex("ar_letter_(\\d{2})_name").matchEntire(name)?.let {
             val i = it.groupValues[1].toInt() - 1
             if (i in arNames.indices) return arNames[i] to "ar"
         }
-
         Regex("ar_letter_(\\d{2})_vowel_([123])").matchEntire(name)?.let {
             val i = it.groupValues[1].toInt() - 1
             val v = it.groupValues[2].toInt()
-            if (i in arLetters.indices) {
-                val marks = listOf("َ", "ُ", "ِ")
-                return arLetters[i] + marks[v - 1] to "ar"
-            }
+            if (i in arLetters.indices) return arLetters[i] + listOf("َ", "ُ", "ِ")[v - 1] to "ar"
         }
-
         Regex("(?:en|ar)_number_(\\d{3})").matchEntire(name)?.let {
             val n = it.groupValues[1].toInt()
             if (n in 1..100) return if (name.startsWith("en_")) englishNumberName(n) to "en" else arabicNumberName(n) to "ar"
         }
-
         val fixed = mapOf(
             "welcome_en" to ("Hello! Welcome to the learning app." to "en"),
             "welcome_ar" to ("أهلاً بك! هيا نتعلم معاً." to "ar"),
@@ -251,7 +224,6 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
             "back_ar" to ("رجوع." to "ar")
         )
         fixed[name]?.let { return it }
-
         Regex("praise_(ar|en)_\\d{2}").matchEntire(name)?.let {
             return if (it.groupValues[1] == "ar") "أحسنت! عمل رائع! استمر!" to "ar" else "Great job! Keep going!" to "en"
         }
@@ -261,22 +233,13 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
     private fun englishNumberName(n: Int): String {
         val ones = arrayOf("zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen")
         val tens = arrayOf("","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety")
-        return when {
-            n < 20 -> ones[n]
-            n % 10 == 0 -> tens[n / 10]
-            else -> "${tens[n / 10]} ${ones[n % 10]}"
-        }
+        return when { n < 20 -> ones[n]; n % 10 == 0 -> tens[n / 10]; else -> "${tens[n / 10]} ${ones[n % 10]}" }
     }
 
     private fun arabicNumberName(n: Int): String {
         val ones = arrayOf("","واحد","اثنان","ثلاثة","أربعة","خمسة","ستة","سبعة","ثمانية","تسعة","عشرة","أحد عشر","اثنا عشر","ثلاثة عشر","أربعة عشر","خمسة عشر","ستة عشر","سبعة عشر","ثمانية عشر","تسعة عشر")
         val tens = arrayOf("","","عشرون","ثلاثون","أربعون","خمسون","ستون","سبعون","ثمانون","تسعون")
-        return when {
-            n == 100 -> "مئة"
-            n < 20 -> ones[n]
-            n % 10 == 0 -> tens[n / 10]
-            else -> "${ones[n % 10]} و${tens[n / 10]}"
-        }
+        return when { n == 100 -> "مئة"; n < 20 -> ones[n]; n % 10 == 0 -> tens[n / 10]; else -> "${ones[n % 10]} و${tens[n / 10]}" }
     }
 
     private fun speakStoryFromScreen(index: Int): Boolean {
@@ -290,9 +253,7 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
             val textField = item.javaClass.getDeclaredField("text").apply { isAccessible = true }
             val text = textField.get(item) as? String ?: return false
             speakOffline(text, if (index <= 10) "ar" else "en")
-        } catch (_: Throwable) {
-            false
-        }
+        } catch (_: Throwable) { false }
     }
 
     fun stop() {
@@ -314,21 +275,12 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         ttsReady = false
     }
 
-    private fun rawId(name: String): Int {
-        val id = context.resources.getIdentifier(name, "raw", context.packageName)
-        check(id != 0) { "Missing local audio resource: $name" }
-        return id
-    }
-
     private fun start(id: Int, resourceName: String) {
-        player = MediaPlayer.create(context, id)
-            ?: error("Could not create local audio resource: $resourceName")
-        player?.setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .build()
-        )
+        player = MediaPlayer.create(context, id) ?: error("Could not create local audio resource: $resourceName")
+        player?.setAudioAttributes(AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build())
         player?.setOnCompletionListener { releasePlayer() }
         player?.start()
     }
@@ -337,32 +289,21 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         if (queueIndex >= queue.size) { queue = emptyList(); return }
         val id = queue[queueIndex]
         player = MediaPlayer.create(context, id) ?: error("Could not create queued local audio")
-        player?.setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .build()
-        )
-        player?.setOnCompletionListener {
-            releasePlayer()
-            queueIndex++
-            playQueueItem()
-        }
+        player?.setAudioAttributes(AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build())
+        player?.setOnCompletionListener { releasePlayer(); queueIndex++; playQueueItem() }
         player?.start()
     }
 
-    private fun releasePlayer() {
-        player?.release()
-        player = null
-    }
+    private fun releasePlayer() { player?.release(); player = null }
 
     private fun parseNumber(text: String, language: String): Int? {
-        val normalized = text.map { c ->
-            when (c) {
-                '٠' -> '0'; '١' -> '1'; '٢' -> '2'; '٣' -> '3'; '٤' -> '4'
-                '٥' -> '5'; '٦' -> '6'; '٧' -> '7'; '٨' -> '8'; '٩' -> '9'; else -> c
-            }
-        }.joinToString("")
+        val normalized = text.map { c -> when (c) {
+            '٠' -> '0'; '١' -> '1'; '٢' -> '2'; '٣' -> '3'; '٤' -> '4';
+            '٥' -> '5'; '٦' -> '6'; '٧' -> '7'; '٨' -> '8'; '٩' -> '9'; else -> c
+        }}.joinToString("")
         val match = Regex("(?<!\\d)(100|[1-9]\\d?)(?!\\d)").find(normalized)
         return match?.value?.toInt()?.takeIf { it in 1..100 }
     }

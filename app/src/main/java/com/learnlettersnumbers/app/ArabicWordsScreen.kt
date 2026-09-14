@@ -11,7 +11,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -63,22 +64,25 @@ fun ArabicWordsScreen(audio: LocalAudioManager, repo: ProgressRepository, onBack
     val current = words[index.coerceIn(0, words.lastIndex)]
 
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
-        Column(Modifier.fillMaxSize().background(Color(0xFFF3FAFF)).padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            Modifier.fillMaxSize().background(Color(0xFFF3FAFF)).padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = onBack, shape = RoundedCornerShape(16.dp)) { Text("رجوع") }
                 Text("القراءة", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF2357A6))
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 WordModeButton("📖 اقرءا كلمات", mode == "read", Color(0xFF4C8BF5), Modifier.weight(1f)) { mode = "read" }
                 WordModeButton("✏️ اكتب كلمات", mode == "write", Color(0xFF6BCB77), Modifier.weight(1f)) { mode = "write" }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 WordLengthButton("3 حروف", length == 3, Color(0xFFFF8A4C), Modifier.weight(1f)) { length = 3; index = 0 }
                 WordLengthButton("4 حروف", length == 4, Color(0xFF9B72E8), Modifier.weight(1f)) { length = 4; index = 0 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             if (mode == "read") {
                 ArabicWordReading(current.text, audio, repo,
                     onPrevious = { index = if (index > 0) index - 1 else words.lastIndex },
@@ -94,14 +98,14 @@ fun ArabicWordsScreen(audio: LocalAudioManager, repo: ProgressRepository, onBack
 
 @Composable
 private fun WordModeButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = modifier.height(58.dp), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White), elevation = CardDefaults.cardElevation(if (selected) 7.dp else 2.dp)) {
+    Card(onClick = onClick, modifier = modifier.height(54.dp), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (selected) color else Color.White), elevation = CardDefaults.cardElevation(if (selected) 7.dp else 2.dp)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = if (selected) Color.White else color, textAlign = TextAlign.Center) }
     }
 }
 
 @Composable
 private fun WordLengthButton(text: String, selected: Boolean, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = modifier.height(46.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else Color(0xFFE8EEF5))) {
+    Button(onClick = onClick, modifier = modifier.height(44.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = if (selected) color else Color(0xFFE8EEF5))) {
         Text(text, fontWeight = FontWeight.ExtraBold, color = if (selected) Color.White else Color(0xFF34526F))
     }
 }
@@ -151,28 +155,26 @@ private fun ArabicWordReading(word: String, audio: LocalAudioManager, repo: Prog
         })
     }
 
-    Card(Modifier.fillMaxWidth().heightIn(min = 330.dp, max = 470.dp), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(10.dp)) {
-        Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text("اقرأ الكلمة بصوتك", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34526F))
-            Spacer(Modifier.height(18.dp))
-            Text(word, fontSize = 78.sp, fontWeight = FontWeight.Black, color = Color(0xFF1F5D8C), textAlign = TextAlign.Center)
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = { if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecognition(recognizer) else launcher.launch(Manifest.permission.RECORD_AUDIO) }, enabled = !listening && recognizer != null, modifier = Modifier.fillMaxWidth().height(58.dp), shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(containerColor = if (listening) Color.Gray else Color(0xFF4C8BF5))) {
-                Text(if (listening) "🎙️ أستمع..." else "🎙️ اقرأ الآن", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(10.dp)) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("اقرأ الكلمة بصوتك", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34526F))
+            Text(word, fontSize = 66.sp, fontWeight = FontWeight.Black, color = Color(0xFF1F5D8C), textAlign = TextAlign.Center)
+            Button(onClick = { if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecognition(recognizer) else launcher.launch(Manifest.permission.RECORD_AUDIO) }, enabled = !listening && recognizer != null, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = if (listening) Color.Gray else Color(0xFF4C8BF5))) {
+                Text(if (listening) "🎙️ أستمع..." else "🎙️ اقرأ الآن", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
             }
             if (failedAttempts >= 2) {
-                Spacer(Modifier.height(10.dp))
-                Button(onClick = { audio.speakOffline(word, "ar") }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF26A69A))) {
-                    Text("🔊 اسمع الكلمة", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.height(6.dp))
+                Button(onClick = { audio.speakOffline(word, "ar") }, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF26A69A))) {
+                    Text("🔊 اسمع الكلمة", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            Text(status, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = when (correct) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center)
-            if (heard.isNotBlank()) Text("سمعت: $heard", fontSize = 15.sp, color = Color(0xFF53636D), modifier = Modifier.padding(top = 6.dp))
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(16.dp)) { Text("السابق", fontWeight = FontWeight.ExtraBold) }
-                Button(onClick = onNext, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A4C))) { Text("التالي", fontWeight = FontWeight.ExtraBold) }
+            Spacer(Modifier.height(6.dp))
+            Text(status, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (correct) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center)
+            if (heard.isNotBlank()) Text("سمعت: $heard", fontSize = 14.sp, color = Color(0xFF53636D), modifier = Modifier.padding(top = 3.dp))
+            Spacer(Modifier.height(5.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(14.dp)) { Text("السابق", fontWeight = FontWeight.ExtraBold) }
+                Button(onClick = onNext, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A4C))) { Text("التالي", fontWeight = FontWeight.ExtraBold) }
             }
         }
     }
@@ -192,9 +194,7 @@ private fun startRecognition(recognizer: SpeechRecognizer?) {
 }
 
 private fun arabicWordMatches(recognized: String, target: String): Boolean {
-    val a = normalizeArabicForSpeech(recognized)
-    val b = normalizeArabicForSpeech(target)
-    return a == b
+    return normalizeArabicForSpeech(recognized) == normalizeArabicForSpeech(target)
 }
 
 private fun normalizeArabicForSpeech(value: String): String {
@@ -215,7 +215,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
     var currentStroke by remember(word) { mutableStateOf<List<Offset>>(emptyList()) }
     var result by remember(word) { mutableStateOf<Boolean?>(null) }
     var recognized by remember(word) { mutableStateOf("") }
-    var status by remember(word) { mutableStateOf("جاري تجهيز نموذج التعرف...") }
+    var status by remember(word) { mutableStateOf("فحص نموذج الكتابة...") }
     var modelReady by remember(word) { mutableStateOf(false) }
     var modelDownloading by remember(word) { mutableStateOf(false) }
     var checking by remember(word) { mutableStateOf(false) }
@@ -227,25 +227,43 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
     val digitalRecognizer = remember(model) { model?.let { DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(it).build()) } }
     DisposableEffect(digitalRecognizer) { onDispose { digitalRecognizer?.close() } }
 
+    fun markModelReady(message: String = "النموذج جاهز — اكتب الكلمة داخل اللوحة") {
+        modelReady = true
+        modelDownloading = false
+        status = message
+    }
+
     fun prepareModel() {
         val currentModel = model ?: run {
-            status = "نموذج الكتابة العربية غير متاح على هذا الإصدار"
+            modelReady = false
             modelDownloading = false
+            status = "نموذج الكتابة العربية غير متاح على هذا الإصدار"
             return
         }
         modelDownloading = true
-        status = "جاري تجهيز نموذج التعرف..."
-        RemoteModelManager.getInstance()
-            .download(currentModel, DownloadConditions.Builder().build())
-            .addOnSuccessListener {
-                modelReady = true
-                modelDownloading = false
-                status = "النموذج جاهز — اكتب الكلمة داخل اللوحة"
+        status = "فحص نموذج الكتابة العربية..."
+        val manager = RemoteModelManager.getInstance()
+        manager.isModelDownloaded(currentModel)
+            .addOnSuccessListener { downloaded ->
+                if (downloaded) {
+                    markModelReady()
+                } else {
+                    status = "جاري تنزيل نموذج الكتابة العربية..."
+                    manager.download(currentModel, DownloadConditions.Builder().build())
+                        .addOnSuccessListener { markModelReady() }
+                        .addOnFailureListener { error ->
+                            modelReady = false
+                            modelDownloading = false
+                            val detail = error.message?.take(90).orEmpty()
+                            status = if (detail.isBlank()) "تعذر تنزيل نموذج الكتابة. تأكد من الإنترنت ثم اضغط إعادة المحاولة." else "تعذر تنزيل النموذج: $detail"
+                        }
+                }
             }
-            .addOnFailureListener {
+            .addOnFailureListener { error ->
                 modelReady = false
                 modelDownloading = false
-                status = "تعذر تجهيز النموذج. اضغط «إعادة تجهيز النموذج» وحاول مرة أخرى."
+                val detail = error.message?.take(90).orEmpty()
+                status = if (detail.isBlank()) "تعذر فحص النموذج. اضغط إعادة المحاولة." else "تعذر فحص النموذج: $detail"
             }
     }
 
@@ -256,7 +274,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
         currentStroke = emptyList()
         result = null
         recognized = ""
-        status = if (modelReady) "اكتب الكلمة داخل اللوحة ثم اضغط «تحقق من الكتابة»" else status
+        status = if (modelReady) "اكتب كلمة «$word» ثم اضغط تحقق من الكتابة" else status
     }
 
     fun checkWriting() {
@@ -266,7 +284,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
         }
         currentStroke = emptyList()
         if (finalStrokes.isEmpty()) {
-            status = "اكتب الكلمة أولاً داخل اللوحة"
+            status = "اكتب كلمة «$word» أولاً داخل اللوحة"
             result = false
             return
         }
@@ -308,34 +326,54 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                     repo.addStars(1)
                 } else {
                     failedAttempts += 1
-                    status = if (failedAttempts >= 2) "حاول مرة أخرى — الكلمة النموذجية ظهرت في منتصف اللوحة" else "لم أتعرف على الكلمة، حاول مرة أخرى"
+                    status = if (failedAttempts >= 2) "لم تطابق الكلمة — النموذج ظهر في منتصف اللوحة للمساعدة" else "لم أتعرف على الكلمة، حاول مرة أخرى"
                 }
                 checking = false
             }
-            .addOnFailureListener {
+            .addOnFailureListener { error ->
                 failedAttempts += 1
                 result = false
                 checking = false
-                status = "حدث خطأ أثناء التعرف. حاول الكتابة بوضوح مرة أخرى."
+                status = error.message?.let { "تعذر التعرف: ${it.take(90)}" } ?: "حدث خطأ أثناء التعرف. حاول الكتابة بوضوح مرة أخرى."
             }
     }
 
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(10.dp)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("اكتب الكلمة", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34526F))
-            Spacer(Modifier.height(8.dp))
-            Box(Modifier.fillMaxWidth().height(350.dp).background(Color(0xFFFCFEFF), RoundedCornerShape(22.dp))) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(8.dp)) {
+        Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("اكتب الكلمة", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34526F))
+            Text(word, fontSize = 54.sp, fontWeight = FontWeight.Black, color = Color(0xFF1F5D8C), textAlign = TextAlign.Center)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(13.dp)) { Text("السابق", fontWeight = FontWeight.ExtraBold) }
+                Button(onClick = onNext, modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A4C))) { Text("التالي", fontWeight = FontWeight.ExtraBold) }
+            }
+            Spacer(Modifier.height(6.dp))
+            Box(Modifier.fillMaxWidth().height(285.dp).background(Color(0xFFFCFEFF), RoundedCornerShape(20.dp))) {
                 if (failedAttempts >= 2) {
                     Text(word, modifier = Modifier.align(Alignment.Center), fontSize = 78.sp, fontWeight = FontWeight.Bold, color = Color(0x421F5D8C), textAlign = TextAlign.Center)
                 }
                 Canvas(
                     Modifier.fillMaxSize().pointerInput(word) {
-                        detectDragGestures(
-                            onDragStart = { point -> currentStroke = listOf(point) },
-                            onDrag = { change, _ -> change.consume(); currentStroke = currentStroke + change.position },
-                            onDragEnd = { if (currentStroke.isNotEmpty()) strokes.add(currentStroke); currentStroke = emptyList() },
-                            onDragCancel = { currentStroke = emptyList() }
-                        )
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            down.consume()
+                            currentStroke = listOf(down.position)
+                            var active = true
+                            while (active) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null) {
+                                    active = false
+                                } else {
+                                    if (change.position != currentStroke.lastOrNull()) {
+                                        currentStroke = currentStroke + change.position
+                                    }
+                                    change.consume()
+                                    if (!change.pressed) active = false
+                                }
+                            }
+                            if (currentStroke.isNotEmpty()) strokes.add(currentStroke)
+                            currentStroke = emptyList()
+                        }
                     }
                 ) {
                     val centerY = size.height / 2f
@@ -344,7 +382,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                     all.forEach { points ->
                         val path = Path()
                         if (points.size == 1) {
-                            drawCircle(Color(0xFF2357A6), radius = 12f, center = points[0])
+                            drawCircle(Color(0xFF2357A6), radius = 13f, center = points[0])
                         } else {
                             points.forEachIndexed { i, p -> if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y) }
                             drawPath(path, color = Color(0xFF2357A6), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 24f, cap = StrokeCap.Round, join = StrokeJoin.Round))
@@ -352,22 +390,17 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(if (modelDownloading) "جاري تجهيز نموذج التعرف..." else status, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center)
-            if (recognized.isNotBlank()) Text("اقتراحات النموذج: $recognized", fontSize = 13.sp, color = Color(0xFF53636D), textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+            Spacer(Modifier.height(5.dp))
+            Text(if (modelDownloading) status else status, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center, maxLines = 2)
+            if (recognized.isNotBlank()) Text("اقتراحات النموذج: $recognized", fontSize = 12.sp, color = Color(0xFF53636D), textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
             if (!modelReady && !modelDownloading) {
-                Spacer(Modifier.height(6.dp))
-                OutlinedButton(onClick = { prepareModel() }, modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(14.dp)) { Text("إعادة تجهيز النموذج", fontWeight = FontWeight.Bold) }
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton(onClick = { prepareModel() }, modifier = Modifier.fillMaxWidth().height(40.dp), shape = RoundedCornerShape(13.dp)) { Text("إعادة المحاولة لتجهيز النموذج", fontWeight = FontWeight.Bold) }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(5.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = ::clearBoard, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(16.dp)) { Text("مسح", fontWeight = FontWeight.ExtraBold) }
-                Button(onClick = ::checkWriting, enabled = modelReady && !checking, modifier = Modifier.weight(1.5f).height(50.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C8BF5))) { Text(if (checking) "جارٍ الفحص..." else "تحقق من الكتابة", fontWeight = FontWeight.ExtraBold) }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(16.dp)) { Text("السابق", fontWeight = FontWeight.ExtraBold) }
-                Button(onClick = onNext, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A4C))) { Text("التالي", fontWeight = FontWeight.ExtraBold) }
+                OutlinedButton(onClick = ::clearBoard, modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(13.dp)) { Text("مسح", fontWeight = FontWeight.ExtraBold) }
+                Button(onClick = ::checkWriting, enabled = modelReady && !checking, modifier = Modifier.weight(1.5f).height(44.dp), shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C8BF5))) { Text(if (checking) "جارٍ الفحص..." else "تحقق من الكتابة", fontWeight = FontWeight.ExtraBold) }
             }
         }
     }

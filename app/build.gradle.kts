@@ -12,32 +12,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures {
-        compose = true
-        buildConfig = true
-    }
+    buildFeatures { compose = true; buildConfig = true }
 
     val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
     val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
     val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
     val releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
-
-    if (!releaseKeystorePath.isNullOrBlank() && !releaseStorePassword.isNullOrBlank() &&
-        !releaseKeyAlias.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()) {
-        signingConfigs.create("release") {
-            storeFile = file(releaseKeystorePath)
-            storePassword = releaseStorePassword
-            keyAlias = releaseKeyAlias
-            keyPassword = releaseKeyPassword
-        }
+    if (!releaseKeystorePath.isNullOrBlank() && !releaseStorePassword.isNullOrBlank() && !releaseKeyAlias.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()) {
+        signingConfigs.create("release") { storeFile = file(releaseKeystorePath); storePassword = releaseStorePassword; keyAlias = releaseKeyAlias; keyPassword = releaseKeyPassword }
         buildTypes.getByName("release") { signingConfig = signingConfigs.getByName("release") }
     }
 }
 
-// Download the A-Z phonics recordings into Android's normal raw resource
-// directory before any resource/source-set mapping happens. This keeps the
-// final APK fully offline at runtime and avoids the previous generated-resource
-// directory not being packaged.
 val phonicsResDir = layout.projectDirectory.dir("src/main/res/raw").asFile
 val downloadEnglishPhonics by tasks.registering {
     doLast {
@@ -47,10 +33,7 @@ val downloadEnglishPhonics by tasks.registering {
             if (output.exists() && output.length() > 100) return@forEach
             val url = URI("https://raw.githubusercontent.com/Neuromancer56/phonics_english/main/sounds/phonics_$letter.ogg").toURL()
             val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 30_000
-            connection.readTimeout = 60_000
-            connection.instanceFollowRedirects = true
-            connection.requestMethod = "GET"
+            connection.connectTimeout = 30_000; connection.readTimeout = 60_000; connection.instanceFollowRedirects = true; connection.requestMethod = "GET"
             connection.setRequestProperty("User-Agent", "learn-letters-numbers-build")
             try {
                 check(connection.responseCode in 200..299) { "Could not download phonics_$letter.ogg: HTTP ${connection.responseCode}" }
@@ -60,15 +43,20 @@ val downloadEnglishPhonics by tasks.registering {
         }
     }
 }
-
-// Android Gradle Plugin reads the raw resource directory during these tasks,
-// so make the dependency explicit for every variant that maps or merges it.
 tasks.configureEach {
-    if ((name.startsWith("map") && name.endsWith("SourceSetPaths")) ||
-        (name.startsWith("merge") && name.endsWith("Resources"))) {
-        dependsOn(downloadEnglishPhonics)
-    }
+    if ((name.startsWith("map") && name.endsWith("SourceSetPaths")) || (name.startsWith("merge") && name.endsWith("Resources"))) dependsOn(downloadEnglishPhonics)
 }
 
-dependencies { implementation(platform("androidx.compose:compose-bom:2024.10.01")); implementation("androidx.activity:activity-compose:1.9.3"); implementation("androidx.compose.ui:ui"); implementation("androidx.compose.ui:ui-tooling-preview"); implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-core"); implementation("androidx.compose.foundation:foundation"); implementation("androidx.compose.animation:animation"); implementation("com.google.android.gms:play-services-ads:25.4.0"); debugImplementation("androidx.compose.ui:ui-tooling") }
+dependencies {
+    implementation(platform("androidx.compose:compose-bom:2024.10.01"))
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.animation:animation")
+    implementation("com.google.android.gms:play-services-ads:25.4.0")
+    implementation("com.google.mlkit:digital-ink-recognition:19.0.0")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+}

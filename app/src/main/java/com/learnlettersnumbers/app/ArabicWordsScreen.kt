@@ -255,10 +255,8 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
 
     fun checkWriting() {
         if (checking || !modelReady || digitalRecognizer == null) return
-        val allStrokes = strokes.toList().filter { it.size >= 2 }
-        if (currentStroke.size >= 2) strokes.add(currentStroke)
+        val finalStrokes = strokes.toList().plus(currentStroke.takeIf { it.size >= 2 }).filter { it.size >= 2 }
         currentStroke = emptyList()
-        val finalStrokes = if (allStrokes.isNotEmpty()) allStrokes else strokes.toList().filter { it.size >= 2 }
         if (finalStrokes.isEmpty()) {
             status = "اكتب الكلمة أولاً داخل اللوحة"
             result = false
@@ -267,18 +265,26 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
         checking = true
         result = null
         status = "جارٍ التعرف على الكتابة..."
+        val minX = finalStrokes.flatten().minOf { it.x }
+        val maxX = finalStrokes.flatten().maxOf { it.x }
+        val minY = finalStrokes.flatten().minOf { it.y }
+        val maxY = finalStrokes.flatten().maxOf { it.y }
+        val sourceW = (maxX - minX).coerceAtLeast(1f)
+        val sourceH = (maxY - minY).coerceAtLeast(1f)
         val inkBuilder = Ink.builder()
+        var timestamp = System.currentTimeMillis()
         finalStrokes.forEach { points ->
             val strokeBuilder = Ink.Stroke.builder()
-            points.forEachIndexed { i, point ->
-                strokeBuilder.addPoint(Ink.Point.create(point.x, point.y, System.currentTimeMillis() + i))
+            points.forEach { point ->
+                val x = ((point.x - minX) / sourceW * 850f).coerceIn(0f, 850f)
+                val y = ((point.y - minY) / sourceH * 300f).coerceIn(0f, 300f)
+                strokeBuilder.addPoint(Ink.Point.create(x, y, timestamp++))
             }
             inkBuilder.addStroke(strokeBuilder.build())
+            timestamp += 20
         }
         val ink = inkBuilder.build()
-        val context = RecognitionContext.builder()
-            .setWritingArea(WritingArea(900f, 350f))
-            .build()
+        val context = RecognitionContext.builder().setWritingArea(WritingArea(900f, 350f)).build()
         digitalRecognizer.recognize(ink, context)
             .addOnSuccessListener { recognition ->
                 val candidates = recognition.candidates.take(10).map { it.text }
@@ -293,7 +299,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                     repo.addStars(1)
                 } else {
                     failedAttempts += 1
-                    status = if (failedAttempts >= 2) "حاول مرة أخرى — الكلمة النموذجية في منتصف اللوحة" else "لم أتعرف على الكلمة، حاول مرة أخرى"
+                    status = if (failedAttempts >= 2) "حاول مرة أخرى — الكلمة النموذجية ظهرت في منتصف اللوحة" else "لم أتعرف على الكلمة، حاول مرة أخرى"
                 }
                 checking = false
             }
@@ -314,24 +320,17 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                     Modifier.fillMaxSize().pointerInput(word) {
                         detectDragGestures(
                             onDragStart = { point -> currentStroke = listOf(point) },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                currentStroke = currentStroke + change.position
-                            },
-                            onDragEnd = {
-                                if (currentStroke.size >= 2) strokes.add(currentStroke)
-                                currentStroke = emptyList()
-                            },
+                            onDrag = { change, _ -> change.consume(); currentStroke = currentStroke + change.position },
+                            onDragEnd = { if (currentStroke.size >= 2) strokes.add(currentStroke); currentStroke = emptyList() },
                             onDragCancel = { currentStroke = emptyList() }
                         )
                     }
                 ) {
-                    val centerX = size.width / 2f
                     val centerY = size.height / 2f
                     drawLine(Color(0xFFD8E3EC), Offset(30f, centerY), Offset(size.width - 30f, centerY), strokeWidth = 2f)
                     if (failedAttempts >= 2) {
-                        drawContext.canvas.nativeCanvas.drawText(word, centerX, centerY + 32f, android.graphics.Paint().apply {
-                            color = android.graphics.Color.argb(70, 31, 93, 140)
+                        drawContext.canvas.nativeCanvas.drawText(word, size.width / 2f, centerY + 28f, android.graphics.Paint().apply {
+                            color = android.graphics.Color.argb(65, 31, 93, 140)
                             textSize = 78f
                             textAlign = android.graphics.Paint.Align.CENTER
                             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -346,14 +345,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Text(
-                when {
-                    modelDownloading -> "جاري تجهيز نموذج الكتابة..."
-                    modelReady -> status
-                    else -> status
-                },
-                fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center
-            )
+            Text(if (modelDownloading) "جاري تجهيز نموذج الكتابة..." else status, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center)
             if (recognized.isNotBlank()) Text("اقتراحات النموذج: $recognized", fontSize = 13.sp, color = Color(0xFF53636D), textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -371,12 +363,5 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
 
 private fun normalizeArabicForWriting(value: String): String {
     val decomposed = Normalizer.normalize(value.trim().lowercase(Locale.ROOT), Normalizer.Form.NFD)
-    return decomposed
-        .replace(Regex("[\\u064B-\\u0652]"), "")
-        .replace("\u0640", "")
-        .replace("أ", "ا")
-        .replace("إ", "ا")
-        .replace("آ", "ا")
-        .replace("ى", "ي")
-        .replace(Regex("\\s+"), "")
+    return decomposed.replace(Regex("[\\u064B-\\u0652]"), "").replace("\u0640", "").replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ى", "ي").replace(Regex("\\s+"), "")
 }

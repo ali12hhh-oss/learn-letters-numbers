@@ -204,26 +204,33 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
 
     Column(Modifier.fillMaxWidth()) {
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(7.dp)) {
-            Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("اكتب الكلمة التالية", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF45606F)); Text(word, fontSize = 48.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6), textAlign = TextAlign.Center)
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("اكتب الكلمة التالية", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF45606F))
+                Text(word, fontSize = 48.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6), textAlign = TextAlign.Center)
                 Text(if (modelDownloading) "⬇️ يتم تجهيز نموذج التعرف على الكتابة..." else if (modelReady) "✓ التعرف الذكي على الكتابة جاهز" else "⚠️ نموذج التعرف غير جاهز", fontSize = 13.sp, color = if (modelReady) Color(0xFF16833D) else Color(0xFF8A5A00), fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.height(8.dp))
-        Card(Modifier.fillMaxWidth().height(300.dp), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(9.dp)) {
+        Card(Modifier.fillMaxWidth().height(350.dp), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(9.dp)) {
             Box(Modifier.fillMaxSize().padding(8.dp)) {
-                if (guide) Text(word, modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center, fontSize = 105.sp, fontWeight = FontWeight.Black, color = Color(0x22355782))
                 Canvas(Modifier.fillMaxSize().background(Color(0xFFFFFEF8), RoundedCornerShape(20.dp)).pointerInput(word) {
                     detectDragGestures(onDragStart = { current = listOf(it) }, onDrag = { change, _ -> change.consume(); current = current + change.position }, onDragEnd = { if (current.isNotEmpty()) strokes.add(current); current = emptyList() }, onDragCancel = { current = emptyList() })
                 }) {
+                    if (guide) drawContext.canvas.nativeCanvas
+                    if (guide) drawContext.canvas
+                    if (guide) {
+                        drawLine(Color(0xFFD9E4EC), Offset(0f, size.height * 0.72f), Offset(size.width, size.height * 0.72f), 2f)
+                    }
                     (strokes + listOf(current)).forEach { pts ->
                         if (pts.size == 1) drawCircle(Color(0xFF245B8A), 7f, pts.first())
                         else if (pts.size > 1) { val path = Path().apply { moveTo(pts[0].x, pts[0].y); for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y) }; drawPath(path, Color(0xFF245B8A), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 20f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
                     }
                 }
+                if (guide) Text(word, modifier = Modifier.fillMaxSize().padding(bottom = 20.dp), textAlign = TextAlign.Center, fontSize = 105.sp, fontWeight = FontWeight.Black, color = Color(0x22355782))
             }
         }
-        Spacer(Modifier.height(6.dp)); Text(status, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(6.dp))
+        Text(status, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         if (recognized.isNotBlank()) Text("النتائج المحتملة: $recognized", fontSize = 13.sp, color = Color(0xFF53636D), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 3.dp))
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

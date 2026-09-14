@@ -34,16 +34,16 @@ android {
     }
 }
 
-// Bundle the A-Z phonics recordings into the APK at build time. Runtime stays
-// fully offline; an existing generated file is reused on incremental builds.
-val phonicsGeneratedResDir = layout.buildDirectory.dir("generated/phonics/res/raw")
+// Bundle the A-Z phonics recordings directly into the normal Android raw
+// resource directory. The previous generated build-directory resources were
+// downloaded successfully but were not packaged into the final APK.
+val phonicsResDir = layout.projectDirectory.dir("src/main/res/raw").asFile
 val downloadEnglishPhonics by tasks.registering {
-    outputs.dir(phonicsGeneratedResDir)
+    outputs.files(('a'..'z').map { phonicsResDir.resolve("phonics_$it.ogg") })
     doLast {
-        val outDir = phonicsGeneratedResDir.get().asFile
-        outDir.mkdirs()
+        phonicsResDir.mkdirs()
         ('a'..'z').forEach { letter ->
-            val output = outDir.resolve("phonics_$letter.ogg")
+            val output = phonicsResDir.resolve("phonics_$letter.ogg")
             if (output.exists() && output.length() > 100) return@forEach
             val url = URI("https://raw.githubusercontent.com/Neuromancer56/phonics_english/main/sounds/phonics_$letter.ogg").toURL()
             val connection = url.openConnection() as HttpURLConnection
@@ -61,8 +61,10 @@ val downloadEnglishPhonics by tasks.registering {
     }
 }
 
-android.sourceSets["main"].res.srcDir(phonicsGeneratedResDir)
-tasks.named("preBuild").configure { dependsOn(downloadEnglishPhonics) }
+// Resource merging must wait until the recordings exist.
+tasks.matching { task ->
+    task.name.startsWith("merge") && task.name.endsWith("Resources")
+}.configureEach { dependsOn(downloadEnglishPhonics) }
 
 dependencies { implementation(platform("androidx.compose:compose-bom:2024.10.01")); implementation("androidx.activity:activity-compose:1.9.3"); implementation("androidx.compose.ui:ui"); implementation("androidx.compose.ui:ui-tooling-preview"); implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core"); implementation("androidx.compose.foundation:foundation"); implementation("androidx.compose.animation:animation"); implementation("com.google.android.gms:play-services-ads:25.4.0"); debugImplementation("androidx.compose.ui:ui-tooling") }

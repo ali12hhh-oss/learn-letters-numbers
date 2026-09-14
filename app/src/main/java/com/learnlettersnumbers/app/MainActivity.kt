@@ -80,7 +80,8 @@ class MainActivity : ComponentActivity() {
                 "arabic_words" -> ArabicWordsScreen(audio=localAudio,repo=progressRepo,onBack={screen="arabic"})
                 "arabic_tutorial" -> WritingStrokeLessonScreen(language="ar",numbers=false,onBack={screen="arabic"},speak={msg,lang->if(lang=="ar")speakArabic(msg)else speak(msg)})
                 "english_tutorial" -> WritingStrokeLessonScreen(language="en",numbers=false,onBack={screen="english"},speak={msg,lang->if(lang=="ar")speakArabic(msg)else speak(msg)})
-                "english" -> EnglishSection(onSettings={settingsReturnScreen="english";screen="settings"},onLetters={screen="letters"},onNumbers={screen="numbers"},onWriting={screen="writing"},onTutorial={screen="english_tutorial"},onProgress={screen="progress"},onRewards={screen="rewards"},onTests={screen="tests"},onStories={screen="stories"},onStages={screen="stages"},onGames={screen="games"},onBack={screen="home"},speak={speak(it)})
+                "english" -> EnglishSection(onSettings={settingsReturnScreen="english";screen="settings"},onLetters={screen="letters"},onNumbers={screen="numbers"},onWriting={screen="writing"},onTutorial={screen="english_tutorial"},onReading={screen="english_words"},onProgress={screen="progress"},onRewards={screen="rewards"},onTests={screen="tests"},onStories={screen="stories"},onStages={screen="stages"},onGames={screen="games"},onBack={screen="home"},speak={speak(it)})
+                "english_words" -> EnglishWordsScreen(audio=localAudio,repo=progressRepo,onBack={screen="english"})
                 "letters" -> EnglishLettersScreen(audio=localAudio,onTap={if(settingsRepo.effectsEnabled())tone?.startTone(ToneGenerator.TONE_PROP_BEEP,70)},onBack={screen="english"},onLetterSeen={progressRepo.recordLetterSeen(it)},soundsEnabled={settingsRepo.soundsEnabled()})
                 "numbers" -> EnglishNumbers(onBack={screen="english"},speak={speak(it)},playNumber={n->localAudio.playRequired("en_number_%03d".format(n))},repo=progressRepo)
                 "writing" -> EnglishWriting(onBack={screen="english"},speak={speak(it)},repo=progressRepo)
@@ -120,7 +121,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun EnglishSection(onSettings:()->Unit,onLetters:()->Unit,onNumbers:()->Unit,onTutorial:()->Unit,onWriting:()->Unit,onProgress:()->Unit,onRewards:()->Unit,onTests:()->Unit,onStories:()->Unit,onStages:()->Unit,onGames:()->Unit,onBack:()->Unit,speak:(String)->Unit){
+    fun EnglishSection(onSettings:()->Unit,onLetters:()->Unit,onNumbers:()->Unit,onTutorial:()->Unit,onWriting:()->Unit,onReading:()->Unit,onProgress:()->Unit,onRewards:()->Unit,onTests:()->Unit,onStories:()->Unit,onStages:()->Unit,onGames:()->Unit,onBack:()->Unit,speak:(String)->Unit){
         Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background,MaterialTheme.colorScheme.surfaceVariant))).padding(horizontal=18.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally){
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                 Button(onClick=onBack,modifier=Modifier.height(42.dp),shape=RoundedCornerShape(14.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF546E7A)),elevation=ButtonDefaults.buttonElevation(defaultElevation=6.dp)){Text("↩ رجوع",fontSize=14.sp,fontWeight=FontWeight.ExtraBold,color=Color.White)}
@@ -134,6 +135,7 @@ class MainActivity : ComponentActivity() {
             EnglishCard("🔢","Numbers","الأرقام الإنجليزية",Color(0xFFFF8A4C),onNumbers)
             EnglishCard("🖊️","Learn to Write","تعلم الكتابة خطوة بخطوة",Color(0xFF9B72E8),onTutorial)
             EnglishCard("✏️","Writing","الكتابة والتدريب",Color(0xFF6BCB77),onWriting)
+            EnglishCard("📖","Reading","قراءة كلمات وكتابتها",Color(0xFF26A69A),onReading)
         }
     }
 
@@ -183,16 +185,8 @@ class MainActivity : ComponentActivity() {
             Row(Modifier.fillMaxWidth().height(46.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){Text(if(mode=="letters")"${index+1} / 26" else "${index+1} / 100",fontWeight=FontWeight.ExtraBold,fontSize=13.sp);Spacer(Modifier.width(10.dp));Text(target,fontSize=34.sp,fontWeight=FontWeight.Black,color=Color(0xFF2357A6));Spacer(Modifier.width(8.dp));IconButton(onClick={speakTarget()}){Text("🔊",fontSize=22.sp)}}
             Card(Modifier.fillMaxWidth().weight(1f),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(9.dp)){
                 Column(Modifier.fillMaxSize().padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                    val boardModifier=Modifier.fillMaxWidth().weight(1f).background(Color(0xFFFDFEFF),RoundedCornerShape(20.dp))
-                        .pointerInput(inkColor){detectTapGestures(onTap={point->strokes.add(listOf(point))})}
-                        .pointerInput(inkColor){detectDragGestures(onDragStart={currentStroke=listOf(it)},onDrag={change,_->change.consume();currentStroke=currentStroke+change.position},onDragEnd={if(currentStroke.isNotEmpty())strokes.add(currentStroke);currentStroke=emptyList()},onDragCancel={currentStroke=emptyList()})}
-                    Canvas(boardModifier){
-                        val all=strokes+listOf(currentStroke)
-                        all.forEach{pts->
-                            if(pts.size==1){drawCircle(inkColor,8f,pts.first())}
-                            else if(pts.size>1){val path=Path().apply{moveTo(pts[0].x,pts[0].y);for(i in 1 until pts.size)lineTo(pts[i].x,pts[i].y)};drawPath(path,inkColor,style=androidx.compose.ui.graphics.drawscope.Stroke(width=36f,cap=StrokeCap.Round,join=StrokeJoin.Round))}
-                        }
-                    }
+                    val boardModifier=Modifier.fillMaxWidth().weight(1f).background(Color(0xFFFDFEFF),RoundedCornerShape(20.dp)).pointerInput(inkColor){detectTapGestures(onTap={point->strokes.add(listOf(point))})}.pointerInput(inkColor){detectDragGestures(onDragStart={currentStroke=listOf(it)},onDrag={change,_->change.consume();currentStroke=currentStroke+change.position},onDragEnd={if(currentStroke.isNotEmpty())strokes.add(currentStroke);currentStroke=emptyList()},onDragCancel={currentStroke=emptyList()})}
+                    Canvas(boardModifier){val all=strokes+listOf(currentStroke);all.forEach{pts->if(pts.size==1){drawCircle(inkColor,8f,pts.first())}else if(pts.size>1){val path=Path().apply{moveTo(pts[0].x,pts[0].y);for(i in 1 until pts.size)lineTo(pts[i].x,pts[i].y)};drawPath(path,inkColor,style=androidx.compose.ui.graphics.drawscope.Stroke(width=36f,cap=StrokeCap.Round,join=StrokeJoin.Round))}}}
                     Row(Modifier.fillMaxWidth().height(42.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){val colors=listOf(Color(0xFF2563EB),Color(0xFF16A34A),Color(0xFFE11D48),Color(0xFF9333EA),Color(0xFFF59E0B));colors.forEach{c->Box(Modifier.padding(4.dp).size(32.dp).background(c,CircleShape).clickable{inkColor=c})}}
                 }
             }
@@ -203,12 +197,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun ModeButton(text:String, arabicText:String, selected:Boolean, color:Color, modifier:Modifier, onClick:()->Unit){
         Card(modifier.height(54.dp).clickable(onClick=onClick),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=if(selected)color else Color.White),elevation=CardDefaults.cardElevation(if(selected)7.dp else 2.dp)){
-            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
-                Column(horizontalAlignment=Alignment.CenterHorizontally){
-                    Text(text,fontSize=16.sp,fontWeight=FontWeight.Black,color=if(selected)Color.White else color)
-                    Text(arabicText,fontSize=11.sp,fontWeight=FontWeight.Bold,color=if(selected)Color.White else Color(0xFF666666))
-                }
-            }
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Text(text,fontSize=16.sp,fontWeight=FontWeight.Black,color=if(selected)Color.White else color);Text(arabicText,fontSize=11.sp,fontWeight=FontWeight.Bold,color=if(selected)Color.White else Color(0xFF666666))}}
         }
     }
 

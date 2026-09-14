@@ -192,7 +192,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                 inkBuilder.addStroke(strokeBuilder.build())
             }
         }
-        val recognitionContext = RecognitionContext.builder().setWritingArea(WritingArea(900f, 300f)).build()
+        val recognitionContext = RecognitionContext.builder().setWritingArea(WritingArea(900f, 350f)).build()
         digitalRecognizer.recognize(inkBuilder.build(), recognitionContext).addOnSuccessListener { recognition ->
             val candidates = recognition.candidates.take(5).map { it.text }; val best = candidates.firstOrNull().orEmpty(); recognized = candidates.joinToString("، ")
             val ok = candidates.any { arabicWordMatches(it, word) }; result = ok
@@ -216,11 +216,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                 Canvas(Modifier.fillMaxSize().background(Color(0xFFFFFEF8), RoundedCornerShape(20.dp)).pointerInput(word) {
                     detectDragGestures(onDragStart = { current = listOf(it) }, onDrag = { change, _ -> change.consume(); current = current + change.position }, onDragEnd = { if (current.isNotEmpty()) strokes.add(current); current = emptyList() }, onDragCancel = { current = emptyList() })
                 }) {
-                    if (guide) drawContext.canvas.nativeCanvas
-                    if (guide) drawContext.canvas
-                    if (guide) {
-                        drawLine(Color(0xFFD9E4EC), Offset(0f, size.height * 0.72f), Offset(size.width, size.height * 0.72f), 2f)
-                    }
+                    if (guide) drawLine(Color(0xFFD9E4EC), Offset(0f, size.height * 0.72f), Offset(size.width, size.height * 0.72f), 2f)
                     (strokes + listOf(current)).forEach { pts ->
                         if (pts.size == 1) drawCircle(Color(0xFF245B8A), 7f, pts.first())
                         else if (pts.size > 1) { val path = Path().apply { moveTo(pts[0].x, pts[0].y); for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y) }; drawPath(path, Color(0xFF245B8A), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 20f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }

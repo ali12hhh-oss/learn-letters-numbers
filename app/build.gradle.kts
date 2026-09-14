@@ -1,7 +1,7 @@
-plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
-
 import java.net.HttpURLConnection
 import java.net.URI
+
+plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
 
 android {
     namespace = "com.learnlettersnumbers.app"
@@ -17,9 +17,6 @@ android {
         buildConfig = true
     }
 
-    // Release signing is enabled only when the keystore and credentials are
-    // supplied through environment variables / local properties. Private
-    // signing material is intentionally never stored in Git.
     val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
     val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
     val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
@@ -33,26 +30,21 @@ android {
             keyAlias = releaseKeyAlias
             keyPassword = releaseKeyPassword
         }
-        buildTypes.getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
-        }
+        buildTypes.getByName("release") { signingConfig = signingConfigs.getByName("release") }
     }
 }
 
-// The phonics_english project publishes the A-Z phonics media separately from
-// its code. Download the CC0 media during the Android build so the APK keeps
-// the sounds locally and remains offline at runtime. Existing files are reused.
+// Bundle the A-Z phonics recordings into the APK at build time. Runtime stays
+// fully offline; an existing generated file is reused on incremental builds.
 val phonicsGeneratedResDir = layout.buildDirectory.dir("generated/phonics/res/raw")
 val downloadEnglishPhonics by tasks.registering {
     outputs.dir(phonicsGeneratedResDir)
     doLast {
         val outDir = phonicsGeneratedResDir.get().asFile
         outDir.mkdirs()
-        val alphabet = ('a'..'z').toList()
-        alphabet.forEach { letter ->
+        ('a'..'z').forEach { letter ->
             val output = outDir.resolve("phonics_$letter.ogg")
             if (output.exists() && output.length() > 100) return@forEach
-
             val url = URI("https://raw.githubusercontent.com/Neuromancer56/phonics_english/main/sounds/phonics_$letter.ogg").toURL()
             val connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 30_000
@@ -61,14 +53,10 @@ val downloadEnglishPhonics by tasks.registering {
             connection.requestMethod = "GET"
             connection.setRequestProperty("User-Agent", "learn-letters-numbers-build")
             try {
-                check(connection.responseCode in 200..299) {
-                    "Could not download phonics_$letter.ogg: HTTP ${connection.responseCode}"
-                }
+                check(connection.responseCode in 200..299) { "Could not download phonics_$letter.ogg: HTTP ${connection.responseCode}" }
                 connection.inputStream.use { input -> output.outputStream().use { input.copyTo(it) } }
                 check(output.length() > 100) { "Downloaded phonics_$letter.ogg is empty" }
-            } finally {
-                connection.disconnect()
-            }
+            } finally { connection.disconnect() }
         }
     }
 }

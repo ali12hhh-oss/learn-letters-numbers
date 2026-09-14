@@ -43,11 +43,17 @@ import java.text.Normalizer
 import java.util.Locale
 
 private data class ArabicWord(val text: String, val letters: Int)
+
+// كلمات شائعة ومفهومة للطفل: كلمات يومية، حيوانات، فواكه، وكلمات تعليمية.
 private val arabicWords = listOf(
-    ArabicWord("باب", 3), ArabicWord("بيت", 3), ArabicWord("قلم", 3), ArabicWord("ولد", 3),
-    ArabicWord("بنت", 3), ArabicWord("نهر", 3), ArabicWord("قمر", 3), ArabicWord("شمس", 3),
-    ArabicWord("كتاب", 4), ArabicWord("حليب", 4), ArabicWord("تفاح", 4), ArabicWord("حصان", 4),
-    ArabicWord("سمكة", 4), ArabicWord("زهرة", 4), ArabicWord("كرسي", 4), ArabicWord("ملعب", 4)
+    ArabicWord("دار", 3), ArabicWord("دور", 3), ArabicWord("بان", 3), ArabicWord("باب", 3),
+    ArabicWord("بيت", 3), ArabicWord("قلم", 3), ArabicWord("قمر", 3), ArabicWord("شمس", 3),
+    ArabicWord("أسد", 3), ArabicWord("نمر", 3), ArabicWord("جمل", 3), ArabicWord("فيل", 3),
+    ArabicWord("موز", 3), ArabicWord("تين", 3), ArabicWord("عنب", 3), ArabicWord("درس", 3),
+    ArabicWord("حرف", 3), ArabicWord("لون", 3), ArabicWord("علم", 3), ArabicWord("نور", 3),
+    ArabicWord("كتاب", 4), ArabicWord("دفتر", 4), ArabicWord("حروف", 4), ArabicWord("تفاح", 4),
+    ArabicWord("رمان", 4), ArabicWord("حصان", 4), ArabicWord("سمكة", 4), ArabicWord("طائر", 4),
+    ArabicWord("نحلة", 4), ArabicWord("بقرة", 4), ArabicWord("وردة", 4), ArabicWord("زهرة", 4)
 )
 
 @Composable
@@ -101,9 +107,17 @@ private fun ArabicWordReading(word: String, audio: LocalAudioManager, repo: Prog
     var status by remember(word) { mutableStateOf("اضغط على الميكروفون ثم اقرأ الكلمة بصوت واضح") }
     var correct by remember(word) { mutableStateOf<Boolean?>(null) }
     var listening by remember(word) { mutableStateOf(false) }
+    var failedAttempts by remember(word) { mutableIntStateOf(0) }
     val recognizer = remember(context) { if (SpeechRecognizer.isRecognitionAvailable(context)) SpeechRecognizer.createSpeechRecognizer(context) else null }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) startRecognition(recognizer) else status = "نحتاج إذن الميكروفون حتى يسمع التطبيق قراءة الطفل" }
     DisposableEffect(recognizer) { onDispose { recognizer?.destroy() } }
+
+    fun registerFailure(message: String) {
+        failedAttempts += 1
+        correct = false
+        status = if (failedAttempts >= 2) "$message — اضغط «اسمع الكلمة» واستمع ثم حاول مرة أخرى" else message
+    }
+
     LaunchedEffect(recognizer, word) {
         recognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { listening = true; status = "استمع إليك... اقرأ الكلمة الآن" }
@@ -111,28 +125,46 @@ private fun ArabicWordReading(word: String, audio: LocalAudioManager, repo: Prog
             override fun onRmsChanged(rmsdB: Float) = Unit
             override fun onBufferReceived(buffer: ByteArray?) = Unit
             override fun onEndOfSpeech() { listening = false; status = "جارٍ التحقق..." }
-            override fun onError(error: Int) { listening = false; correct = false; status = "لم أفهم الكلمة، حاول مرة أخرى"; audio.speakOffline("حاول مرة أخرى", "ar") }
+            override fun onError(error: Int) { listening = false; registerFailure("لم أفهم الكلمة، حاول مرة أخرى") }
             override fun onResults(results: Bundle?) {
                 listening = false
                 val options = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
                 heard = options.firstOrNull().orEmpty()
                 val ok = options.any { arabicWordMatches(it, word) }
-                correct = ok; status = if (ok) "أحسنت! قراءة صحيحة 👏" else "حاول مرة أخرى 🌟"
-                if (ok) { repo.recordLesson("Arabic word reading", word, true); repo.addStars(1); audio.speakOffline("أحسنت", "ar") } else audio.speakOffline("حاول مرة أخرى", "ar")
+                if (ok) {
+                    correct = true
+                    status = "أحسنت! قراءة صحيحة 👏"
+                    repo.recordLesson("Arabic word reading", word, true)
+                    repo.addStars(1)
+                } else {
+                    registerFailure(if (heard.isBlank()) "لم أتعرف على الكلمة" else "سمعت: «$heard» — حاول مرة أخرى")
+                }
             }
             override fun onPartialResults(partialResults: Bundle?) = Unit
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
         })
     }
+
     Card(Modifier.fillMaxWidth().heightIn(min = 330.dp, max = 470.dp), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(10.dp)) {
         Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text("اقرأ الكلمة بصوتك", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34526F))
-            Spacer(Modifier.height(18.dp)); Text(word, fontSize = 78.sp, fontWeight = FontWeight.Black, color = Color(0xFF1F5D8C), textAlign = TextAlign.Center)
-            Spacer(Modifier.height(12.dp)); Button(onClick = { audio.speakOffline(word, "ar") }, shape = RoundedCornerShape(18.dp)) { Text("🔊 اسمع الكلمة", fontSize = 17.sp) }
-            Spacer(Modifier.height(10.dp)); Button(onClick = { if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecognition(recognizer) else launcher.launch(Manifest.permission.RECORD_AUDIO) }, enabled = !listening && recognizer != null, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(containerColor = if (listening) Color.Gray else Color(0xFF4C8BF5))) { Text(if (listening) "🎙️ أستمع..." else "🎙️ اقرأ الآن", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold) }
-            Spacer(Modifier.height(10.dp)); Text(status, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = when (correct) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(18.dp))
+            Text(word, fontSize = 78.sp, fontWeight = FontWeight.Black, color = Color(0xFF1F5D8C), textAlign = TextAlign.Center)
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = { if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecognition(recognizer) else launcher.launch(Manifest.permission.RECORD_AUDIO) }, enabled = !listening && recognizer != null, modifier = Modifier.fillMaxWidth().height(58.dp), shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(containerColor = if (listening) Color.Gray else Color(0xFF4C8BF5))) {
+                Text(if (listening) "🎙️ أستمع..." else "🎙️ اقرأ الآن", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+            }
+            if (failedAttempts >= 2) {
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = { audio.speakOffline(word, "ar") }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF26A69A))) {
+                    Text("🔊 اسمع الكلمة", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(status, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = when (correct) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center)
             if (heard.isNotBlank()) Text("سمعت: $heard", fontSize = 15.sp, color = Color(0xFF53636D), modifier = Modifier.padding(top = 6.dp))
-            Spacer(Modifier.height(10.dp)); Button(onClick = onNext, shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A4C))) { Text("الكلمة التالية", fontWeight = FontWeight.ExtraBold) }
+            Spacer(Modifier.height(10.dp))
+            Button(onClick = onNext, enabled = correct == true, shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A4C))) { Text("الكلمة التالية", fontWeight = FontWeight.ExtraBold) }
         }
     }
 }
@@ -140,17 +172,33 @@ private fun ArabicWordReading(word: String, audio: LocalAudioManager, repo: Prog
 private fun startRecognition(recognizer: SpeechRecognizer?) {
     if (recognizer == null) return
     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-IQ"); putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-IQ"); putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5); putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-IQ")
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-IQ")
+        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+        putExtra(RecognizerIntent.EXTRA_PROMPT, "اقرأ الكلمة الظاهرة بصوت واضح")
     }
     recognizer.startListening(intent)
 }
 
 private fun arabicWordMatches(recognized: String, target: String): Boolean {
-    val a = normalizeArabic(recognized); val b = normalizeArabic(target); return a == b || a.contains(b) || b.contains(a)
+    val a = normalizeArabicForSpeech(recognized)
+    val b = normalizeArabicForSpeech(target)
+    // مطابقة دقيقة بعد إزالة اختلافات التشكيل والألف فقط؛ لا نستخدم contains حتى لا نقبل كلمات أخرى بالخطأ.
+    return a == b
 }
-private fun normalizeArabic(value: String): String {
+
+private fun normalizeArabicForSpeech(value: String): String {
     val decomposed = Normalizer.normalize(value.trim().lowercase(Locale.ROOT), Normalizer.Form.NFD)
-    return decomposed.replace(Regex("[\\u064B-\\u0652]"), "").replace("\u0640", "").replace(Regex("^ال"), "").replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ى", "ي").replace(Regex("\\s+"), "")
+    return decomposed
+        .replace(Regex("[\\u064B-\\u0652]"), "")
+        .replace("\u0640", "")
+        .replace("أ", "ا")
+        .replace("إ", "ا")
+        .replace("آ", "ا")
+        .replace("ى", "ي")
+        .replace(Regex("\\s+"), "")
 }
 
 @Composable

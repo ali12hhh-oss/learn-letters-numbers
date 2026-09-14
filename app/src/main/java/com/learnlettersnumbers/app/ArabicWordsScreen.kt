@@ -216,34 +216,41 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
     var currentStroke by remember(word) { mutableStateOf<List<Offset>>(emptyList()) }
     var result by remember(word) { mutableStateOf<Boolean?>(null) }
     var recognized by remember(word) { mutableStateOf("") }
-    var status by remember(word) { mutableStateOf("اكتب الكلمة داخل اللوحة ثم اضغط «تحقق من الكتابة»") }
+    var status by remember(word) { mutableStateOf("جاري تجهيز نموذج التعرف...") }
     var modelReady by remember(word) { mutableStateOf(false) }
     var modelDownloading by remember(word) { mutableStateOf(false) }
     var checking by remember(word) { mutableStateOf(false) }
     var failedAttempts by remember(word) { mutableIntStateOf(0) }
 
     val model = remember {
-        try { DigitalInkRecognitionModelIdentifier.fromLanguageTag("ar")?.let { DigitalInkRecognitionModel.builder(it).build() } } catch (_: Exception) { null }
+        try { DigitalInkRecognitionModel.builder(DigitalInkRecognitionModelIdentifier.AR).build() } catch (_: Exception) { null }
     }
     val digitalRecognizer = remember(model) { model?.let { DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(it).build()) } }
     DisposableEffect(digitalRecognizer) { onDispose { digitalRecognizer?.close() } }
 
-    LaunchedEffect(model) {
-        if (model == null) { status = "نموذج الكتابة العربية غير متاح"; return@LaunchedEffect }
-        val manager = RemoteModelManager.getInstance()
+    fun prepareModel() {
+        val currentModel = model ?: run {
+            status = "نموذج الكتابة العربية غير متاح على هذا الإصدار"
+            modelDownloading = false
+            return
+        }
         modelDownloading = true
-        manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
-            if (downloaded) {
+        status = "جاري تجهيز نموذج التعرف..."
+        RemoteModelManager.getInstance()
+            .download(currentModel, DownloadConditions.Builder().build())
+            .addOnSuccessListener {
                 modelReady = true
                 modelDownloading = false
                 status = "النموذج جاهز — اكتب الكلمة داخل اللوحة"
-            } else {
-                manager.download(model, DownloadConditions.Builder().build())
-                    .addOnSuccessListener { modelReady = true; modelDownloading = false; status = "النموذج جاهز — اكتب الكلمة داخل اللوحة" }
-                    .addOnFailureListener { modelDownloading = false; status = "تعذر تحميل نموذج الكتابة العربية. تحقق من الإنترنت ثم أعد المحاولة." }
             }
-        }.addOnFailureListener { modelDownloading = false; status = "تعذر التحقق من نموذج الكتابة العربية" }
+            .addOnFailureListener {
+                modelReady = false
+                modelDownloading = false
+                status = "تعذر تجهيز النموذج. اضغط «إعادة تجهيز النموذج» وحاول مرة أخرى."
+            }
     }
+
+    LaunchedEffect(model) { prepareModel() }
 
     fun clearBoard() {
         strokes.clear()
@@ -316,6 +323,9 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
             Text("اكتب الكلمة", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34526F))
             Spacer(Modifier.height(8.dp))
             Box(Modifier.fillMaxWidth().height(350.dp).background(Color(0xFFFCFEFF), RoundedCornerShape(22.dp))) {
+                if (failedAttempts >= 2) {
+                    Text(word, modifier = Modifier.align(Alignment.Center), fontSize = 78.sp, fontWeight = FontWeight.Bold, color = Color(0x421F5D8C), textAlign = TextAlign.Center)
+                }
                 Canvas(
                     Modifier.fillMaxSize().pointerInput(word) {
                         detectDragGestures(
@@ -328,14 +338,6 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                 ) {
                     val centerY = size.height / 2f
                     drawLine(Color(0xFFD8E3EC), Offset(30f, centerY), Offset(size.width - 30f, centerY), strokeWidth = 2f)
-                    if (failedAttempts >= 2) {
-                        drawContext.canvas.nativeCanvas.drawText(word, size.width / 2f, centerY + 28f, android.graphics.Paint().apply {
-                            color = android.graphics.Color.argb(65, 31, 93, 140)
-                            textSize = 78f
-                            textAlign = android.graphics.Paint.Align.CENTER
-                            typeface = android.graphics.Typeface.DEFAULT_BOLD
-                        })
-                    }
                     val all = strokes.toList() + listOfNotNull(currentStroke.takeIf { it.isNotEmpty() })
                     all.forEach { points ->
                         val path = Path()
@@ -349,8 +351,12 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Text(if (modelDownloading) "جاري تجهيز نموذج الكتابة..." else status, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center)
+            Text(if (modelDownloading) "جاري تجهيز نموذج التعرف..." else status, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center)
             if (recognized.isNotBlank()) Text("اقتراحات النموذج: $recognized", fontSize = 13.sp, color = Color(0xFF53636D), textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+            if (!modelReady && !modelDownloading) {
+                Spacer(Modifier.height(6.dp))
+                OutlinedButton(onClick = { prepareModel() }, modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(14.dp)) { Text("إعادة تجهيز النموذج", fontWeight = FontWeight.Bold) }
+            }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = ::clearBoard, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(16.dp)) { Text("مسح", fontWeight = FontWeight.ExtraBold) }

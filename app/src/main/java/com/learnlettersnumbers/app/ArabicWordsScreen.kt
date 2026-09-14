@@ -255,7 +255,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
 
     fun checkWriting() {
         if (checking || !modelReady || digitalRecognizer == null) return
-        val finalStrokes = strokes.toList().plus(currentStroke.takeIf { it.size >= 2 }).filter { it.size >= 2 }
+        val finalStrokes = strokes.toList().plus(currentStroke.takeIf { it.isNotEmpty() }).filter { it.isNotEmpty() }
         currentStroke = emptyList()
         if (finalStrokes.isEmpty()) {
             status = "اكتب الكلمة أولاً داخل اللوحة"
@@ -321,7 +321,7 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                         detectDragGestures(
                             onDragStart = { point -> currentStroke = listOf(point) },
                             onDrag = { change, _ -> change.consume(); currentStroke = currentStroke + change.position },
-                            onDragEnd = { if (currentStroke.size >= 2) strokes.add(currentStroke); currentStroke = emptyList() },
+                            onDragEnd = { if (currentStroke.isNotEmpty()) strokes.add(currentStroke); currentStroke = emptyList() },
                             onDragCancel = { currentStroke = emptyList() }
                         )
                     }
@@ -336,11 +336,15 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
                             typeface = android.graphics.Typeface.DEFAULT_BOLD
                         })
                     }
-                    val all = strokes.toList() + listOfNotNull(currentStroke.takeIf { it.size >= 2 })
+                    val all = strokes.toList() + listOfNotNull(currentStroke.takeIf { it.isNotEmpty() })
                     all.forEach { points ->
                         val path = Path()
-                        points.forEachIndexed { index, point -> if (index == 0) path.moveTo(point.x, point.y) else path.lineTo(point.x, point.y) }
-                        drawPath(path, color = Color(0xFF2357A6), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 7f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        if (points.size == 1) {
+                            drawCircle(Color(0xFF2357A6), radius = 12f, center = points[0])
+                        } else {
+                            points.forEachIndexed { i, p -> if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y) }
+                            drawPath(path, color = Color(0xFF2357A6), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 24f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        }
                     }
                 }
             }

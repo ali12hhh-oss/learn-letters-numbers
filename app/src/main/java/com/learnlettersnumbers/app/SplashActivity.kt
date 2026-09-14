@@ -35,8 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import kotlinx.coroutines.delay
-import kotlin.math.PI
-import kotlin.math.sin
 
 class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,8 +83,7 @@ private fun ArabicSplash(onFinished: () -> Unit) {
         label = "sun_pulse"
     )
 
-    // LTR here is deliberate: the children are supplied left-to-right as
-    // والأرقام, الحروف, تعلّم, guaranteeing the requested RTL visual order.
+    // LTR is deliberate: left = والأرقام, center = الحروف, right = تعلّم.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(Modifier.fillMaxSize()) {
             SplashBackground(cloudShift, sunPulse)
@@ -116,21 +113,6 @@ private fun ArabicSplash(onFinished: () -> Unit) {
                         SplashBalloon(item)
                         if (index != items.lastIndex) Spacer(Modifier.width(3.dp))
                     }
-                }
-
-                Spacer(Modifier.height(1.dp))
-
-                // Raised directly beneath the balloon strings.
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ArabicNumeral("٣", Color(0xFF7B42B9))
-                    Spacer(Modifier.width(22.dp))
-                    ArabicNumeral("٢", Color(0xFFE24D73))
-                    Spacer(Modifier.width(22.dp))
-                    ArabicNumeral("١", Color(0xFF0878C8))
                 }
 
                 Spacer(Modifier.weight(1f))
@@ -179,16 +161,13 @@ private fun SplashBackground(cloudShift: Float, sunPulse: Float) {
                 center = androidx.compose.ui.geometry.Offset(w * .83f, h * .15f)
             )
 
-            // Soft distant clouds, drawn natively rather than using an image.
             drawCloud(w * .10f + cloudShift * density.density, h * .20f, 1.0f)
             drawCloud(w * .78f - cloudShift * density.density, h * .29f, .72f)
 
-            // Tiny stars / sparkles add depth without cluttering the balloons.
             drawSparkle(w * .16f, h * .10f, 5f)
             drawSparkle(w * .66f, h * .08f, 4f)
             drawSparkle(w * .93f, h * .34f, 4f)
 
-            // Layered rolling hills at the bottom.
             val backHill = Path().apply {
                 moveTo(0f, h * .84f)
                 cubicTo(w * .20f, h * .75f, w * .34f, h * .84f, w * .52f, h * .78f)
@@ -256,7 +235,6 @@ private fun SplashBalloon(item: SplashItem) {
         },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Ground shadow gives the balloons a floating, dimensional feel.
         Box(
             Modifier.width(56.dp).height(8.dp).shadow(7.dp, RoundedCornerShape(50)).background(Color.Black.copy(alpha = .13f), RoundedCornerShape(50))
         )
@@ -300,19 +278,6 @@ private fun SplashBalloon(item: SplashItem) {
 
         Box(Modifier.size(9.dp).background(item.colors[1], RoundedCornerShape(3.dp)))
         Box(Modifier.width(2.dp).height(20.dp).background(Color.White.copy(alpha = .72f), RoundedCornerShape(50)))
-    }
-}
-
-@Composable
-private fun ArabicNumeral(value: String, color: Color) {
-    Box(
-        Modifier.size(44.dp)
-            .shadow(7.dp, CircleShape)
-            .background(Color.White.copy(alpha = .94f), CircleShape)
-            .border(2.dp, color.copy(alpha = .60f), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(value, fontSize = 25.sp, fontWeight = FontWeight.Black, color = color)
     }
 }
 

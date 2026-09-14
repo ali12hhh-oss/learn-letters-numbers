@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
                 ArabicCard("🔤","الحروف","الحروف العربية وأصواتها",Color(0xFF4C8BF5),onLetters)
                 ArabicCard("🔢","الأرقام","الأرقام والجمع والطرح",Color(0xFFFF8A4C),onNumbers)
                 ArabicCard("🖊️","تعلم الكتابة","اتجاه القلم من البداية إلى النهاية",Color(0xFF9B7EDE),onTutorial)
-                ArabicCard("✏️","القراءة","اكتب وتدرّب على السبورة",Color(0xFF6BCB77),onWriting)
+                ArabicCard("✏️","الكتابة","اكتب وتدرّب على السبورة",Color(0xFF6BCB77),onWriting)
             }
         }
     }

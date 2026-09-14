@@ -142,11 +142,7 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
         return engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId) == TextToSpeech.SUCCESS
     }
 
-    /**
-     * Plays the bundled phonics_english A-Z recording. If the generated raw
-     * resource is unavailable, the previous offline TTS phonetic cue remains
-     * as a safe fallback.
-     */
+    /** Plays the bundled phonics_english A-Z recording. */
     private fun speakEnglishLetterSound(index: Int): Boolean {
         if (!enabled || index !in 0..25) return false
         val letter = ('a'..'z').elementAt(index)
@@ -276,25 +272,45 @@ class LocalAudioManager(private val context: Context) : TextToSpeech.OnInitListe
     }
 
     private fun start(id: Int, resourceName: String) {
-        player = MediaPlayer.create(context, id) ?: error("Could not create local audio resource: $resourceName")
-        player?.setAudioAttributes(AudioAttributes.Builder()
+        releasePlayer()
+        val media = MediaPlayer()
+        media.setAudioAttributes(AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build())
-        player?.setOnCompletionListener { releasePlayer() }
-        player?.start()
+        val afd = context.resources.openRawResourceFd(id)
+            ?: error("Could not open local audio resource: $resourceName")
+        try {
+            media.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+        } finally {
+            afd.close()
+        }
+        media.setOnCompletionListener { releasePlayer() }
+        media.prepare()
+        player = media
+        media.start()
     }
 
     private fun playQueueItem() {
         if (queueIndex >= queue.size) { queue = emptyList(); return }
         val id = queue[queueIndex]
-        player = MediaPlayer.create(context, id) ?: error("Could not create queued local audio")
-        player?.setAudioAttributes(AudioAttributes.Builder()
+        releasePlayer()
+        val media = MediaPlayer()
+        media.setAudioAttributes(AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build())
-        player?.setOnCompletionListener { releasePlayer(); queueIndex++; playQueueItem() }
-        player?.start()
+        val afd = context.resources.openRawResourceFd(id)
+            ?: error("Could not open queued local audio")
+        try {
+            media.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+        } finally {
+            afd.close()
+        }
+        media.setOnCompletionListener { releasePlayer(); queueIndex++; playQueueItem() }
+        media.prepare()
+        player = media
+        media.start()
     }
 
     private fun releasePlayer() { player?.release(); player = null }

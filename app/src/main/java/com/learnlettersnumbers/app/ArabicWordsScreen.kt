@@ -34,7 +34,6 @@ import com.google.mlkit.common.model.RemoteModelManager
 import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognition
 import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognitionModel
 import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognitionModelIdentifier
-import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognizer
 import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognizerOptions
 import com.google.mlkit.vision.digitalink.recognition.Ink
 import com.google.mlkit.vision.digitalink.recognition.RecognitionContext
@@ -262,7 +261,9 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
 
     fun checkWriting() {
         if (checking || !modelReady || digitalRecognizer == null) return
-        val finalStrokes = strokes.toList().plus(currentStroke.takeIf { it.isNotEmpty() }).filter { it.isNotEmpty() }
+        val finalStrokes: List<List<Offset>> = strokes.toList() + currentStroke.let { stroke ->
+            if (stroke.isEmpty()) emptyList() else listOf(stroke)
+        }
         currentStroke = emptyList()
         if (finalStrokes.isEmpty()) {
             status = "اكتب الكلمة أولاً داخل اللوحة"
@@ -272,10 +273,11 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
         checking = true
         result = null
         status = "جارٍ التعرف على الكتابة..."
-        val minX = finalStrokes.flatten().minOf { it.x }
-        val maxX = finalStrokes.flatten().maxOf { it.x }
-        val minY = finalStrokes.flatten().minOf { it.y }
-        val maxY = finalStrokes.flatten().maxOf { it.y }
+        val allPoints = finalStrokes.flatten()
+        val minX = allPoints.minOf { it.x }
+        val maxX = allPoints.maxOf { it.x }
+        val minY = allPoints.minOf { it.y }
+        val maxY = allPoints.maxOf { it.y }
         val sourceW = (maxX - minX).coerceAtLeast(1f)
         val sourceH = (maxY - minY).coerceAtLeast(1f)
         val inkBuilder = Ink.builder()

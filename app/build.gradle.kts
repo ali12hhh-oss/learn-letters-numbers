@@ -34,12 +34,12 @@ android {
     }
 }
 
-// Bundle the A-Z phonics recordings directly into the normal Android raw
-// resource directory. The previous generated build-directory resources were
-// downloaded successfully but were not packaged into the final APK.
+// Download the A-Z phonics recordings into Android's normal raw resource
+// directory before any resource/source-set mapping happens. This keeps the
+// final APK fully offline at runtime and avoids the previous generated-resource
+// directory not being packaged.
 val phonicsResDir = layout.projectDirectory.dir("src/main/res/raw").asFile
 val downloadEnglishPhonics by tasks.registering {
-    outputs.files(('a'..'z').map { phonicsResDir.resolve("phonics_$it.ogg") })
     doLast {
         phonicsResDir.mkdirs()
         ('a'..'z').forEach { letter ->
@@ -61,10 +61,14 @@ val downloadEnglishPhonics by tasks.registering {
     }
 }
 
-// Resource merging must wait until the recordings exist.
-tasks.matching { task ->
-    task.name.startsWith("merge") && task.name.endsWith("Resources")
-}.configureEach { dependsOn(downloadEnglishPhonics) }
+// Android Gradle Plugin reads the raw resource directory during these tasks,
+// so make the dependency explicit for every variant that maps or merges it.
+tasks.configureEach {
+    if ((name.startsWith("map") && name.endsWith("SourceSetPaths")) ||
+        (name.startsWith("merge") && name.endsWith("Resources"))) {
+        dependsOn(downloadEnglishPhonics)
+    }
+}
 
 dependencies { implementation(platform("androidx.compose:compose-bom:2024.10.01")); implementation("androidx.activity:activity-compose:1.9.3"); implementation("androidx.compose.ui:ui"); implementation("androidx.compose.ui:ui-tooling-preview"); implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core"); implementation("androidx.compose.foundation:foundation"); implementation("androidx.compose.animation:animation"); implementation("com.google.android.gms:play-services-ads:25.4.0"); debugImplementation("androidx.compose.ui:ui-tooling") }

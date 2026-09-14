@@ -5,8 +5,7 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,9 +20,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -77,10 +73,11 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(screen) { onDispose { localAudio.stop(); tone?.stopTone() } }
             when (screen) {
                 "home" -> HomeSection(onArabic={screen="arabic"}, onEnglish={screen="english"}, onProgress={settingsReturnScreen="home";screen="progress"}, onRewards={settingsReturnScreen="home";screen="rewards"}, onTests={settingsReturnScreen="home";screen="tests"}, onStories={settingsReturnScreen="home";screen="stories"}, onGames={settingsReturnScreen="home";screen="games"}, onStages={settingsReturnScreen="home";screen="stages"}, onSettings={settingsReturnScreen="home";screen="settings"}, speak={speakArabic(it)})
-                "arabic" -> ArabicSection(onSettings={settingsReturnScreen="arabic";screen="settings"}, onLetters={screen="arabic_letters"}, onNumbers={screen="arabic_numbers"}, onTutorial={screen="arabic_tutorial"}, onWriting={screen="arabic_reading"}, onBack={screen="home"}, speak={speakArabic(it)})
+                "arabic" -> ArabicSection(onSettings={settingsReturnScreen="arabic";screen="settings"}, onLetters={screen="arabic_letters"}, onNumbers={screen="arabic_numbers"}, onTutorial={screen="arabic_tutorial"}, onWriting={screen="arabic_reading"}, onReading={screen="arabic_words"}, onBack={screen="home"}, speak={speakArabic(it)})
                 "arabic_letters" -> LettersScreen(audio=localAudio,onTap={if(settingsRepo.effectsEnabled())tone?.startTone(ToneGenerator.TONE_PROP_BEEP,70)},onBack={screen="arabic"},soundsEnabled={settingsRepo.soundsEnabled()})
                 "arabic_numbers" -> NumbersScreen(audio=localAudio,onTap={if(settingsRepo.effectsEnabled())tone?.startTone(ToneGenerator.TONE_PROP_BEEP,70)},onBack={screen="arabic"},soundsEnabled={settingsRepo.soundsEnabled()})
                 "arabic_reading" -> ReadingScreen(audio=localAudio,onTap={if(settingsRepo.effectsEnabled())tone?.startTone(ToneGenerator.TONE_PROP_BEEP,70)},onBack={screen="arabic"},soundsEnabled={settingsRepo.soundsEnabled()})
+                "arabic_words" -> ArabicWordsScreen(audio=localAudio,repo=progressRepo,onBack={screen="arabic"})
                 "arabic_tutorial" -> WritingStrokeLessonScreen(language="ar",numbers=false,onBack={screen="arabic"},speak={msg,lang->if(lang=="ar")speakArabic(msg)else speak(msg)})
                 "english_tutorial" -> WritingStrokeLessonScreen(language="en",numbers=false,onBack={screen="english"},speak={msg,lang->if(lang=="ar")speakArabic(msg)else speak(msg)})
                 "english" -> EnglishSection(onSettings={settingsReturnScreen="english";screen="settings"},onLetters={screen="letters"},onNumbers={screen="numbers"},onWriting={screen="writing"},onTutorial={screen="english_tutorial"},onProgress={screen="progress"},onRewards={screen="rewards"},onTests={screen="tests"},onStories={screen="stories"},onStages={screen="stages"},onGames={screen="games"},onBack={screen="home"},speak={speak(it)})
@@ -88,7 +85,6 @@ class MainActivity : ComponentActivity() {
                 "numbers" -> EnglishNumbers(onBack={screen="english"},speak={speak(it)},playNumber={n->localAudio.playRequired("en_number_%03d".format(n))},repo=progressRepo)
                 "writing" -> EnglishWriting(onBack={screen="english"},speak={speak(it)},repo=progressRepo)
                 "progress" -> ParentProgressScreen(repo=progressRepo,onBack={screen=settingsReturnScreen},speak={speak(it)})
-                // The rewards screen is Arabic, so it must use the Arabic voice explicitly.
                 "rewards" -> RewardStoreScreen(repo=progressRepo,onBack={screen=settingsReturnScreen},speak={text ->
             if (settingsRepo.soundsEnabled()) localAudio.speakOffline(text, "ar")
             if (settingsRepo.effectsEnabled()) tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 70)
@@ -103,7 +99,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ArabicSection(onSettings:()->Unit,onLetters:()->Unit,onNumbers:()->Unit,onTutorial:()->Unit,onWriting:()->Unit,onBack:()->Unit,speak:(String)->Unit) {
+    fun ArabicSection(onSettings:()->Unit,onLetters:()->Unit,onNumbers:()->Unit,onTutorial:()->Unit,onWriting:()->Unit,onReading:()->Unit,onBack:()->Unit,speak:(String)->Unit) {
         CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl){
             Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background,MaterialTheme.colorScheme.surfaceVariant))).padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally){
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onSettings,shape=RoundedCornerShape(18.dp)){Text("⚙ الإعدادات")};Button(onClick=onBack,shape=RoundedCornerShape(18.dp)){Text("رجوع")}};Text("العربية",fontSize=30.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2C5F8A))}
@@ -112,6 +108,7 @@ class MainActivity : ComponentActivity() {
                 ArabicCard("🔢","الأرقام","الأرقام والجمع والطرح",Color(0xFFFF8A4C),onNumbers)
                 ArabicCard("🖊️","تعلم الكتابة","اتجاه القلم من البداية إلى النهاية",Color(0xFF9B7EDE),onTutorial)
                 ArabicCard("✏️","الكتابة","اكتب وتدرّب على السبورة",Color(0xFF6BCB77),onWriting)
+                ArabicCard("📖","القراءة","اقرأ كلمات واكتب كلمات",Color(0xFF26A69A),onReading)
             }
         }
     }
@@ -218,8 +215,6 @@ class MainActivity : ComponentActivity() {
     @Composable private fun LetterCaseChoice(letter:String,title:String,arabic:String,selected:Boolean,color:Color,modifier:Modifier,onClick:()->Unit){val scale by animateFloatAsState(if(selected)1.04f else 1f,label="caseChoice_$title");Card(modifier.scale(scale).clickable{onClick()},shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=if(selected)color else MaterialTheme.colorScheme.surface),elevation=CardDefaults.cardElevation(if(selected)9.dp else 3.dp)){Column(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(letter,fontSize=34.sp,fontWeight=FontWeight.Black,color=if(selected)Color.White else color);Text(title,fontSize=14.sp,fontWeight=FontWeight.ExtraBold,color=if(selected)Color.White else Color(0xFF245B8A));Text(arabic,fontSize=12.sp,color=if(selected)Color.White else Color(0xFF666666))}}
     }
 
-    // Kept separate from Letter Name. These are short pronunciation cues for the
-    // English speech engine, never the visible letter name.
     private fun englishLetterSound(c:Char):String=when(c.lowercaseChar()){'a'->"apple";'b'->"bat";'c'->"cat";'d'->"dog";'e'->"egg";'f'->"fish";'g'->"go";'h'->"hat";'i'->"igloo";'j'->"jam";'k'->"kite";'l'->"lamp";'m'->"moon";'n'->"nose";'o'->"octopus";'p'->"pig";'q'->"queen";'r'->"red";'s'->"sun";'t'->"top";'u'->"up";'v'->"van";'w'->"web";'x'->"box";'y'->"yellow";'z'->"zoo";else->c.toString()}
     private fun numberName(n:Int):String=when(n){1->"one";2->"two";3->"three";4->"four";5->"five";6->"six";7->"seven";8->"eight";9->"nine";10->"ten";11->"eleven";12->"twelve";13->"thirteen";14->"fourteen";15->"fifteen";16->"sixteen";17->"seventeen";18->"eighteen";19->"nineteen";20->"twenty";30->"thirty";40->"forty";50->"fifty";60->"sixty";70->"seventy";80->"eighty";90->"ninety";100->"one hundred";else->"${numberName((n/10)*10)} ${numberName(n%10)}"}
 }

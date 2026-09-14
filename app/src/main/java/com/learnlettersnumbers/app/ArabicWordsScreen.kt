@@ -29,6 +29,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.mlkit.common.model.DownloadConditions
+import com.google.mlkit.common.model.RemoteModelManager
+import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognition
+import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognitionModel
+import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognitionModelIdentifier
+import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognizer
+import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognizerOptions
+import com.google.mlkit.vision.digitalink.recognition.Ink
+import com.google.mlkit.vision.digitalink.recognition.RecognitionContext
+import com.google.mlkit.vision.digitalink.recognition.WritingArea
 import java.text.Normalizer
 import java.util.Locale
 
@@ -97,14 +107,7 @@ private fun ArabicWordReading(word: String, audio: LocalAudioManager, repo: Prog
     var correct by remember(word) { mutableStateOf<Boolean?>(null) }
     var listening by remember(word) { mutableStateOf(false) }
     val recognizer = remember(context) { if (SpeechRecognizer.isRecognitionAvailable(context)) SpeechRecognizer.createSpeechRecognizer(context) else null }
-
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startRecognition(word, recognizer, { listening = it }, { heard = it }, { status = it }, { ok ->
-            correct = ok
-            if (ok) { repo.recordLesson("Arabic word reading", word, true); repo.addStars(1); audio.speakOffline("أحسنت", "ar") }
-            else audio.speakOffline("حاول مرة أخرى", "ar")
-        }) else status = "نحتاج إذن الميكروفون حتى يسمع التطبيق قراءة الطفل"
-    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) startRecognition(recognizer) else status = "نحتاج إذن الميكروفون حتى يسمع التطبيق قراءة الطفل" }
 
     DisposableEffect(recognizer) { onDispose { recognizer?.destroy() } }
     LaunchedEffect(recognizer, word) {
@@ -114,7 +117,7 @@ private fun ArabicWordReading(word: String, audio: LocalAudioManager, repo: Prog
             override fun onRmsChanged(rmsdB: Float) = Unit
             override fun onBufferReceived(buffer: ByteArray?) = Unit
             override fun onEndOfSpeech() { listening = false; status = "جارٍ التحقق..." }
-            override fun onError(error: Int) { listening = false; status = "لم أفهم الكلمة، حاول مرة أخرى"; correct = false; audio.speakOffline("حاول مرة أخرى", "ar") }
+            override fun onError(error: Int) { listening = false; correct = false; status = "لم أفهم الكلمة، حاول مرة أخرى"; audio.speakOffline("حاول مرة أخرى", "ar") }
             override fun onResults(results: Bundle?) {
                 listening = false
                 val options = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
@@ -137,12 +140,7 @@ private fun ArabicWordReading(word: String, audio: LocalAudioManager, repo: Prog
             Spacer(Modifier.height(12.dp))
             Button(onClick = { audio.speakOffline(word, "ar") }, shape = RoundedCornerShape(18.dp)) { Text("🔊 اسمع الكلمة", fontSize = 17.sp) }
             Spacer(Modifier.height(10.dp))
-            Button(onClick = {
-                if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecognition(word, recognizer, { listening = it }, { heard = it }, { status = it }, { ok ->
-                    correct = ok
-                    if (ok) { repo.recordLesson("Arabic word reading", word, true); repo.addStars(1); audio.speakOffline("أحسنت", "ar") } else audio.speakOffline("حاول مرة أخرى", "ar")
-                }) else launcher.launch(Manifest.permission.RECORD_AUDIO)
-            }, enabled = !listening && recognizer != null, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(containerColor = if (listening) Color.Gray else Color(0xFF4C8BF5))) {
+            Button(onClick = { if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecognition(recognizer) else launcher.launch(Manifest.permission.RECORD_AUDIO) }, enabled = !listening && recognizer != null, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(containerColor = if (listening) Color.Gray else Color(0xFF4C8BF5))) {
                 Text(if (listening) "🎙️ أستمع..." else "🎙️ اقرأ الآن", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(10.dp))
@@ -154,8 +152,8 @@ private fun ArabicWordReading(word: String, audio: LocalAudioManager, repo: Prog
     }
 }
 
-private fun startRecognition(word: String, recognizer: SpeechRecognizer?, setListening: (Boolean) -> Unit, setHeard: (String) -> Unit, setStatus: (String) -> Unit, finish: (Boolean) -> Unit) {
-    if (recognizer == null) { setStatus("التعرّف على الصوت غير متاح على هذا الجهاز"); return }
+private fun startRecognition(recognizer: SpeechRecognizer?) {
+    if (recognizer == null) return
     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-IQ")
@@ -163,7 +161,7 @@ private fun startRecognition(word: String, recognizer: SpeechRecognizer?, setLis
         putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
         putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
     }
-    setListening(true); setHeard(""); setStatus("استمع إليك... اقرأ الكلمة الآن"); recognizer.startListening(intent)
+    recognizer.startListening(intent)
 }
 
 private fun arabicWordMatches(recognized: String, target: String): Boolean {
@@ -180,22 +178,87 @@ private fun normalizeArabic(value: String): String {
 
 @Composable
 private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: ProgressRepository, onNext: () -> Unit) {
+    val context = LocalContext.current
     val strokes = remember(word) { mutableStateListOf<List<Offset>>() }
     var current by remember(word) { mutableStateOf<List<Offset>>(emptyList()) }
     var result by remember(word) { mutableStateOf<Boolean?>(null) }
-    var guide by remember(word) { mutableStateOf(true) }
+    var recognized by remember(word) { mutableStateOf("") }
+    var status by remember(word) { mutableStateOf("اكتب الكلمة داخل اللوحة ثم اضغط «تحقق من الكتابة»") }
+    var modelReady by remember(word) { mutableStateOf(false) }
+    var modelDownloading by remember(word) { mutableStateOf(false) }
+    var checking by remember(word) { mutableStateOf(false) }
+
+    val model = remember {
+        try {
+            DigitalInkRecognitionModelIdentifier.fromLanguageTag("ar")?.let { DigitalInkRecognitionModel.builder(it).build() }
+        } catch (_: Exception) { null }
+    }
+    val digitalRecognizer = remember(model) {
+        model?.let { DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(it).build()) }
+    }
+
+    DisposableEffect(digitalRecognizer) { onDispose { digitalRecognizer?.close() } }
+
+    LaunchedEffect(model) {
+        if (model == null) { status = "نموذج الكتابة العربية غير متاح"; return@LaunchedEffect }
+        val manager = RemoteModelManager.getInstance()
+        modelDownloading = true
+        manager.isModelDownloaded(model)
+            .addOnSuccessListener { downloaded ->
+                if (downloaded) { modelReady = true; modelDownloading = false; status = "اكتب الكلمة ثم اضغط تحقق" }
+                else {
+                    manager.download(model, DownloadConditions.Builder().build())
+                        .addOnSuccessListener { modelReady = true; modelDownloading = false; status = "النموذج جاهز — اكتب الكلمة ثم اضغط تحقق" }
+                        .addOnFailureListener { modelDownloading = false; status = "تعذر تنزيل نموذج الكتابة. اتصل بالإنترنت ثم حاول مرة أخرى" }
+                }
+            }
+            .addOnFailureListener { modelDownloading = false; status = "تعذر فحص نموذج الكتابة" }
+    }
+
+    fun clearBoard() {
+        strokes.clear(); current = emptyList(); result = null; recognized = ""; status = if (modelReady) "اكتب الكلمة ثم اضغط تحقق" else status
+    }
+
+    fun verifyWriting() {
+        if (checking || strokes.isEmpty() || digitalRecognizer == null || model == null) return
+        checking = true; result = null; status = "جارٍ تحليل خط الطفل..."
+        val inkBuilder = Ink.builder()
+        strokes.forEach { points ->
+            if (points.isNotEmpty()) {
+                val strokeBuilder = Ink.Stroke.builder()
+                points.forEachIndexed { i, point -> strokeBuilder.addPoint(Ink.Point.create(point.x, point.y, System.currentTimeMillis() + i)) }
+                inkBuilder.addStroke(strokeBuilder.build())
+            }
+        }
+        val ink = inkBuilder.build()
+        val recognitionContext = RecognitionContext.builder().setWritingArea(WritingArea(900f, 300f)).build()
+        digitalRecognizer.recognize(ink, recognitionContext)
+            .addOnSuccessListener { recognition ->
+                val candidates = recognition.candidates.take(5).map { it.text }
+                val best = candidates.firstOrNull().orEmpty()
+                recognized = candidates.joinToString("، ")
+                val ok = candidates.any { arabicWordMatches(it, word) }
+                result = ok
+                status = if (ok) "أحسنت! كتبت «$word» بشكل صحيح 👏" else if (best.isNotBlank()) "قرأت: «$best» — حاول كتابة «$word» مرة أخرى" else "لم أتعرف على الكلمة — حاول مرة أخرى"
+                if (ok) { repo.recordLesson("Arabic word writing", word, true); repo.addStars(1); audio.speakOffline("أحسنت", "ar") } else audio.speakOffline("حاول مرة أخرى", "ar")
+                checking = false
+            }
+            .addOnFailureListener { checking = false; result = false; status = "حدث خطأ أثناء تحليل الكتابة. تأكد من اتصال الإنترنت لتنزيل النموذج ثم أعد المحاولة" }
+    }
 
     Column(Modifier.fillMaxWidth()) {
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(7.dp)) {
             Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("اكتب الكلمة التالية", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF45606F))
                 Text(word, fontSize = 48.sp, fontWeight = FontWeight.Black, color = Color(0xFF2357A6), textAlign = TextAlign.Center)
+                Text(if (modelDownloading) "⬇️ يتم تجهيز نموذج التعرف على الكتابة..." else if (modelReady) "✓ التعرف الذكي على الكتابة جاهز" else "⚠️ نموذج التعرف غير جاهز", fontSize = 13.sp, color = if (modelReady) Color(0xFF16833D) else Color(0xFF8A5A00), fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.height(8.dp))
         Card(Modifier.fillMaxWidth().height(300.dp), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(9.dp)) {
             Box(Modifier.fillMaxSize().padding(8.dp)) {
-                if (guide) Text(word, modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center, fontSize = 105.sp, fontWeight = FontWeight.Black, color = Color(0x22355782))
+                if (guide) { }
+                Text(word, modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center, fontSize = 105.sp, fontWeight = FontWeight.Black, color = Color(0x22355782))
                 Canvas(Modifier.fillMaxSize().background(Color(0xFFFFFEF8), RoundedCornerShape(20.dp)).pointerInput(word) {
                     detectDragGestures(onDragStart = { current = listOf(it) }, onDrag = { change, _ -> change.consume(); current = current + change.position }, onDragEnd = { if (current.isNotEmpty()) strokes.add(current); current = emptyList() }, onDragCancel = { current = emptyList() })
                 }) {
@@ -207,13 +270,17 @@ private fun ArabicWordWriting(word: String, audio: LocalAudioManager, repo: Prog
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(result?.let { if (it) "أحسنت! الكتابة جيدة 👏" else "حاول مرة أخرى واكتب الكلمة كاملة" } ?: "استخدم الدليل ثم اضغط تحقق", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF596A74) }, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Row(Modifier.fillMaxWidth().height(52.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            OutlinedButton(onClick = { strokes.clear(); current = emptyList(); result = null }, modifier = Modifier.weight(1f)) { Text("مسح") }
-            TextButton(onClick = { guide = !guide }, modifier = Modifier.weight(1f)) { Text(if (guide) "إخفاء الدليل" else "إظهار الدليل") }
-            Button(onClick = { val ok = strokes.sumOf { it.size } >= 20; result = ok; if (ok) { repo.recordLesson("Arabic word writing", word, true); repo.addStars(1); audio.speakOffline("أحسنت", "ar") } else audio.speakOffline("حاول مرة أخرى", "ar") }, enabled = strokes.isNotEmpty(), modifier = Modifier.weight(1.35f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C8BF5))) { Text("✓ تحقق") }
+        Text(status, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = when (result) { true -> Color(0xFF16833D); false -> Color(0xFFC62828); else -> Color(0xFF5C6B73) }, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        if (recognized.isNotBlank()) Text("النتائج المحتملة: $recognized", fontSize = 13.sp, color = Color(0xFF53636D), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 3.dp))
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { guide = !guide }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp)) { Text(if (guide) "إخفاء الدليل" else "إظهار الدليل") }
+            OutlinedButton(onClick = ::clearBoard, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp)) { Text("مسح") }
         }
-        Spacer(Modifier.height(5.dp))
-        Button(onClick = { strokes.clear(); current = emptyList(); result = null; onNext() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A4C))) { Text("الكلمة التالية", fontWeight = FontWeight.ExtraBold) }
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = ::verifyWriting, enabled = modelReady && !checking && strokes.isNotEmpty(), modifier = Modifier.weight(1.4f).height(52.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C8BF5))) { Text(if (checking) "جاري التحقق..." else "✓ تحقق من الكتابة", fontWeight = FontWeight.ExtraBold) }
+            Button(onClick = onNext, enabled = result == true, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A4C))) { Text("الكلمة التالية", fontWeight = FontWeight.ExtraBold) }
+        }
     }
 }

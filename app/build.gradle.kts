@@ -6,14 +6,9 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id(
 android {
     namespace = "com.learnlettersnumbers.app"
     compileSdk = 36
-    defaultConfig { applicationId="com.learnlettersnumbers.app"; minSdk=24; targetSdk=36; versionCode=1; versionName = "1.0.0"
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+    defaultConfig { applicationId="com.learnlettersnumbers.app"; minSdk=24; targetSdk=36; versionCode=1; versionName = "1.0.0" }
+    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     buildFeatures { compose = true; buildConfig = true }
-
     val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
     val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
     val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
@@ -43,9 +38,7 @@ val downloadEnglishPhonics by tasks.registering {
         }
     }
 }
-tasks.configureEach {
-    if ((name.startsWith("map") && name.endsWith("SourceSetPaths")) || (name.startsWith("merge") && name.endsWith("Resources"))) dependsOn(downloadEnglishPhonics)
-}
+tasks.configureEach { if ((name.startsWith("map") && name.endsWith("SourceSetPaths")) || (name.startsWith("merge") && name.endsWith("Resources"))) dependsOn(downloadEnglishPhonics) }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.10.01"))
@@ -57,6 +50,5 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")
     implementation("com.google.android.gms:play-services-ads:25.4.0")
-    implementation("com.google.mlkit:digital-ink-recognition:19.0.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -23,21 +24,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLayoutDirection
 import kotlinx.coroutines.delay
+import kotlin.math.PI
+import kotlin.math.sin
 
 class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = android.graphics.Color.rgb(18, 113, 188)
-        window.navigationBarColor = android.graphics.Color.rgb(25, 91, 112)
+        window.statusBarColor = android.graphics.Color.rgb(17, 93, 163)
+        window.navigationBarColor = android.graphics.Color.rgb(18, 70, 105)
         setContent {
             ArabicSplash {
                 startActivity(Intent(this, MainActivity::class.java))
@@ -57,9 +62,9 @@ private data class SplashItem(
 private fun ArabicSplash(onFinished: () -> Unit) {
     val items = remember {
         listOf(
-            SplashItem("تعلّم", listOf(Color(0xFF39C6E8), Color(0xFF0879C9)), 100),
-            SplashItem("الحروف", listOf(Color(0xFFFF8A4C), Color(0xFFE44375)), 650),
-            SplashItem("والأرقام", listOf(Color(0xFFD45BEB), Color(0xFF7047C9)), 1200)
+            SplashItem("والأرقام", listOf(Color(0xFFFF6A8B), Color(0xFF9D3FD1)), 1100),
+            SplashItem("الحروف", listOf(Color(0xFFFFB14E), Color(0xFFE34D75)), 600),
+            SplashItem("تعلّم", listOf(Color(0xFF45D8E8), Color(0xFF0878C8)), 100)
         )
     }
 
@@ -68,122 +73,283 @@ private fun ArabicSplash(onFinished: () -> Unit) {
         onFinished()
     }
 
-    val infinite = rememberInfiniteTransition(label = "splash")
-    val cloudShift by infinite.animateFloat(-12f, 12f, infiniteRepeatable(tween(7000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "cloud_shift")
-    val glow by infinite.animateFloat(.72f, 1f, infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
+    val infinite = rememberInfiniteTransition(label = "splash_motion")
+    val cloudShift by infinite.animateFloat(
+        -10f, 10f,
+        infiniteRepeatable(tween(8000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "cloud_shift"
+    )
+    val sunPulse by infinite.animateFloat(
+        .88f, 1.08f,
+        infiniteRepeatable(tween(2600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "sun_pulse"
+    )
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color(0xFF075CA8), Color(0xFF12A8DE), Color(0xFF75D8E9), Color(0xFFFFD59C)))
-            )
-        ) {
-            Box(Modifier.size(260.dp).offset(x = 145.dp, y = 55.dp).background(Color(0xFFFFF1A8).copy(alpha = .22f * glow), CircleShape))
-            Box(Modifier.size(150.dp).offset(x = 200.dp, y = 110.dp).background(Color(0xFFFFF6C5).copy(alpha = .35f * glow), CircleShape))
-            SplashCloud(Modifier.align(Alignment.TopStart).offset(x = cloudShift.dp, y = 125.dp), 1.0f)
-            SplashCloud(Modifier.align(Alignment.TopEnd).offset(x = (-cloudShift).dp, y = 205.dp), .82f)
+    // LTR here is deliberate: the children are supplied left-to-right as
+    // والأرقام, الحروف, تعلّم, guaranteeing the requested RTL visual order.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(Modifier.fillMaxSize()) {
+            SplashBackground(cloudShift, sunPulse)
 
             Column(
-                Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 30.dp),
+                Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(205.dp))
-                Text("تعلّم بمرح", fontFamily = FontFamily.Serif, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = .9f))
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(148.dp))
 
-                // RTL order is intentional: right = تعلّم, center = الحروف, left = والأرقام.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "تعلّم بمرح",
+                    fontFamily = FontFamily.Serif,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = .9f)
+                )
+
+                Spacer(Modifier.height(13.dp))
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.Top
+                ) {
                     items.forEachIndexed { index, item ->
                         SplashBalloon(item)
-                        if (index < items.lastIndex) Spacer(Modifier.width(7.dp))
+                        if (index != items.lastIndex) Spacer(Modifier.width(3.dp))
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
-                // Explicit children guarantee Arabic visual order: ١ right, ٢ center, ٣ left.
-                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    ArabicNumeral("١", Color(0xFF0879C9))
-                    Spacer(Modifier.width(30.dp))
-                    ArabicNumeral("٢", Color(0xFFE44375))
-                    Spacer(Modifier.width(30.dp))
-                    ArabicNumeral("٣", Color(0xFF7047C9))
+                Spacer(Modifier.height(1.dp))
+
+                // Raised directly beneath the balloon strings.
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ArabicNumeral("٣", Color(0xFF7B42B9))
+                    Spacer(Modifier.width(22.dp))
+                    ArabicNumeral("٢", Color(0xFFE24D73))
+                    Spacer(Modifier.width(22.dp))
+                    ArabicNumeral("١", Color(0xFF0878C8))
                 }
 
                 Spacer(Modifier.weight(1f))
                 StoneMotto()
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(14.dp))
                 FullGreenProgress()
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(5.dp))
             }
         }
     }
+}
+
+@Composable
+private fun SplashBackground(cloudShift: Float, sunPulse: Float) {
+    val density = LocalDensity.current
+    Box(Modifier.fillMaxSize()) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF07569E),
+                        Color(0xFF0798D0),
+                        Color(0xFF62D5E4),
+                        Color(0xFFFFD08D)
+                    )
+                )
+            )
+
+            val sunRadius = 74f * sunPulse * density.density
+            drawCircle(
+                color = Color(0xFFFFF2A8).copy(alpha = .18f),
+                radius = sunRadius * 2.0f,
+                center = androidx.compose.ui.geometry.Offset(w * .83f, h * .15f)
+            )
+            drawCircle(
+                color = Color(0xFFFFF4B4).copy(alpha = .30f),
+                radius = sunRadius,
+                center = androidx.compose.ui.geometry.Offset(w * .83f, h * .15f)
+            )
+            drawCircle(
+                color = Color(0xFFFFF7C8).copy(alpha = .9f),
+                radius = sunRadius * .62f,
+                center = androidx.compose.ui.geometry.Offset(w * .83f, h * .15f)
+            )
+
+            // Soft distant clouds, drawn natively rather than using an image.
+            drawCloud(w * .10f + cloudShift * density.density, h * .20f, 1.0f)
+            drawCloud(w * .78f - cloudShift * density.density, h * .29f, .72f)
+
+            // Tiny stars / sparkles add depth without cluttering the balloons.
+            drawSparkle(w * .16f, h * .10f, 5f)
+            drawSparkle(w * .66f, h * .08f, 4f)
+            drawSparkle(w * .93f, h * .34f, 4f)
+
+            // Layered rolling hills at the bottom.
+            val backHill = Path().apply {
+                moveTo(0f, h * .84f)
+                cubicTo(w * .20f, h * .75f, w * .34f, h * .84f, w * .52f, h * .78f)
+                cubicTo(w * .72f, h * .70f, w * .86f, h * .80f, w, h * .73f)
+                lineTo(w, h)
+                lineTo(0f, h)
+                close()
+            }
+            drawPath(backHill, Color(0xFF68C58D).copy(alpha = .75f))
+
+            val frontHill = Path().apply {
+                moveTo(0f, h * .91f)
+                cubicTo(w * .18f, h * .83f, w * .34f, h * .91f, w * .52f, h * .87f)
+                cubicTo(w * .70f, h * .82f, w * .84f, h * .91f, w, h * .84f)
+                lineTo(w, h)
+                lineTo(0f, h)
+                close()
+            }
+            drawPath(frontHill, Color(0xFF42A874).copy(alpha = .92f))
+        }
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCloud(x: Float, y: Float, scale: Float) {
+    val r1 = 28f * scale
+    val r2 = 39f * scale
+    val r3 = 25f * scale
+    drawCircle(Color.White.copy(alpha = .25f), r1, androidx.compose.ui.geometry.Offset(x, y))
+    drawCircle(Color.White.copy(alpha = .34f), r2, androidx.compose.ui.geometry.Offset(x + r1, y - r1 * .42f))
+    drawCircle(Color.White.copy(alpha = .28f), r3, androidx.compose.ui.geometry.Offset(x + r1 * 2.0f, y + 2f))
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSparkle(x: Float, y: Float, radius: Float) {
+    drawLine(Color.White.copy(alpha = .55f), androidx.compose.ui.geometry.Offset(x, y - radius), androidx.compose.ui.geometry.Offset(x, y + radius), strokeWidth = 2f)
+    drawLine(Color.White.copy(alpha = .55f), androidx.compose.ui.geometry.Offset(x - radius, y), androidx.compose.ui.geometry.Offset(x + radius, y), strokeWidth = 2f)
 }
 
 @Composable
 private fun SplashBalloon(item: SplashItem) {
     val entry = remember { Animatable(0f) }
     val infinite = rememberInfiniteTransition(label = "${item.word}_motion")
-    val floatY by infinite.animateFloat(-3.5f, 3.5f, infiniteRepeatable(tween(4200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "${item.word}_float")
-    val rotation by infinite.animateFloat(-.7f, .7f, infiniteRepeatable(tween(5200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "${item.word}_rotation")
+    val floatY by infinite.animateFloat(
+        -2.8f, 2.8f,
+        infiniteRepeatable(tween(4300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "${item.word}_float"
+    )
+    val rotation by infinite.animateFloat(
+        -.55f, .55f,
+        infiniteRepeatable(tween(5200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "${item.word}_rotation"
+    )
 
     LaunchedEffect(Unit) {
         delay(item.delay.toLong())
-        entry.animateTo(1f, tween(1500, easing = FastOutSlowInEasing))
+        entry.animateTo(1f, tween(1450, easing = FastOutSlowInEasing))
     }
 
     Column(
-        Modifier.width(112.dp).graphicsLayer {
-            translationY = 110f * (1f - entry.value) + floatY
+        Modifier.width(98.dp).graphicsLayer {
+            translationY = 82f * (1f - entry.value) + floatY
             alpha = entry.value
-            scaleX = .88f + .12f * entry.value
-            scaleY = .88f + .12f * entry.value
+            scaleX = .90f + .10f * entry.value
+            scaleY = .90f + .10f * entry.value
             rotationZ = rotation * entry.value
         },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Ground shadow gives the balloons a floating, dimensional feel.
         Box(
-            Modifier.size(108.dp).shadow(13.dp, CircleShape).background(
-                Brush.radialGradient(listOf(Color.White.copy(alpha = .55f), item.colors[0], item.colors[1])), CircleShape
-            ).border(2.dp, Color.White.copy(alpha = .55f), CircleShape),
+            Modifier.width(56.dp).height(8.dp).shadow(7.dp, RoundedCornerShape(50)).background(Color.Black.copy(alpha = .13f), RoundedCornerShape(50))
+        )
+        Spacer(Modifier.height(3.dp))
+
+        Box(
+            Modifier.size(94.dp)
+                .shadow(15.dp, CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        0.0f to Color.White.copy(alpha = .72f),
+                        .28f to item.colors[0].copy(alpha = .96f),
+                        1.0f to item.colors[1]
+                    ), CircleShape
+                )
+                .border(2.dp, Color.White.copy(alpha = .60f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Box(Modifier.size(24.dp).offset(x = (-23).dp, y = (-27).dp).background(Color.White.copy(alpha = .42f), CircleShape))
-            Box(Modifier.fillMaxWidth(.88f).height(43.dp).background(Color.Black.copy(alpha = .12f), RoundedCornerShape(15.dp)).border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) {
-                Text(item.word, fontFamily = FontFamily.Serif, fontSize = if (item.word == "والأرقام") 17.sp else 19.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            Box(
+                Modifier.size(18.dp).offset(x = (-22).dp, y = (-25).dp)
+                    .background(Color.White.copy(alpha = .55f), CircleShape)
+            )
+            Box(
+                Modifier.fillMaxWidth(.84f).height(39.dp)
+                    .background(Color.Black.copy(alpha = .10f), RoundedCornerShape(14.dp))
+                    .border(1.dp, Color.White.copy(alpha = .30f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    item.word,
+                    fontFamily = FontFamily.Serif,
+                    fontSize = if (item.word == "والأرقام") 15.sp else 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
-        Spacer(Modifier.height(2.dp))
-        Box(Modifier.size(8.dp).background(item.colors[1], RoundedCornerShape(3.dp)))
-        Box(Modifier.width(3.dp).height(30.dp).background(item.colors[1], RoundedCornerShape(50)))
+
+        Box(Modifier.size(9.dp).background(item.colors[1], RoundedCornerShape(3.dp)))
+        Box(Modifier.width(2.dp).height(20.dp).background(Color.White.copy(alpha = .72f), RoundedCornerShape(50)))
     }
 }
 
 @Composable
 private fun ArabicNumeral(value: String, color: Color) {
-    Box(Modifier.size(38.dp).shadow(5.dp, CircleShape).background(Color.White.copy(alpha = .9f), CircleShape).border(2.dp, color.copy(alpha = .55f), CircleShape), contentAlignment = Alignment.Center) {
-        Text(value, fontSize = 23.sp, fontWeight = FontWeight.Black, color = color)
-    }
-}
-
-@Composable
-private fun SplashCloud(modifier: Modifier, scale: Float) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size((42 * scale).dp).background(Color.White.copy(alpha = .62f), CircleShape))
-        Box(Modifier.size((62 * scale).dp).offset(x = (-12 * scale).dp).background(Color.White.copy(alpha = .78f), CircleShape))
-        Box(Modifier.size((44 * scale).dp).offset(x = (-23 * scale).dp).background(Color.White.copy(alpha = .62f), CircleShape))
+    Box(
+        Modifier.size(44.dp)
+            .shadow(7.dp, CircleShape)
+            .background(Color.White.copy(alpha = .94f), CircleShape)
+            .border(2.dp, color.copy(alpha = .60f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(value, fontSize = 25.sp, fontWeight = FontWeight.Black, color = color)
     }
 }
 
 @Composable
 private fun StoneMotto() {
-    Box(Modifier.fillMaxWidth(.91f).background(Color(0xFF536D72).copy(alpha = .68f), RoundedCornerShape(24.dp)).border(2.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(24.dp)).padding(horizontal = 12.dp, vertical = 13.dp), contentAlignment = Alignment.Center) {
-        Text("التعلّم في الصغر كالنقش بالحجر", fontFamily = FontFamily.Serif, fontSize = 19.sp, fontWeight = FontWeight.Black, color = Color.White, textAlign = TextAlign.Center)
+    Box(
+        Modifier.fillMaxWidth(.92f)
+            .background(Color(0xFF365E69).copy(alpha = .72f), RoundedCornerShape(22.dp))
+            .border(1.dp, Color.White.copy(alpha = .28f), RoundedCornerShape(22.dp))
+            .padding(horizontal = 12.dp, vertical = 11.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            "التعلّم في الصغر كالنقش بالحجر",
+            fontFamily = FontFamily.Serif,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Black,
+            color = Color.White,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
 @Composable
 private fun FullGreenProgress() {
-    Box(Modifier.fillMaxWidth(.86f).height(13.dp).background(Color.White.copy(alpha = .32f), RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = .5f), RoundedCornerShape(50)).padding(2.dp)) {
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFF9CFF45), Color(0xFF25D65A), Color(0xFF08A94B))), RoundedCornerShape(50)))
+    Box(
+        Modifier.fillMaxWidth(.86f)
+            .height(12.dp)
+            .background(Color.White.copy(alpha = .30f), RoundedCornerShape(50))
+            .border(1.dp, Color.White.copy(alpha = .48f), RoundedCornerShape(50))
+            .padding(2.dp)
+    ) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.horizontalGradient(listOf(Color(0xFFB5FF63), Color(0xFF35DC63), Color(0xFF0AA94C))),
+                RoundedCornerShape(50)
+            )
+        )
     }
 }
